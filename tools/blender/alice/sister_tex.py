@@ -38,6 +38,23 @@ def make_all(out_dir=None):
     img = img * (0.96 + 0.04 * weave)[..., None]
     mk('Sister_Dress', np.clip(img, 0, 1))
 
+    # pleated skirt: u runs once around per pleat (11 per revolution), v rises from the hem — fold shading, linen weave, tiny sprigs, lace hem
+    S = 1024
+    img = paint.wash('#86A66E', S, S, seed=861, tint_var=0.035, blotch=0.05, facets=0, grain=0.03)
+    u, v = _grid(S, S)
+    pleat = 0.5 + 0.5 * np.cos(2 * math.pi * (u + 0.5))
+    img = img * (0.70 + 0.32 * pleat ** 0.8)[..., None]
+    img = img * (0.93 + 0.07 * (0.5 + 0.5 * np.sin(u * S * math.pi) * np.sin(v * S * math.pi)))[..., None]
+    from world.painters import _dabs, _splat
+    img = _splat(img, _dabs(S, S, 160, 3.4, 77, 1.0), _rgb('#F1E6C6'), 0.8)
+    img = _splat(img, _dabs(S, S, 160, 2.2, 78, 1.0), _rgb('#C98A82'), 0.7)
+    img = _splat(img, np.clip((paint.fbm(S, S, 6, 4, 79) - 0.58) * 4, 0, 1), _rgb('#5E7F4C'), 0.5)
+    hem = np.clip((0.07 - v) / 0.02, 0, 1)
+    img = _blend(img, hem, _rgb('#4F6F40'), 0.9)
+    lace = ((np.floor(u * 22) % 2) == 0) & (v > 0.07) & (v < 0.11)
+    img = _blend(img, lace.astype(np.float32), _rgb('#EFE4C4'), 0.9)
+    mk('Sister_Skirt', np.clip(img, 0, 1))
+
     # cream crochet shawl: openwork rosettes
     img = paint.wash('#EADFC3', 512, 512, seed=821, tint_var=0.02, blotch=0.04, facets=0, grain=0.02)
     u, v = _grid(512, 512)

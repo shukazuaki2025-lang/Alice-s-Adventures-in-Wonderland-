@@ -96,8 +96,8 @@ def main():
             o.data.update()
         return o
 
-    skirt = part('Sister_Skirt', sister.build_skirt, m['Sister_Dress'], 0.008)
-    mk.uv_triplanar(skirt, scale=1.6)
+    skirt = part('Sister_Skirt', sister.build_skirt, m['Sister_Skirt'], 0.008)
+    mk.uv_cylindrical(skirt, (0.0, -0.13), (0.0, 0.34), u_repeat=11.0)
     bodice = part('Sister_Bodice', sister.build_bodice, m['Sister_Dress'], None, True)
     mk.uv_cylindrical(bodice, (0.0, 0.015), (0.2, 0.66))
     shawl = part('Sister_Shawl', sister.build_shawl, m['Sister_Shawl'], 0.004, True)

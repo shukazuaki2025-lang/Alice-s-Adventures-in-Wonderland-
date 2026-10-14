@@ -43,7 +43,7 @@ BONES = [
 def build_skirt(bm):
     """Gathered green skirt: a dome over the bent knees, spilling to the ground with a scalloped hem."""
     cx, cy = 0.0, -0.13
-    N, K = 72, 22
+    N, K = 132, 34
     rows = []
     for k in range(K + 1):
         r = k / K
@@ -52,7 +52,7 @@ def build_skirt(bm):
             th = -2 * math.pi * i / N      # decreasing angle -> outward normals for a loft running outwards/down
             front = max(0.0, -math.cos(th))   # 0..1 toward -Y
             R = lerp(0.37, 0.56, front ** 1.4)
-            fold = 1.0 + 0.06 * math.sin(11 * th) * r
+            fold = 1.0 + (0.085 * math.sin(11 * th) + 0.035 * math.sin(23 * th + 1.7) + 0.02 * math.sin(5 * th + 0.4)) * r ** 1.3
             rr = R * r * fold
             x = cx + rr * math.sin(-th)
             y = cy + rr * -math.cos(-th)
