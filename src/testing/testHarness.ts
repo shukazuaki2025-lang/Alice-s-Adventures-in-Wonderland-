@@ -74,6 +74,8 @@ export function registerTestHarness(gameManager: GameManager): void {
       });
       return out;
     },
+    /** which INT_/TRG_ prop the E key would act on right now (null = nothing eligible in reach) */
+    getNearbyInteractable: () => gameManager['getNearbyInteractable'](),
     getAliceAnimation: () => gameManager.aliceEntity.getDebug(),
     getAliceBoneWorld: (name: string) => {
       const v = gameManager.aliceEntity.getBoneWorldPosition(name);

@@ -25,6 +25,7 @@ declare global {
       };
       getRenderStats: () => { calls: number; triangles: number };
       getRenderBreakdown: () => Record<string, { meshes: number; hulls: number; shadowCasters: number; drawn: number }>;
+      getNearbyInteractable: () => string | null;
       getAliceAnimation: () => unknown;
       getAliceBoneWorld: (name: string) => { x: number; y: number; z: number } | null;
       getSceneMetrics: () => unknown;
@@ -69,9 +70,10 @@ class AliceGameBootstrap {
     this.audioManager = new AudioManager();
 
     this.gameManager = new GameManager(this.canvas);
-    registerTestHarness(this.gameManager);
-
     await this.gameManager.init();
+    // Only expose window.__game once every GLB is parsed and the loop is running: init() ends by re-applying the state's
+    // visuals (Alice back to the spawn), so a harness that drove the game earlier would be teleported mid-test.
+    registerTestHarness(this.gameManager);
 
     // Play title music (M1)
     this.audioManager.playMusic('M1');
