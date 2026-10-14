@@ -178,7 +178,7 @@ class Canvas:
     def dab(self, x, y, rx, ry, ang, color, alpha=255):
         c = self._c(color, alpha)
         ca, sa = math.cos(ang), math.sin(ang)
-        pts0 = [(rx * math.cos(t), ry * math.sin(t)) for t in np.linspace(0, TAU, 9)[:-1]]
+        pts0 = [(rx * math.cos(t) * (1.0 + 0.10 * math.sin(3 * t + rx)), ry * math.sin(t) * (1.0 + 0.10 * math.cos(2 * t + ry))) for t in np.linspace(0, TAU, 15)[:-1]]
         for dx, dy in self._wraps(x, y, max(rx, ry)):
             pts = [(x + dx + px * ca - py * sa, y + dy + px * sa + py * ca) for px, py in pts0]
             self.d.polygon(pts, fill=c)
@@ -688,7 +688,7 @@ def _bake_well_light(img, items, W, H, C, ppm_u, ppm_v, Vz, U, seed, log):
         G += radial_glow((H, W), [(X(d), Y(z), 0.80 * ppm_u, 1.0) for d, z in lamps], 0.8)
         G += radial_glow((H, W), [(X(d), Y(z), 2.0 * ppm_u, 0.46) for d, z in lamps], 0.8)
     gg = np.clip(G, 0, 1)[..., None]
-    cool = np.array([0.88, 0.84, 1.00], np.float32)
+    cool = np.array([0.97, 0.93, 1.00], np.float32)
     warm = np.array([1.30, 1.08, 0.80], np.float32)
     img = img * (cool * (1 - gg) + warm * gg)
     img += (np.clip(G - 0.55, 0, 1.2) ** 1.5)[..., None] * np.array([0.20, 0.10, 0.02], np.float32)

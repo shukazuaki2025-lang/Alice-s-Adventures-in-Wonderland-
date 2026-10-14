@@ -49,7 +49,7 @@ def _paste_cell(atlas, cell, col, row, cw, ch):
 
 # ------------------------------------------------------------------------------------------------ wood
 def _wood_cell(size, base, seed, paint_hex=None, boards=8, dark=False):
-    img = I.planks(size, size, n=boards, base=base, seed=seed, seams=0.010)
+    img = I.planks(size, size, n=boards, base=base, seed=seed, seams=0.006)
     yy, xx = _grid(size, size)
     if dark:
         img = img * np.array([0.50, 0.46, 0.50], np.float32)
@@ -58,7 +58,7 @@ def _wood_cell(size, base, seed, paint_hex=None, boards=8, dark=False):
     if paint_hex:
         coat = np.ones_like(img) * _rgb(paint_hex)
         streak = rfield(size, size, 3, 90, seed + 9)                                  # horizontal brush strokes
-        coat = coat * (0.90 + 0.20 * streak)[..., None] * (0.94 + 0.12 * rfbm(size, size, 5, 5, 3, seed + 11))[..., None]
+        coat = coat * (0.95 + 0.10 * streak)[..., None] * (0.94 + 0.12 * rfbm(size, size, 5, 5, 3, seed + 11))[..., None]
         # raised panel rails: lighter bevel on top edges, darker underneath, repeating each board
         row = np.floor(yy * boards)
         fy = yy * boards - row

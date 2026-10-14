@@ -149,7 +149,7 @@ def main():
         th = math.radians(deg)
         d = (0.045 * math.sin(7 * th + 2 * math.pi * 2 * z / SEG_H) + 0.030 * math.sin(13 * th - 2 * math.pi * 5 * z / SEG_H + 1.3)
              + 0.020 * math.sin(29 * th + 2 * math.pi * 11 * z / SEG_H))
-        r = R + d
+        r = R + (d + 0.095) * 0.55            # always recessed behind R, so nothing hung at R is ever swallowed by a bulge
         return V(r * math.cos(-th), r * math.sin(-th), z)
 
     for q in range(4):
@@ -256,16 +256,17 @@ def main():
         a0, a1 = -w / 2, w / 2
         wood = WC[spec['wood']]
         oak, dark = WC['oak'], WC['dark']
-        f.box(T['wood'], a0 - 0.05, a1 + 0.05, 0.0, depth + 0.06, 0.0, 0.06, oak)                               # platform
+        BK = -0.13                                                                                           # sink into the (recessed) wall
+        f.box(T['wood'], a0 - 0.05, a1 + 0.05, BK, depth + 0.06, 0.0, 0.06, oak)                              # platform
         for sa in (-1, 1):                                                                                   # stepped stone corbels
             a = sa * (w / 2 - 0.12)
             for k in range(4):
-                f.box(T['stone'], a - 0.05, a + 0.05, 0.0, 0.10 + k * (depth - 0.10) / 3, -0.30 + k * 0.075, -0.225 + k * 0.075, (0, 0, 1, 1), scale=0.7)
+                f.box(T['stone'], a - 0.05, a + 0.05, BK, 0.10 + k * (depth - 0.10) / 3, -0.30 + k * 0.075, -0.225 + k * 0.075, (0, 0, 1, 1), scale=0.7)
         zb = 0.06
-        f.box(T['wood'], a0, a0 + 0.04, 0.0, depth, zb, zb + h, wood)                                          # carcass
-        f.box(T['wood'], a1 - 0.04, a1, 0.0, depth, zb, zb + h, wood)
-        f.box(T['wood'], a0 - 0.03, a1 + 0.03, 0.0, depth + 0.03, zb + h, zb + h + 0.05, wood)
-        f.box(T['wood'], a0 + 0.04, a1 - 0.04, 0.0, 0.025, zb, zb + h, dark)                                    # dark back panel
+        f.box(T['wood'], a0, a0 + 0.04, BK, depth, zb, zb + h, wood)                                          # carcass
+        f.box(T['wood'], a1 - 0.04, a1, BK, depth, zb, zb + h, wood)
+        f.box(T['wood'], a0 - 0.03, a1 + 0.03, BK, depth + 0.03, zb + h, zb + h + 0.05, wood)
+        f.box(T['wood'], a0 + 0.04, a1 - 0.04, BK, 0.025, zb, zb + h, dark)                                    # dark back panel
         if kind == 'books':
             n_shelf = 4
             for k in range(n_shelf + 1):
@@ -406,8 +407,8 @@ def main():
         fw = 0.06
         gold = METAL['brass']
         for (a0_, a1_, zz0, zz1) in ((-w_ / 2 - fw, w_ / 2 + fw, h_, h_ + fw), (-w_ / 2 - fw, w_ / 2 + fw, -fw, 0.0), (-w_ / 2 - fw, -w_ / 2, 0.0, h_), (w_ / 2, w_ / 2 + fw, 0.0, h_)):
-            f.box(T['brass'], a0_, a1_, 0.0, 0.05, zz0, zz1, gold, scale=0.5)
-        f.box(T['wood'], -w_ / 2, w_ / 2, 0.0, 0.02, 0.0, h_, WC['dark'])
+            f.box(T['brass'], a0_, a1_, -0.13, 0.05, zz0, zz1, gold, scale=0.5)
+        f.box(T['wood'], -w_ / 2, w_ / 2, -0.13, 0.02, 0.0, h_, WC['dark'])
         r = ART[key]
         ins = 0.012
         f.quad(T['art'], -w_ / 2, w_ / 2, 0.0, h_, 0.022, (r[0] + ins, r[1] + ins, r[2] - ins, r[3] - ins))
@@ -418,8 +419,9 @@ def main():
         T = new_T()
         f = UP.UnitFrame()
         w_, h_ = 0.95, 0.72
-        f.box(T['wood'], -w_ / 2 - 0.03, w_ / 2 + 0.03, 0.0, 0.05, h_, h_ + 0.04, WC['oak'])
-        f.box(T['wood'], -w_ / 2 - 0.03, w_ / 2 + 0.03, 0.0, 0.05, -0.04, 0.0, WC['oak'])
+        f.box(T['wood'], -w_ / 2 - 0.03, w_ / 2 + 0.03, -0.13, 0.05, h_, h_ + 0.04, WC['oak'])
+        f.box(T['wood'], -w_ / 2 - 0.03, w_ / 2 + 0.03, -0.13, 0.05, -0.04, 0.0, WC['oak'])
+        f.box(T['wood'], -w_ / 2, w_ / 2, -0.13, 0.015, 0.0, h_, WC['dark'])
         r = ART[key]
         ins = 0.012
         f.quad(T['art'], -w_ / 2, w_ / 2, 0.0, h_, 0.02, (r[0] + ins, r[1] + ins, r[2] - ins, r[3] - ins))
@@ -434,8 +436,8 @@ def main():
         f = UP.UnitFrame()
         z_c = 0.62
         brass = METAL['brass']
-        f.box(T['brass'], -0.05, 0.05, 0.0, 0.014, z_c - 0.09, z_c + 0.09, brass, scale=0.4)                         # back plate
-        UP.alathe(T['brass'], [(0.013, 0.0), (0.015, 0.1), (0.012, 0.3), (0.012, 0.4)], brass, Matrix.Translation(f.p(0, 0.0, z_c)) @ Matrix.Rotation(math.radians(-90), 4, 'Y'), seg=8)
+        f.box(T['brass'], -0.05, 0.05, -0.13, 0.014, z_c - 0.09, z_c + 0.09, brass, scale=0.4)                         # back plate
+        UP.alathe(T['brass'], [(0.013, 0.0), (0.015, 0.1), (0.012, 0.3), (0.012, 0.4)], brass, Matrix.Translation(f.p(0, -0.02, z_c)) @ Matrix.Rotation(math.radians(-90), 4, 'Y'), seg=8)
         c = f.p(0, 0.43, z_c)
         m = Matrix.Translation(c)
         UP.alathe(T['brass'], [(0.001, -0.16), (0.05, -0.16), (0.068, -0.14), (0.052, -0.11), (0.001, -0.11)], brass, m, seg=10)
@@ -463,9 +465,9 @@ def main():
         zc = h_ - r
         th, dp = 0.07, 0.055
         st = (0, 0, 1, 1)
-        f.box(T['stone'], -r - th, -r, 0.0, dp, 0.0, zc, st, scale=0.8)
-        f.box(T['stone'], r, r + th, 0.0, dp, 0.0, zc, st, scale=0.8)
-        f.box(T['stone'], -r - th - 0.03, r + th + 0.03, 0.0, 0.17, -0.05, 0.0, st, scale=0.8)                  # sill
+        f.box(T['stone'], -r - th, -r, -0.13, dp, 0.0, zc, st, scale=0.8)
+        f.box(T['stone'], r, r + th, -0.13, dp, 0.0, zc, st, scale=0.8)
+        f.box(T['stone'], -r - th - 0.03, r + th + 0.03, -0.13, 0.17, -0.05, 0.0, st, scale=0.8)                  # sill
         N = 12
         uvf = lambda p_: (0.25 + 0.1 * ((p_.y * 1.7) % 1.0), 0.25 + 0.1 * ((p_.z * 1.7) % 1.0))
         for i in range(N):

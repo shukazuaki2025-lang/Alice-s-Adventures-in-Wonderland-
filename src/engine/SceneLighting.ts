@@ -38,11 +38,12 @@ export const GRADE_WELL: GradeParams = {
   satCompress: 0.2,
   vignette: 0.35,
   vignetteTint: [0.6, 0.52, 0.72],
-  clarity: 0.4,
-  clarityBroad: 0.3,
+  exposure: 1.35,
+  clarity: 0.75,
+  clarityBroad: 0.5,
   bloom: 0.35,
   bloomTint: [1.0, 0.75, 0.45],
-  bloomThreshold: 0.75,
+  bloomThreshold: 0.85,
   granulation: 0.05,
   mottle: 0.03,
 };
@@ -67,11 +68,12 @@ export const GRADE_HALL: GradeParams = {
   satCompress: 0.2,
   vignette: 0.3,
   vignetteTint: [0.58, 0.5, 0.7],
-  clarity: 0.38,
-  clarityBroad: 0.28,
-  bloom: 0.32,
+  exposure: 1.25,
+  clarity: 0.5,
+  clarityBroad: 0.35,
+  bloom: 0.3,
   bloomTint: [1.0, 0.78, 0.46],
-  bloomThreshold: 0.8,
+  bloomThreshold: 0.9,
   granulation: 0.04,
   mottle: 0.03,
 };
@@ -326,7 +328,7 @@ export class SceneLightingManager {
       const c = cand[i];
       const l = this.wellLights[i];
       l.position.set(c[0], c[1], c[2]);
-      l.intensity = this.wellLampIntensity * Math.min(1, Math.max(0, (dN - c[3]) / (dN * 0.3)));
+      l.intensity = this.wellLampIntensity * Math.min(1, Math.max(0, (dN - c[3]) / (dN * 0.12)));
     }
   }
 
