@@ -336,17 +336,17 @@ def rubble(U, V, spec, seed, period_u):
 WELL_R = 4.0
 WELL_H = 6.0
 
-_BRICK_RED = dict(course=(0.064, 0.074), length=(0.205, 0.245), joint=0.011, bevel=0.55, tone=0.10, cloud=0.20, speckle=0.07, mortar='#CBBFA6',
-                  pal=pal('#B65F49', '#A44D3D', '#C87B58', '#8F4538', '#BA6A4E', '#9C5A49', '#C48A62', '#7F4A45'))
-_BRICK_STOCK = dict(course=(0.064, 0.074), length=(0.205, 0.245), joint=0.011, bevel=0.5, tone=0.09, cloud=0.24, speckle=0.07, mortar='#DCD3BE',
-                    pal=pal('#CDB57F', '#C2A872', '#D6C28E', '#AE9965', '#BBA26B', '#A39063', '#8F8062', '#D9C99A'))
+_BRICK_RED = dict(course=(0.084, 0.098), length=(0.25, 0.31), joint=0.015, bevel=0.6, tone=0.11, cloud=0.20, speckle=0.07, mortar='#D4C8AE',
+                  pal=pal('#C4684F', '#B4553F', '#D4855D', '#9C4A3A', '#C8745A', '#A86050', '#D49666', '#8A4E48'))
+_BRICK_STOCK = dict(course=(0.084, 0.098), length=(0.25, 0.31), joint=0.015, bevel=0.55, tone=0.10, cloud=0.24, speckle=0.07, mortar='#E4DCC8',
+                    pal=pal('#D8C08A', '#CDB27A', '#E2CE98', '#B9A370', '#C6AC74', '#AE9A6C', '#98896A', '#E4D4A4'))
 _CHALK = dict(course=(0.22, 0.32), length=(0.50, 0.85), joint=0.012, bevel=0.5, tone=0.045, cloud=0.14, speckle=0.05, mortar='#9E998A',
               pal=pal('#E9E1CD', '#DED4BC', '#F0E9D8', '#D5CAB2', '#E4DAC4', '#CFD0C8', '#DCD6C4'))
 _SLATE = dict(course=(0.15, 0.22), length=(0.60, 1.10), joint=0.010, bevel=0.6, tone=0.07, cloud=0.16, speckle=0.06, mortar='#262B33',
               pal=pal('#62717F', '#4F5D6D', '#79879A', '#5A6678', '#6B7088', '#7C8294', '#46535F', '#6C7C86'))
 _OCHRE = dict(cell=0.34, joint=0.022, mortar='#52391F', cloud=0.18, speckle=0.07,
               pal=pal('#C99C55', '#BA8946', '#D8B06C', '#A9753D', '#C98F4F', '#BFA070', '#9F7A47', '#D2B27E'))
-_FLINT = dict(cell=0.17, joint=0.05, mortar='#E2D8C0', cloud=0.12, speckle=0.05, rind='#F2ECDD',
+_FLINT = dict(cell=0.20, joint=0.034, mortar='#E2D8C0', cloud=0.12, speckle=0.05, rind='#F2ECDD',
               pal=pal('#2F3640', '#424B55', '#262A31', '#566069', '#3B4450', '#8A8F8F', '#4D4A52'))
 
 
@@ -621,6 +621,7 @@ def well_wall(items, W=6144, H=1536, seed=1865, log=print):
 def _bake_well_light(img, items, W, H, C, ppm_u, ppm_v, Vz, U, seed, log):
     """Shelf shadows, painted niches and lantern pools - the 'value structure' of the shaft, painted into the wall."""
     log('  wall: baked light')
+    img = wander(img, seed, 0.12)
     R = WELL_R
     deg_px = W / 360.0
 
@@ -645,8 +646,8 @@ def _bake_well_light(img, items, W, H, C, ppm_u, ppm_v, Vz, U, seed, log):
         frames.append((cx - hw - 5, Y(z0 - 0.03), cx + hw + 5, Y(z0 + h + 0.03)))
     ao = 0.0
     if rects:
-        ao = ao + 0.42 * blur_mask(rect_mask(W, H, rects), 26)
-        ao = ao + 0.40 * blur_mask(rect_mask(W, H, under), 40)
+        ao = ao + 0.36 * blur_mask(rect_mask(W, H, rects), 26)
+        ao = ao + 0.36 * blur_mask(rect_mask(W, H, under), 40)
     if frames:
         sh = [(a + 9, b - 11, c + 13, d - 11) for a, b, c, d in frames]
         ao = ao + 0.40 * blur_mask(rect_mask(W, H, sh), 11)
@@ -687,11 +688,22 @@ def _bake_well_light(img, items, W, H, C, ppm_u, ppm_v, Vz, U, seed, log):
         G += radial_glow((H, W), [(X(d), Y(z), 0.80 * ppm_u, 1.0) for d, z in lamps], 0.8)
         G += radial_glow((H, W), [(X(d), Y(z), 2.0 * ppm_u, 0.46) for d, z in lamps], 0.8)
     gg = np.clip(G, 0, 1)[..., None]
-    cool = np.array([0.70, 0.67, 0.88], np.float32)
-    warm = np.array([1.20, 1.02, 0.74], np.float32)
+    cool = np.array([0.88, 0.84, 1.00], np.float32)
+    warm = np.array([1.30, 1.08, 0.80], np.float32)
     img = img * (cool * (1 - gg) + warm * gg)
     img += (np.clip(G - 0.55, 0, 1.2) ** 1.5)[..., None] * np.array([0.20, 0.10, 0.02], np.float32)
     return img
+
+
+def wander(img, seed, amt=0.10):
+    """Layered colour wash: three independent slow fields drift the red, green and blue gain, so every stretch of wall has its own
+    temperature (a glaze of rose here, sage there, a lilac cool patch) instead of one flat tint per material."""
+    H, W = img.shape[:2]
+    out = img.copy()
+    for c, (nu, nv) in enumerate(((11, 3), (15, 4), (9, 3))):
+        f = rfbm(W, H, nu, nv, 3, seed + 400 + 17 * c)
+        out[..., c] *= 1.0 + amt * (f - 0.5) * 2.0
+    return out
 
 
 def finish(img, blur=0.8):

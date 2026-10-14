@@ -329,14 +329,17 @@ const FINAL_FRAG = /* glsl */ `
     // --- the paper -----------------------------------------------------------------------------------------------------
     vec2 puv = vUv * vec2( uRes.x / uRes.y, 1.0 ) * ( 720.0 / 512.0 );
     vec3 pp = texture2D( tPaper, puv ).rgb;
-    vec3 pm = texture2D( tPaper, puv * 0.21 + vec2( 0.37, 0.61 ) ).rgb;
+    // three independently drifting washes (one per channel), sampled at different offsets of the same low-frequency page
+    vec3 pm = vec3( texture2D( tPaper, puv * 0.21 + vec2( 0.37, 0.61 ) ).b,
+                    texture2D( tPaper, puv * 0.17 + vec2( 0.81, 0.23 ) ).b,
+                    texture2D( tPaper, puv * 0.25 + vec2( 0.12, 0.74 ) ).b );
     float dark = 1.0 - smoothstep( 0.05, 0.85, lum( d ) );
     float tooth = ( pp.r - 0.5 ) * 2.0;
     float gran = ( pp.g - 0.5 ) * 2.0;
-    float mott = ( pm.b - 0.5 ) * 2.0;
+    vec3 mott = ( pm - 0.5 ) * 2.0;
     d *= 1.0 + tooth * opacity * uPaperAmt;
     d *= 1.0 + gran * uGran * ( 0.30 + 0.70 * dark );
-    d *= vec3( 1.0 + mott * uMottle * 1.15, 1.0 + mott * uMottle * 0.45, 1.0 - mott * uMottle * 0.9 );
+    d *= 1.0 + mott * uMottle;
 
     // --- vignette: a tinted wash, never black ---------------------------------------------------------------------------
     vec2 q = ( vUv - 0.5 ) * vec2( 1.0, 0.82 );

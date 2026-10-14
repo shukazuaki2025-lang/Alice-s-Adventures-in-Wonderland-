@@ -89,6 +89,8 @@ export class SceneLightingManager {
   private wellLights: THREE.PointLight[] = [];
   private hallLamps: THREE.PointLight[] = [];
   private passageLights: THREE.PointLight[] = [];
+  private wellAnchors: THREE.Vector3[] = [];
+  private wellLampIntensity = 7;
   private vistaLight: THREE.SpotLight;
   private sunOffset = new THREE.Vector3(18, 28, 14);
 
@@ -137,6 +139,7 @@ export class SceneLightingManager {
       [-1.6, -2.0, 0.5],
       [0, -6.0, -1.6],
       [1.4, -10.0, 1.1],
+      [-1.2, 4.0, -1.4],
     ];
     for (const [x, y, z] of wellOffsets) {
       const pl = new THREE.PointLight(0xffb86c, 1.4, 14, 1.5);
@@ -186,6 +189,7 @@ export class SceneLightingManager {
 
   /** Put the real point lights on the lamps the Blender sets actually contain (LAMP_* empties). */
   public setLampAnchors(a: { well: THREE.Vector3[]; passage: THREE.Vector3[]; hall: THREE.Vector3[] }): void {
+    this.wellAnchors = a.well.map((v) => v.clone());
     a.hall.forEach((p, i) => {
       const l = this.hallLamps[i];
       if (l) l.position.set(p.x, p.y - 0.15, p.z);
@@ -240,8 +244,8 @@ export class SceneLightingManager {
         this.sunLight.position.set(2, 12, 3);
         this.wellLights.forEach((l) => {
           l.color.setHex(0xffb061);
-          l.intensity = 6;
-          l.distance = 10;
+          l.intensity = this.wellLampIntensity;
+          l.distance = 7.5;
           l.decay = 2;
           l.visible = true;
         });
@@ -298,6 +302,31 @@ export class SceneLightingManager {
         this.vistaLight.visible = true;
         break;
       }
+    }
+  }
+
+  /**
+   * S3: the real point lights ride on the lanterns of the scrolling shaft. Each frame the lanterns nearest to Alice (of the four
+   * stacked 6 m segments) get the lights; every light's strength fades to zero at the distance of the first lantern left out, so
+   * lanterns hand over smoothly as they stream past and nothing ever pops.
+   */
+  public updateWellLamps(scrollY: number, focus: THREE.Vector3): void {
+    if (!this.wellAnchors.length) return;
+    const cand: Array<[number, number, number, number]> = []; // x, y, z, distance to focus
+    for (let k = 0; k < 4; k++) {
+      for (const a of this.wellAnchors) {
+        const y = a.y - 12 + 6 * k + scrollY;
+        cand.push([a.x * 0.9, y, a.z * 0.9, Math.hypot(a.x - focus.x, y - focus.y, a.z - focus.z)]);
+      }
+    }
+    cand.sort((p, q) => p[3] - q[3]);
+    const n = this.wellLights.length;
+    const dN = cand[Math.min(n, cand.length - 1)][3];
+    for (let i = 0; i < n; i++) {
+      const c = cand[i];
+      const l = this.wellLights[i];
+      l.position.set(c[0], c[1], c[2]);
+      l.intensity = this.wellLampIntensity * Math.min(1, Math.max(0, (dN - c[3]) / (dN * 0.3)));
     }
   }
 

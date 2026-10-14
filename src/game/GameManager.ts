@@ -370,6 +370,7 @@ export class GameManager {
 
     if (state === 'S3_FALL') {
       this.sceneLoader.wellScrollingGroup.position.y = (this.elapsedTime * 2.2) % 6.0;
+      this.lighting.updateWellLamps(this.sceneLoader.wellScrollingGroup.position.y, this.characterController.position);
       this.aliceEntity.mesh.position.y = Math.sin(this.elapsedTime * 2.5) * 0.15;
       this.aliceEntity.mesh.rotation.y += deltaTime * 0.6;
       

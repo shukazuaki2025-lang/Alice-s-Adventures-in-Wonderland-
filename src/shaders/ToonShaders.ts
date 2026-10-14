@@ -38,7 +38,7 @@ function getSharedGradientMap(): THREE.DataTexture {
   return sharedGradientMap;
 }
 
-const PAINT_CACHE_KEY = 'victorian-watercolour-toon-v4';
+const PAINT_CACHE_KEY = 'victorian-watercolour-toon-v5';
 
 /**
  * Scene-wide paint lighting shared by every toon material (one set of uniform objects, so SceneLighting can change them
@@ -98,14 +98,15 @@ function applyPaintFinish(material: THREE.MeshToonMaterial, wash: WashKind = 'no
     shader.uniforms.uHeightHigh = paintLight.heightHigh;
     shader.uniforms.uHeightRange = paintLight.heightRange;
     shader.vertexShader = shader.vertexShader
-      .replace('void main() {', 'varying vec3 vPaintP;\nvarying float vPaintY;\nvoid main() {')
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\n\tvPaintP = position;')
+      .replace('void main() {', 'varying vec3 vPaintP;\nvarying vec3 vPaintN;\nvarying float vPaintY;\nvoid main() {')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\n\tvPaintP = position;\n\tvPaintN = normal;')
       .replace('#include <project_vertex>', '#include <project_vertex>\n\tvPaintY = ( modelMatrix * vec4( transformed, 1.0 ) ).y;');
     shader.fragmentShader = shader.fragmentShader
       .replace(
         'void main() {',
         /* glsl */ `
       varying vec3 vPaintP;
+      varying vec3 vPaintN;
       varying float vPaintY;
       uniform float uWash;
       uniform float uWashGain;
@@ -126,19 +127,28 @@ function applyPaintFinish(material: THREE.MeshToonMaterial, wash: WashKind = 'no
       #include <map_fragment>
       if ( uWash > 0.0 ) {
         float wa = uWash * uWashGain;
+        // 1. tonal wash: overlapping light / dark washes at four scales
         float w1 = pNoise( vPaintP * 0.55 );
         float w2 = pNoise( vPaintP * 1.9 + 7.3 );
         float w3 = pNoise( vPaintP * 6.0 + 3.1 );
         float w4 = pNoise( vPaintP * 17.0 + 19.0 );
         float tone = ( w1 - 0.5 ) * 0.9 + ( w2 - 0.5 ) * 0.6 + ( w3 - 0.5 ) * 0.35 + ( w4 - 0.5 ) * 0.2;
-        float hueN = pNoise( vPaintP * 0.38 + 11.0 ) - 0.5;
+        // 2. pigment drift: every pigment (here the three channels) pools and thins on its own, so a wash wanders between
+        //    blue-green / yellow-green, sienna / rose ... instead of staying one hue
+        vec3 pig = vec3( pNoise( vPaintP * 0.5 + 3.0 ), pNoise( vPaintP * 0.5 + 41.0 ), pNoise( vPaintP * 0.5 + 77.0 ) )
+                 + 0.55 * vec3( pNoise( vPaintP * 2.1 + 13.0 ), pNoise( vPaintP * 2.1 + 59.0 ), pNoise( vPaintP * 2.1 + 91.0 ) );
+        pig -= vec3( 0.775 );
+        vec3 wc = diffuseColor.rgb * ( 1.0 + tone * 0.30 * wa ) * ( 1.0 + pig * 0.62 * min( wa, 1.3 ) );
         float chromaN = pNoise( vPaintP * 0.9 + 23.0 ) - 0.5;
-        vec3 warmT = vec3( 1.08, 1.01, 0.86 );
-        vec3 coolT = vec3( 0.89, 0.99, 1.12 );
-        vec3 tint = mix( coolT, warmT, clamp( hueN * 2.4 + 0.5, 0.0, 1.0 ) );
-        vec3 wc = diffuseColor.rgb * ( 1.0 + tone * 0.34 * wa ) * mix( vec3( 1.0 ), tint, clamp( wa, 0.0, 1.0 ) * 0.9 );
         float wl = dot( wc, vec3( 0.2126, 0.7152, 0.0722 ) );
-        diffuseColor.rgb = mix( vec3( wl ), wc, 1.0 + chromaN * 0.55 * min( wa, 1.2 ) );
+        wc = mix( vec3( wl ), wc, 1.0 + chromaN * 0.5 * min( wa, 1.2 ) );
+        // 3. dry-brush streaks: long strokes (floors: along x; walls: vertical) with a soft bristle cross-grain
+        vec3 an = abs( vPaintN );
+        vec2 bp = an.y > 0.75 ? vec2( vPaintP.x * 0.9 + vPaintP.z * 0.4, vPaintP.z * 19.0 - vPaintP.x * 5.0 )
+                              : vec2( vPaintP.y * 1.1, ( vPaintP.x + vPaintP.z ) * 19.0 );
+        float stroke = pNoise( vec3( bp.x, bp.y, 5.0 ) ) + 0.5 * pNoise( vec3( bp.x * 2.0, bp.y * 2.3, 9.0 ) ) - 0.75;
+        wc *= 1.0 + stroke * 0.16 * min( wa, 1.2 );
+        diffuseColor.rgb = wc;
       }`
       )
       .replace(

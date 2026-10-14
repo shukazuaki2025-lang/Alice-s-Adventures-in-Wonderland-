@@ -142,8 +142,8 @@ def main():
     FULL = (0.0, 0.0, 1.0, 1.0)
 
     # ------------------------------------------------------------------------------------------ the shaft wall (seamless), four atlas quarters
-    cols_q = 48
-    rows = 60
+    cols_q = 40
+    rows = 40
 
     def wall_point(deg, z):
         th = math.radians(deg)
@@ -196,26 +196,26 @@ def main():
 
     def jam_jar(T, f, a, d, z, key, yaw):
         m = mat_at(f, a, d, z, yaw)
-        UP.alathe(T['pres'], [(0.001, 0), (0.058, 0.0), (0.062, 0.02), (0.062, 0.14), (0.056, 0.16), (0.040, 0.168), (0.040, 0.176)], PRC[key], m, seg=18, cap_top=False)
-        UP.alathe(T['pres'], [(0.043, 0.168), (0.052, 0.178), (0.054, 0.205), (0.045, 0.22), (0.001, 0.224)], PRC['wax'], m, seg=14, cap_bottom=False)
+        UP.alathe(T['pres'], [(0.058, 0), (0.062, 0.02), (0.062, 0.14), (0.042, 0.168), (0.040, 0.176)], PRC[key], m, seg=10, cap_top=False, cap_bottom=False)
+        UP.alathe(T['pres'], [(0.044, 0.170), (0.054, 0.190), (0.050, 0.215), (0.001, 0.222)], PRC['wax'], m, seg=8, cap_bottom=False)
 
     def bottle(T, f, a, d, z, key, yaw, tall=0.30):
         m = mat_at(f, a, d, z, yaw)
-        UP.alathe(T['pres'], [(0.001, 0), (0.034, 0.0), (0.040, 0.03), (0.040, tall * 0.55), (0.022, tall * 0.8), (0.016, tall * 0.9), (0.020, tall)], PRC[key], m, seg=14, cap_top=False)
-        UP.alathe(T['pres'], [(0.019, tall - 0.002), (0.022, tall + 0.006), (0.020, tall + 0.03), (0.001, tall + 0.032)], PRC['terracotta'], m, seg=10, cap_bottom=False)
+        UP.alathe(T['pres'], [(0.034, 0.0), (0.040, 0.03), (0.040, tall * 0.55), (0.022, tall * 0.85), (0.020, tall)], PRC[key], m, seg=8, cap_top=False, cap_bottom=False)
+        UP.alathe(T['pres'], [(0.019, tall - 0.002), (0.022, tall + 0.006), (0.020, tall + 0.03), (0.001, tall + 0.032)], PRC['terracotta'], m, seg=8, cap_bottom=False)
 
     def pot(T, f, a, d, z, key, yaw, s=1.0):
         m = mat_at(f, a, d, z, yaw)
-        UP.alathe(T['pres'], [(0.001, 0), (0.05 * s, 0.0), (0.07 * s, 0.07 * s), (0.075 * s, 0.13 * s), (0.05 * s, 0.19 * s), (0.04 * s, 0.21 * s), (0.05 * s, 0.225 * s)],
-                  PRC[key], m, seg=18, cap_top=False)
+        UP.alathe(T['pres'], [(0.05 * s, 0.0), (0.072 * s, 0.07 * s), (0.075 * s, 0.13 * s), (0.05 * s, 0.19 * s), (0.04 * s, 0.21 * s), (0.05 * s, 0.225 * s)],
+                  PRC[key], m, seg=10, cap_top=False, cap_bottom=False)
 
     def tin(T, f, a, d, z, key, yaw):
         m = mat_at(f, a, d, z, yaw)
-        UP.alathe(T['pres'], [(0.001, 0), (0.05, 0.0), (0.052, 0.01), (0.052, 0.13), (0.05, 0.14), (0.001, 0.14)], PRC[key], m, seg=16)
+        UP.alathe(T['pres'], [(0.05, 0.0), (0.052, 0.01), (0.052, 0.13), (0.05, 0.14), (0.001, 0.14)], PRC[key], m, seg=10, cap_bottom=False)
 
     def teapot(T, f, a, d, z, key, yaw):
         m = mat_at(f, a, d, z, yaw)
-        UP.alathe(T['pres'], [(0.001, 0.0), (0.05, 0.0), (0.075, 0.04), (0.08, 0.08), (0.065, 0.12), (0.045, 0.135), (0.03, 0.14), (0.034, 0.15), (0.001, 0.16)], PRC[key], m, seg=18)
+        UP.alathe(T['pres'], [(0.001, 0.0), (0.05, 0.0), (0.075, 0.04), (0.08, 0.08), (0.065, 0.12), (0.045, 0.135), (0.03, 0.14), (0.034, 0.15), (0.001, 0.16)], PRC[key], m, seg=12)
         sp = bmesh.new()                                         # spout
         sol.lathe(sp, [(0.014, 0.0), (0.020, 0.03), (0.012, 0.09), (0.008, 0.12)], (0, 0, 0), seg=8, cap_top=False, cap_bottom=False)
         UP.uv_const(sp, (0.5, 0.5))
@@ -226,7 +226,7 @@ def main():
     def plate(T, f, a, d, z, key, tilt_deg=14):
         """a dinner plate standing on its rim against the back rail, face forward."""
         tmp = bmesh.new()
-        sol.lathe(tmp, [(0.001, 0.0), (0.075, 0.0), (0.112, 0.012), (0.118, 0.022), (0.108, 0.022), (0.075, 0.008), (0.001, 0.008)], (0, 0, 0), seg=26)
+        sol.lathe(tmp, [(0.001, 0.0), (0.075, 0.0), (0.112, 0.012), (0.118, 0.022), (0.108, 0.022), (0.075, 0.008), (0.001, 0.008)], (0, 0, 0), seg=16)
         uvl = tmp.loops.layers.uv.active
         for fc in tmp.faces:
             for loop in fc.loops:
@@ -299,11 +299,11 @@ def main():
             for k in (1, 2):
                 zs = zb + k * h / 3
                 f.box(T['wood'], a0 + 0.04, a1 - 0.04, 0.0, depth - 0.04, zs, zs + 0.02, oak)
-            for k in range(2):
+            for k in range(2 if spec['idx'] % 3 == 0 else 0):                                   # contents only where a door stands ajar
                 zs = zb + k * h / 3 + 0.02 if k else zb
                 aa = a0 + 0.14
                 while aa < a1 - 0.14:
-                    jam_jar(T, f, aa, depth * 0.5, zs + (0.0 if k == 0 else 0.0), JAM[int(min(rng.range(0, 8), 7.99))], rng.range(-0.4, 0.4))
+                    jam_jar(T, f, aa, depth * 0.5, zs, JAM[int(min(rng.range(0, 8), 7.99))], rng.range(-0.4, 0.4))
                     aa += 0.17
             ajar = spec['idx'] % 3 == 0
             for k in range(n):
@@ -438,9 +438,9 @@ def main():
         UP.alathe(T['brass'], [(0.013, 0.0), (0.015, 0.1), (0.012, 0.3), (0.012, 0.4)], brass, Matrix.Translation(f.p(0, 0.0, z_c)) @ Matrix.Rotation(math.radians(-90), 4, 'Y'), seg=8)
         c = f.p(0, 0.43, z_c)
         m = Matrix.Translation(c)
-        UP.alathe(T['brass'], [(0.001, -0.16), (0.05, -0.16), (0.068, -0.14), (0.052, -0.11), (0.001, -0.11)], brass, m, seg=16)
-        UP.alathe(T['glow'], [(0.044, -0.11), (0.075, -0.06), (0.082, 0.02), (0.068, 0.10), (0.024, 0.16)], FULL, m, seg=16, cap_bottom=False)
-        UP.alathe(T['brass'], [(0.001, 0.15), (0.095, 0.15), (0.07, 0.19), (0.026, 0.24), (0.034, 0.255), (0.001, 0.265)], brass, m, seg=16)
+        UP.alathe(T['brass'], [(0.001, -0.16), (0.05, -0.16), (0.068, -0.14), (0.052, -0.11), (0.001, -0.11)], brass, m, seg=10)
+        UP.alathe(T['glow'], [(0.044, -0.11), (0.075, -0.06), (0.082, 0.02), (0.068, 0.10), (0.024, 0.16)], FULL, m, seg=10, cap_bottom=False)
+        UP.alathe(T['brass'], [(0.001, 0.15), (0.095, 0.15), (0.07, 0.19), (0.026, 0.24), (0.034, 0.255), (0.001, 0.265)], brass, m, seg=10)
         for k in range(4):
             a_ = k * math.pi / 2 + math.pi / 4
             UP.alathe(T['brass'], [(0.004, -0.11), (0.004, 0.15)], brass, Matrix.Translation(c + Vector((math.cos(a_) * 0.078, math.sin(a_) * 0.078, 0.0))), seg=5)
@@ -528,7 +528,7 @@ def main():
             continue
         o = mk.bm_to_object(bm, 'S3_WellSegment_' + key.capitalize(), M[key])
         objs.append(o)
-    print('[build_ch1_s3_well] triangles:', sum(mk.triangle_count(o) for o in objs), 'objects:', len(objs))
+    print('[build_ch1_s3_well] triangles:', sum(mk.triangle_count(o) for o in objs), 'objects:', len(objs), {o.name.replace('S3_WellSegment_', ''): mk.triangle_count(o) for o in objs})
 
     for name, loc, props in (('SPAWN_S3', V(0, 0, 6.0), {'targetState': 'S3_FALL'}),):
         e = bpy.data.objects.new(name, None)
