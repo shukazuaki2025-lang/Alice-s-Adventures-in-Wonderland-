@@ -1,0 +1,77 @@
+import { GameManager } from './game/GameManager';
+import { UIManager } from './ui/UIManager';
+import { AudioManager } from './audio/AudioManager';
+import { loadI18nData } from './ui/i18n';
+import { registerTestHarness } from './testing/testHarness';
+import { GameStateSnapshot } from './core/types';
+
+console.log('[Alice: Down the Rabbit-Hole] Initializing game runtime...');
+
+declare global {
+  interface Window {
+    __game?: {
+      goto: (state: string) => void;
+      setFlag: (flag: string, value: unknown) => void;
+      getFlag: (flag: string) => unknown;
+      addItem: (itemId: string) => void;
+      setScale: (scale: number) => void;
+      getState: () => GameStateSnapshot;
+      triggerInteraction: (id: string) => void;
+    };
+  }
+}
+
+class AliceGameBootstrap {
+  private canvas: HTMLCanvasElement;
+  private gameManager: GameManager | null = null;
+  private uiManager: UIManager | null = null;
+  private audioManager: AudioManager | null = null;
+
+  public getUIManager(): UIManager | null {
+    return this.uiManager;
+  }
+  public getAudioManager(): AudioManager | null {
+    return this.audioManager;
+  }
+
+  constructor() {
+    const canvasEl = document.getElementById('render-canvas') as HTMLCanvasElement;
+    if (!canvasEl) {
+      throw new Error('Canvas element #render-canvas not found in DOM');
+    }
+    this.canvas = canvasEl;
+    this.init();
+  }
+
+  private async init(): Promise<void> {
+    try {
+      await loadI18nData('/assets/i18n/ch1.json');
+    } catch (e) {
+      console.warn('[Bootstrap] Using embedded i18n data due to fetch error:', e);
+    }
+
+    this.uiManager = new UIManager();
+    this.audioManager = new AudioManager();
+
+    this.gameManager = new GameManager(this.canvas);
+    registerTestHarness(this.gameManager);
+
+    await this.gameManager.init();
+
+    // Play title music (M1)
+    this.audioManager.playMusic('M1');
+
+    // Fade out loading screen
+    const loader = document.getElementById('loading-screen');
+    if (loader) {
+      setTimeout(() => {
+        loader.style.opacity = '0';
+        setTimeout(() => loader.remove(), 800);
+      }, 500);
+    }
+  }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  new AliceGameBootstrap();
+});

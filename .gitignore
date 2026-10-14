@@ -1,0 +1,13 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+
+# Test output & artifacts
+test-results/
+playwright-report/
+
+# OS / Editor files
+.DS_Store
+*.log

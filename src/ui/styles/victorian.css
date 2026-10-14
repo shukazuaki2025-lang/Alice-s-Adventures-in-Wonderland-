@@ -1,0 +1,512 @@
+/* ==========================================================================
+   Victorian Picture-Book UI Overlay Stylesheet
+   Alice's Adventures in Wonderland — Chapter I: Down the Rabbit-Hole
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Noto+Serif+SC:wght@400;600;700&family=LXGW+WenKai:wght@400;700&display=swap');
+
+:root {
+  --paper-bg: #F7F3EA;
+  --paper-dark: #EADCB9;
+  --paper-card: #F3E9D2;
+  --ink-dark: #2B2420;
+  --ink-muted: #5C4F48;
+  --gold-accent: #C9A24A;
+  --gold-dark: #9A772B;
+  --wine-red: #7A2E3A;
+  --border-ink: 2px solid #2B2420;
+  --font-en: "IM Fell English", Georgia, serif;
+  --font-zh: "Noto Serif SC", "LXGW WenKai", "Songti SC", serif;
+}
+
+/* Global Reset for UI Root */
+.victorian-ui {
+  font-family: var(--font-en), var(--font-zh);
+  color: var(--ink-dark);
+  box-sizing: border-box;
+}
+
+/* Common Parchment Card styling with double ink border */
+.parchment-card {
+  background-color: var(--paper-card);
+  background-image: radial-gradient(#E8D5B5 1px, transparent 0);
+  background-size: 16px 16px;
+  border: 3px solid var(--ink-dark);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), inset 0 0 10px rgba(92, 79, 72, 0.2);
+  border-radius: 4px;
+  padding: 1rem;
+  position: relative;
+}
+
+.parchment-card::before {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  right: 3px;
+  bottom: 3px;
+  border: 1px solid var(--ink-muted);
+  pointer-events: none;
+}
+
+/* Victorian Drop Capital */
+.drop-cap {
+  float: left;
+  font-size: 3rem;
+  line-height: 0.8;
+  padding-top: 4px;
+  padding-right: 8px;
+  padding-left: 2px;
+  font-family: var(--font-en);
+  font-weight: bold;
+  color: var(--wine-red);
+}
+
+/* Victorian Button */
+.victorian-btn {
+  background: linear-gradient(180deg, #FAF6EE 0%, #E6D9C3 100%);
+  border: 2px solid var(--ink-dark);
+  color: var(--ink-dark);
+  padding: 0.6rem 1.4rem;
+  font-family: inherit;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 3px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.victorian-btn:hover {
+  background: linear-gradient(180deg, #FFF9F0 0%, #D8C3A8 100%);
+  border-color: var(--wine-red);
+  color: var(--wine-red);
+  transform: translateY(-1px);
+}
+
+.victorian-btn:active {
+  transform: translateY(1px);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
+/* 1. Title / Start Screen (Book Cover) */
+.ui-title-screen {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle, #3A2F2B 0%, #171210 100%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 2rem;
+}
+
+.ui-title-book-cover {
+  width: min(90vw, 680px);
+  background-color: var(--paper-bg);
+  border: 6px double var(--ink-dark);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.8);
+  padding: 3rem 2rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.ui-title-header h1 {
+  font-size: 2.2rem;
+  letter-spacing: 0.05em;
+  color: var(--wine-red);
+  margin-bottom: 0.5rem;
+  border-bottom: 2px solid var(--gold-accent);
+  padding-bottom: 0.5rem;
+}
+
+.ui-title-header h2 {
+  font-size: 1.3rem;
+  font-style: italic;
+  color: var(--ink-muted);
+}
+
+.ui-title-quote {
+  font-style: italic;
+  font-size: 1.1rem;
+  color: var(--gold-dark);
+  margin: 0.5rem 0;
+}
+
+.ui-title-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+  max-width: 280px;
+}
+
+.ui-lang-selector {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.ui-lang-btn {
+  padding: 0.3rem 0.8rem;
+  font-size: 0.9rem;
+  border: 1px solid var(--ink-dark);
+  background: var(--paper-dark);
+  cursor: pointer;
+}
+
+.ui-lang-btn.active {
+  background: var(--wine-red);
+  color: white;
+  border-color: var(--wine-red);
+}
+
+/* 2. Chapter Header Banner */
+.ui-chapter-header {
+  position: absolute;
+  top: 10%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(90vw, 540px);
+  text-align: center;
+  z-index: 500;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 1s ease;
+}
+
+.ui-chapter-header.visible {
+  opacity: 1;
+}
+
+/* 3. Subtitle / Dialogue Box */
+.ui-subtitle-box {
+  position: absolute;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(92vw, 760px);
+  z-index: 400;
+  transition: opacity 0.3s ease;
+}
+
+.ui-subtitle-content {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+}
+
+.ui-speaker-avatar {
+  width: 64px;
+  height: 64px;
+  border: 2px solid var(--ink-dark);
+  border-radius: 50%;
+  background-color: var(--paper-dark);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.8rem;
+  flex-shrink: 0;
+  box-shadow: inset 0 0 5px rgba(0,0,0,0.2);
+}
+
+.ui-subtitle-text-container {
+  flex: 1;
+}
+
+.ui-speaker-name {
+  font-weight: bold;
+  font-size: 1rem;
+  color: var(--wine-red);
+  margin-bottom: 0.3rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.ui-subtitle-text {
+  font-size: 1.2rem;
+  line-height: 1.4;
+  min-height: 2.8em;
+}
+
+.ui-subtitle-text.think {
+  font-style: italic;
+  color: var(--ink-muted);
+}
+
+/* 4. 6-slot Inventory Bar */
+.ui-inventory-bar {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  display: flex;
+  gap: 8px;
+  z-index: 300;
+}
+
+.ui-inventory-slot {
+  width: 54px;
+  height: 54px;
+  background: var(--paper-card);
+  border: 2px solid var(--ink-dark);
+  border-radius: 4px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  position: relative;
+  transition: transform 0.15s ease;
+}
+
+.ui-inventory-slot:hover {
+  transform: translateY(-2px);
+  border-color: var(--wine-red);
+}
+
+.ui-inventory-slot.empty {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.ui-inventory-slot-icon {
+  font-size: 1.8rem;
+}
+
+/* 5. 3D Item Inspector Modal */
+.ui-inspect-modal {
+  position: absolute;
+  inset: 0;
+  background: rgba(23, 18, 16, 0.85);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 800;
+  backdrop-filter: blur(4px);
+}
+
+.ui-inspect-container {
+  width: min(90vw, 560px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.ui-inspect-canvas-wrapper {
+  width: 280px;
+  height: 280px;
+  border: 3px solid var(--ink-dark);
+  background: radial-gradient(circle, #FAF6EE 0%, #D8C3A8 100%);
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 5rem;
+  box-shadow: inset 0 0 15px rgba(0,0,0,0.3);
+}
+
+.ui-inspect-hint {
+  font-size: 0.9rem;
+  font-style: italic;
+  color: var(--ink-muted);
+}
+
+.ui-inspect-checklist {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.95rem;
+  margin: 0.5rem 0;
+}
+
+.ui-check-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.ui-check-item.done {
+  color: green;
+}
+
+/* 6. Interaction Prompt HUD */
+.ui-interact-prompt {
+  position: absolute;
+  top: 60%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 350;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.ui-prompt-badge {
+  background-color: var(--paper-card);
+  border: 2px solid var(--ink-dark);
+  padding: 0.5rem 1.2rem;
+  border-radius: 20px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+  font-weight: bold;
+  font-size: 1.1rem;
+  color: var(--wine-red);
+}
+
+/* 7. Size Indicator */
+.ui-size-indicator {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  z-index: 300;
+  font-size: 0.95rem;
+}
+
+.ui-size-ribbon {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.8rem;
+  background: var(--paper-card);
+  border: 2px solid var(--ink-dark);
+  border-radius: 3px;
+}
+
+/* 8. Curiosity Note Popup */
+.ui-curiosity-modal {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 850;
+}
+
+.ui-curiosity-content {
+  width: min(90vw, 520px);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.ui-curiosity-title {
+  color: var(--wine-red);
+  font-size: 1.4rem;
+  border-bottom: 2px dashed var(--gold-accent);
+  padding-bottom: 0.4rem;
+}
+
+.ui-curiosity-fact {
+  background: var(--paper-dark);
+  border-left: 3px solid var(--gold-accent);
+  padding: 0.6rem 0.8rem;
+  font-style: italic;
+  font-size: 0.95rem;
+}
+
+/* 9. Stuck Hint Toast */
+.ui-stuck-toast {
+  position: absolute;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 450;
+  width: min(90vw, 480px);
+  text-align: center;
+  border-color: var(--gold-dark);
+}
+
+/* 10. Pause Menu & Settings */
+.ui-pause-modal {
+  position: absolute;
+  inset: 0;
+  background: rgba(23, 18, 16, 0.85);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 900;
+}
+
+.ui-pause-card {
+  width: min(90vw, 460px);
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  align-items: center;
+}
+
+.ui-slider-row {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 1rem;
+}
+
+.ui-slider-row input[type="range"] {
+  accent-color: var(--wine-red);
+  width: 180px;
+}
+
+/* 11. Cutscene Skip Indicator */
+.ui-cutscene-skip {
+  position: absolute;
+  bottom: 25px;
+  left: 25px;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  background: rgba(247, 243, 234, 0.9);
+  border: 2px solid var(--ink-dark);
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.ui-skip-progress-bar {
+  width: 80px;
+  height: 8px;
+  border: 1px solid var(--ink-dark);
+  background: var(--paper-dark);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.ui-skip-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--wine-red);
+  transition: width 0.1s linear;
+}
+
+/* 12. Chapter Complete Card */
+.ui-chapter-complete-modal {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle, #3A2F2B 0%, #171210 100%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 950;
+}
+
+.ui-complete-card {
+  width: min(90vw, 540px);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  align-items: center;
+}
+
+/* Utilities */
+.hidden {
+  display: none !important;
+}

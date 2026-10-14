@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Alice's Adventures in Wonderland — Chapter I: Down the Rabbit-Hole</title>
+    <meta name="description" content="A 3D Victorian picture-book interactive narrative game based on Lewis Carroll's 1865 masterpiece." />
+    <style>
+      :root {
+        --paper-bg: #F7F3EA;
+        --ink-dark: #2B2420;
+        --gold-accent: #C9A24A;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        user-select: none;
+        -webkit-user-select: none;
+      }
+      html, body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background-color: var(--paper-bg);
+        color: var(--ink-dark);
+        font-family: "IM Fell English", "Noto Serif SC", Georgia, serif;
+      }
+      #game-container {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        background-color: #12100E;
+      }
+      #render-canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: block;
+        outline: none;
+      }
+      #ui-root {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 10;
+      }
+      #ui-root > * {
+        pointer-events: auto;
+      }
+      .loading-screen {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        background: #F7F3EA;
+        color: #2B2420;
+        z-index: 100;
+        transition: opacity 0.8s ease;
+      }
+      .loading-title {
+        font-size: 2rem;
+        letter-spacing: 0.1em;
+        margin-bottom: 1rem;
+        text-align: center;
+      }
+      .loading-subtitle {
+        font-size: 1.1rem;
+        font-style: italic;
+        opacity: 0.8;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="game-container">
+      <canvas id="render-canvas"></canvas>
+      <div id="ui-root">
+        <div id="loading-screen" class="loading-screen">
+          <h1 class="loading-title">Alice's Adventures in Wonderland</h1>
+          <p class="loading-subtitle">Chapter I. Down the Rabbit-Hole</p>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

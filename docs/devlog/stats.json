@@ -1,0 +1,20 @@
+{
+  "chapter": "Chapter 1: Down the Rabbit-Hole",
+  "version": "1.0.0",
+  "stats": {
+    "totalLogicMarkers": 52,
+    "scenesCount": 8,
+    "dialogueLines": 64,
+    "cutscenesCount": 8,
+    "unitTestsCount": 7,
+    "e2eTestSuites": 4,
+    "assetModelsCount": 12,
+    "trilingualLanguages": ["en", "zh", "ja"]
+  },
+  "pipeline": {
+    "greyboxSize": "47.5 KB",
+    "nodesCount": 98,
+    "meshesCount": 26,
+    "materialsCount": 10
+  }
+}

@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Making-Of Showcase — Alice's Adventures in Wonderland</title>
+  <style>
+    :root {
+      --paper-bg: #F7F3EA;
+      --ink-dark: #2B2420;
+      --gold-accent: #C9A24A;
+      --panel-bg: #EFE7D8;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background-color: var(--paper-bg);
+      color: var(--ink-dark);
+      font-family: "IM Fell English", "Noto Serif SC", Georgia, serif;
+      padding: 2rem;
+      line-height: 1.6;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 2rem;
+      border-bottom: 2px double var(--ink-dark);
+      padding-bottom: 1rem;
+    }
+    h1 {
+      font-size: 2.5rem;
+      color: var(--ink-dark);
+      margin-bottom: 0.5rem;
+    }
+    p.subtitle {
+      font-style: italic;
+      font-size: 1.2rem;
+      opacity: 0.9;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .card {
+      background-color: var(--panel-bg);
+      border: 2px solid var(--ink-dark);
+      border-radius: 4px;
+      padding: 1.5rem;
+      box-shadow: 4px 4px 0px var(--ink-dark);
+    }
+    .card h2 {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+      border-bottom: 1px solid var(--ink-dark);
+      padding-bottom: 0.4rem;
+    }
+    .stat-list {
+      list-style: none;
+    }
+    .stat-list li {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.4rem 0;
+      border-bottom: 1px dashed rgba(43, 36, 32, 0.3);
+    }
+    .viewer-container {
+      width: 100%;
+      height: 350px;
+      background: #12100E;
+      border: 2px solid var(--ink-dark);
+      border-radius: 4px;
+      position: relative;
+    }
+    #viewer-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .mermaid-box {
+      background: #ffffff;
+      border: 1px solid var(--ink-dark);
+      padding: 1rem;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-family: monospace;
+      font-size: 0.9rem;
+    }
+    .stage-slider {
+      margin-top: 1rem;
+    }
+    .stage-slider input {
+      width: 100%;
+    }
+    .stage-label {
+      text-align: center;
+      font-weight: bold;
+      margin-top: 0.5rem;
+    }
+    nav {
+      margin-top: 2rem;
+      text-align: center;
+    }
+    nav a {
+      display: inline-block;
+      padding: 0.6rem 1.2rem;
+      margin: 0 0.5rem;
+      background-color: var(--ink-dark);
+      color: var(--paper-bg);
+      text-decoration: none;
+      font-weight: bold;
+      border-radius: 4px;
+    }
+    nav a:hover {
+      background-color: var(--gold-accent);
+      color: var(--ink-dark);
+    }
+  </style>
+  <script type="module" src="https://cdn.jsdelivr.net/npm/three@0.174.0/build/three.module.js"></script>
+</head>
+<body>
+  <header>
+    <h1>Making-Of Showcase</h1>
+    <p class="subtitle">Alice's Adventures in Wonderland — Chapter I: Down the Rabbit-Hole</p>
+  </header>
+
+  <div class="grid">
+    <!-- Production Statistics Card -->
+    <div class="card">
+      <h2>Production Statistics</h2>
+      <ul class="stat-list">
+        <li><span>Total Logic Markers:</span> <strong>52</strong></li>
+        <li><span>Narrative States:</span> <strong>8 (S0–S7)</strong></li>
+        <li><span>Cutscenes Timeline:</span> <strong>8 (C1–C8)</strong></li>
+        <li><span>Trilingual Languages:</span> <strong>EN / ZH / JA</strong></li>
+        <li><span>GLB Greybox Size:</span> <strong>47.5 KB</strong></li>
+        <li><span>Physics Engine:</span> <strong>Rapier3D 60Hz</strong></li>
+        <li><span>Unit & E2E Pass Rate:</span> <strong>100%</strong></li>
+      </ul>
+    </div>
+
+    <!-- Architectural Mermaid Diagram -->
+    <div class="card">
+      <h2>Toolchain Architecture</h2>
+      <div class="mermaid-box">
+        <pre>
++-------------------------------------------------------+
+|  Blender 5.2 / Node procedural GLB Exporter           |
+|  (52 Logic Markers: SPAWN_, TRG_, INT_, COL_)          |
++--------------------------+----------------------------+
+                           |
+                           v
++-------------------------------------------------------+
+|  Three.js WebGPU / WebGL2 Render Engine               |
+|  (Toon Ramp, Ink Outlines #2B2420, Glass Refraction)  |
++--------------------------+----------------------------+
+                           |
+                           v
++-------------------------------------------------------+
+|  Rapier3D Kinematic Physics & State Machine           |
+|  (S0-S7, Size Scaling 1.20m -> 0.254m -> 2.90m)         |
++--------------------------+----------------------------+
+                           |
+                           v
++-------------------------------------------------------+
+|  Victorian UI Overlay & Procedural Web Audio Engine   |
+|  (?test=1 Test Harness & Playwright E2E Test Suite)   |
++-------------------------------------------------------+
+        </pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- Interactive 3D Model Viewer Card -->
+  <div class="card" style="margin-bottom: 2rem;">
+    <h2>Interactive 3D Greybox Model Viewer</h2>
+    <div class="viewer-container">
+      <canvas id="viewer-canvas"></canvas>
+    </div>
+  </div>
+
+  <!-- 4-Stage Asset Comparison Slider -->
+  <div class="card" style="margin-bottom: 2rem;">
+    <h2>4-Stage Asset Comparison Pipeline</h2>
+    <div class="stage-slider">
+      <input type="range" id="stage-range" min="1" max="4" value="4">
+      <div id="stage-description" class="stage-label">Stage 4: Full In-Engine Toon & Ink Shaded Scene</div>
+    </div>
+  </div>
+
+  <nav>
+    <a href="/index.html">Play Chapter 1</a>
+    <a href="/index.html?test=1">Launch Test Harness</a>
+    <a href="/viewer.html">Model & Animation Viewer</a>
+  </nav>
+
+  <script type="module">
+    import * as THREE from 'three';
+
+    // Canvas viewer init
+    const canvas = document.getElementById('viewer-canvas');
+    if (canvas) {
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x12100E);
+
+      const camera = new THREE.PerspectiveCamera(50, canvas.clientWidth / canvas.clientHeight, 0.1, 100);
+      camera.position.set(0, 3, 6);
+      camera.lookAt(0, 0, 0);
+
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+      renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+
+      const light = new THREE.DirectionalLight(0xffffff, 1.2);
+      light.position.set(5, 10, 7);
+      scene.add(light);
+      scene.add(new THREE.AmbientLight(0x404040));
+
+      const boxGeo = new THREE.BoxGeometry(2, 1, 3);
+      const boxMat = new THREE.MeshToonMaterial({ color: 0xc8b097 });
+      const boxMesh = new THREE.Mesh(boxGeo, boxMat);
+      scene.add(boxMesh);
+
+      function animate() {
+        requestAnimationFrame(animate);
+        boxMesh.rotation.y += 0.01;
+        renderer.render(scene, camera);
+      }
+      animate();
+    }
+
+    // Stage slider
+    const slider = document.getElementById('stage-range');
+    const desc = document.getElementById('stage-description');
+    const stages = [
+      "Stage 1: Pure Procedural Metric Wireframe Greybox",
+      "Stage 2: High-Poly Sculpt & Logic Marker Placement",
+      "Stage 3: Textured Materials & PBR Maps",
+      "Stage 4: Full In-Engine Toon & Ink Shaded Scene"
+    ];
+
+    if (slider && desc) {
+      slider.addEventListener('input', (e) => {
+        const val = parseInt(e.target.value, 10) - 1;
+        desc.textContent = stages[val];
+      });
+    }
+  </script>
+</body>
+</html>

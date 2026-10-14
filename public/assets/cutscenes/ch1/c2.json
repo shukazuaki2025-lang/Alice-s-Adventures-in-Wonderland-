@@ -1,0 +1,53 @@
+{
+  "id": "C2",
+  "title": "Rabbit Hole Jump",
+  "duration": 6,
+  "events": [
+    {
+      "time": 0,
+      "type": "animation",
+      "target": "chr_alice",
+      "payload": {
+        "animation": "Alice_CrawlIn"
+      }
+    },
+    {
+      "time": 2.5,
+      "type": "camera",
+      "target": "tunnel",
+      "payload": {
+        "mode": "TUNNEL_INTERIOR"
+      }
+    },
+    {
+      "time": 4,
+      "type": "camera",
+      "target": "Alice",
+      "payload": {
+        "mode": "TILT_UP_SILHOUETTE"
+      }
+    },
+    {
+      "time": 5,
+      "type": "dialogue",
+      "target": "narrator",
+      "payload": {
+        "lineId": "S2_JUMP",
+        "text": "In another moment down went Alice after it, never once considering how in the world she was to get out again.",
+        "zh": "紧接着爱丽丝也跳了进去，根本没想过以后怎么出来。"
+      }
+    },
+    {
+      "time": 6,
+      "type": "state",
+      "target": "game",
+      "payload": {
+        "goto": "S3_FALL"
+      }
+    }
+  ],
+  "terminalFlags": {
+    "chaseStarted": true,
+    "rabbitInHole": true
+  }
+}

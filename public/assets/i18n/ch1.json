@@ -1,0 +1,867 @@
+{
+  "meta": {
+    "chapter": "Chapter I: Down the Rabbit-Hole",
+    "version": "1.0.0",
+    "source": "Lewis Carroll, 1865 (Public Domain)"
+  },
+  "dialogues": {
+    "S0_TITLE_NARR_1": {
+      "id": "S0_TITLE_NARR_1",
+      "scene": "S0",
+      "speaker": "narrator",
+      "type": "narr",
+      "en": "Alice was beginning to get very tired of sitting by her sister on the bank,",
+      "zh": "那天下午很热。爱丽丝挨着姐姐坐在河岸上，",
+      "ja": "アリスは姉の傍らで堤防に座っているのにすっかり飽きてしまい、",
+      "dur": 3.5
+    },
+    "S0_TITLE_NARR_2": {
+      "id": "S0_TITLE_NARR_2",
+      "scene": "S0",
+      "speaker": "narrator",
+      "type": "narr",
+      "en": "and of having nothing to do.",
+      "zh": "什么事也没有，开始觉得没意思了。",
+      "ja": "何もすることがないことに嫌気がさしていました。",
+      "dur": 2.5
+    },
+    "S1_PEEK_BOOK": {
+      "id": "S1_PEEK_BOOK",
+      "scene": "S1",
+      "speaker": "alice",
+      "type": "think",
+      "en": "and what is the use of a book, without pictures or conversations?",
+      "zh": "一本书，又没有图画，又没有对话，有什么用呢？",
+      "ja": "絵も会話もない本なんて、何の役に立つのかしら？",
+      "dur": 3.0
+    },
+    "S1_IDLE": {
+      "id": "S1_IDLE",
+      "scene": "S1",
+      "speaker": "alice",
+      "type": "think",
+      "en": "Would the pleasure of making a daisy-chain be worth the trouble of getting up and picking the daisies?",
+      "zh": "编个雏菊花环吧……可是值得为这个站起来去摘花吗？",
+      "ja": "デイジーの首飾りを作る楽しさは、起きて花を摘む手間が見合うかしら？",
+      "dur": 3.5
+    },
+    "S1_RABBIT_RUN": {
+      "id": "S1_RABBIT_RUN",
+      "scene": "S1",
+      "speaker": "rabbit",
+      "type": "say",
+      "en": "Oh dear! Oh dear! I shall be late!",
+      "zh": "天哪！天哪！我要迟到了！",
+      "ja": "大変だ！大変だ！遅刻してしまう！",
+      "dur": 2.0,
+      "audioSfx": "sfx_watch_open"
+    },
+    "S1_RABBIT_WATCH": {
+      "id": "S1_RABBIT_WATCH",
+      "scene": "S1",
+      "speaker": "alice",
+      "type": "think",
+      "en": "A rabbit with a waistcoat-pocket, and a watch to take out of it!",
+      "zh": "兔子穿着背心，还从口袋里掏出一块表？",
+      "ja": "チョッキのポケットがあって、そこから時計を取り出すウサギだなんて！",
+      "dur": 2.8
+    },
+    "S1_OBJECTIVE": {
+      "id": "S1_OBJECTIVE",
+      "scene": "S1",
+      "speaker": "system",
+      "type": "ui",
+      "en": "Follow the White Rabbit",
+      "zh": "跟上白兔",
+      "ja": "白ウサギの後を追う",
+      "dur": 3.0
+    },
+    "S2_JUMP": {
+      "id": "S2_JUMP",
+      "scene": "S2",
+      "speaker": "narrator",
+      "type": "narr",
+      "en": "In another moment down went Alice after it, never once considering how in the world she was to get out again.",
+      "zh": "她一下子就跟着钻了进去，压根没想过待会儿要怎么出来。",
+      "ja": "アリスはすぐにその後を追って飛び込み、どうやって出るかなど全く考えませんでした。",
+      "dur": 4.0,
+      "audioSfx": "sfx_hole_jump"
+    },
+    "S3_START": {
+      "id": "S3_START",
+      "scene": "S3",
+      "speaker": "narrator",
+      "type": "narr",
+      "en": "Either the well was very deep, or she fell very slowly, for she had plenty of time as she went down to look about her.",
+      "zh": "要么是井太深，要么是掉得太慢，反正她有时间东张西望。",
+      "ja": "井戸がとても深かったのか、落下のスピードが遅かったのか、周りを見回す時間が十分にありました。",
+      "dur": 4.5
+    },
+    "S3_JAR_PICK": {
+      "id": "S3_JAR_PICK",
+      "scene": "S3",
+      "speaker": "alice",
+      "type": "think",
+      "en": "ORANGE MARMALADE... empty!",
+      "zh": "“橘子酱”！……空的。",
+      "ja": "「オレンジマーマレード」……空っぽだわ！",
+      "dur": 2.0,
+      "audioSfx": "sfx_jar_pick"
+    },
+    "S3_JAR_DROP_TRY": {
+      "id": "S3_JAR_DROP_TRY",
+      "scene": "S3",
+      "speaker": "alice",
+      "type": "think",
+      "en": "I mustn't drop it. I might kill somebody underneath!",
+      "zh": "不能扔，砸到下面的人怎么办。",
+      "ja": "落としたら大変。誰かに当たってしまうかもしれないわ！",
+      "dur": 2.5
+    },
+    "S3_JAR_STORED": {
+      "id": "S3_JAR_STORED",
+      "scene": "S3",
+      "speaker": "alice",
+      "type": "think",
+      "en": "There!",
+      "zh": "好啦，就放这儿。",
+      "ja": "よし、ここに入れておきましょう。",
+      "dur": 1.5,
+      "audioSfx": "sfx_jar_place"
+    },
+    "S3_THOUGHT_1": {
+      "id": "S3_THOUGHT_1",
+      "scene": "S3",
+      "speaker": "alice",
+      "type": "think",
+      "en": "after such a fall as this, I shall think nothing of tumbling down stairs!",
+      "zh": "摔过这么一跤，以后滚下楼梯我都不当回事了！",
+      "ja": "こんなに落ちたら、階段から転げ落ちるなんて何とも思わないわ！",
+      "dur": 3.2,
+      "audioSfx": "sfx_thought_pop"
+    },
+    "S3_THOUGHT_2": {
+      "id": "S3_THOUGHT_2",
+      "scene": "S3",
+      "speaker": "alice",
+      "type": "say",
+      "en": "I wonder how many miles I've fallen by this time? I must be getting somewhere near the centre of the earth. Let me see: that would be four thousand miles down, I think—",
+      "zh": "我掉了多少英里了？快到地心了吧，大概四千英里？",
+      "ja": "今までに何マイル落ちたのかしら？地球の中心の近くまで来たはずだわ。たしか四千マイルくらいね—",
+      "dur": 4.2,
+      "audioSfx": "sfx_thought_pop"
+    },
+    "S3_THOUGHT_3": {
+      "id": "S3_THOUGHT_3",
+      "scene": "S3",
+      "speaker": "alice",
+      "type": "say",
+      "en": "but then I wonder what Latitude or Longitude I've got to?",
+      "zh": "那现在到了什么纬度、什么经度呢？",
+      "ja": "でも、今の緯度や経度はどこかしら？",
+      "dur": 2.5,
+      "audioSfx": "sfx_thought_pop"
+    },
+    "S3_THOUGHT_4": {
+      "id": "S3_THOUGHT_4",
+      "scene": "S3",
+      "speaker": "alice",
+      "type": "say",
+      "en": "I wonder if I shall fall right through the earth! How funny it'll seem to come out among the people that walk with their heads downward! The Antipathies, I think—",
+      "zh": "会不会一直掉穿地球，掉到头朝下走路的“对头人”那边去？",
+      "ja": "地球を通り抜けて落ちちゃうかしら！頭を下にして歩く人たちのところに出たら変ね！",
+      "dur": 4.5,
+      "audioSfx": "sfx_thought_pop"
+    },
+    "S3_CURTSEY": {
+      "id": "S3_CURTSEY",
+      "scene": "S3",
+      "speaker": "narrator",
+      "type": "narr",
+      "en": "(she tried to curtsey as she spoke—fancy curtseying as you're falling through the air!)",
+      "zh": "她一边说一边试着行屈膝礼。在半空中行礼，你想想看！",
+      "ja": "（彼女はおしゃべりしながらお辞儀をしようとしました—空を落ちながらお辞儀だなんて！）",
+      "dur": 3.5
+    },
+    "S3_THOUGHT_5": {
+      "id": "S3_THOUGHT_5",
+      "scene": "S3",
+      "speaker": "alice",
+      "type": "say",
+      "en": "Dinah'll miss me very much to-night, I should think! ... Do cats eat bats? Do cats eat bats?",
+      "zh": "黛娜今晚肯定会想我的！猫吃蝙蝠吗？猫吃蝙蝠吗？",
+      "ja": "今夜ダイナは私がいなくて寂しがるわ！……ネコはコウモリを食べるかしら？",
+      "dur": 3.8,
+      "audioSfx": "sfx_thought_pop"
+    },
+    "S3_DOZE": {
+      "id": "S3_DOZE",
+      "scene": "S3",
+      "speaker": "alice",
+      "type": "say",
+      "en": "Do bats eat cats?",
+      "zh": "……蝙蝠吃猫吗？",
+      "ja": "……コウモリはネコを食べるかしら？",
+      "dur": 2.0
+    },
+    "S3_LAND": {
+      "id": "S3_LAND",
+      "scene": "S3",
+      "speaker": "narrator",
+      "type": "narr",
+      "en": "thump! thump! ... and the fall was over.",
+      "zh": "砰！砰！坠落结束了。",
+      "ja": "ドスン！ドスン！……落下は終わりました。",
+      "dur": 2.0,
+      "audioSfx": "sfx_land_thump"
+    },
+    "S4_UP": {
+      "id": "S4_UP",
+      "scene": "S4",
+      "speaker": "alice",
+      "type": "think",
+      "en": "Not a bit hurt!",
+      "zh": "一点都没摔疼！",
+      "ja": "ちっとも怪我していないわ！",
+      "dur": 1.8
+    },
+    "S4_CORNER": {
+      "id": "S4_CORNER",
+      "scene": "S4",
+      "speaker": "rabbit",
+      "type": "say",
+      "en": "Oh my ears and whiskers, how late it's getting!",
+      "zh": "哎哟，我的耳朵和胡子啊，都这么晚了！",
+      "ja": "おや僕の耳とヒゲにかけて、なんて遅くなっちまったんだ！",
+      "dur": 2.8,
+      "audioSfx": "sfx_rabbit_scurry"
+    },
+    "S4_GONE": {
+      "id": "S4_GONE",
+      "scene": "S4",
+      "speaker": "alice",
+      "type": "think",
+      "en": "Where has it gone?",
+      "zh": "咦？兔子呢？",
+      "ja": "あら？ウサギはどこへ行ったのかしら？",
+      "dur": 1.8
+    },
+    "S5_ENTER": {
+      "id": "S5_ENTER",
+      "scene": "S5",
+      "speaker": "narrator",
+      "type": "narr",
+      "en": "she found herself in a long, low hall, which was lit up by a row of lamps hanging from the roof.",
+      "zh": "她站在一间又长又矮的大厅里，屋顶垂下一排灯，把大厅照亮。",
+      "ja": "彼女は天井から吊るされたランプの列で照らされた、長くて低い広間にいました。",
+      "dur": 4.5,
+      "audioSfx": "amb_hall"
+    },
+    "S5_DOOR_LOCKED": {
+      "id": "S5_DOOR_LOCKED",
+      "scene": "S5",
+      "speaker": "alice",
+      "type": "think",
+      "en": "Locked.",
+      "zh": "锁着。",
+      "ja": "鍵がかかっているわ。",
+      "dur": 1.5,
+      "audioSfx": "sfx_door_locked"
+    },
+    "S5_DOOR_REPEAT_1": {
+      "id": "S5_DOOR_REPEAT_1",
+      "scene": "S5",
+      "speaker": "alice",
+      "type": "think",
+      "en": "This one too.",
+      "zh": "这扇也锁着。",
+      "ja": "これも鍵がかかっているわ。",
+      "dur": 1.5,
+      "audioSfx": "sfx_door_locked"
+    },
+    "S5_DOOR_REPEAT_2": {
+      "id": "S5_DOOR_REPEAT_2",
+      "scene": "S5",
+      "speaker": "alice",
+      "type": "think",
+      "en": "Still locked tight.",
+      "zh": "还是锁着的。",
+      "ja": "やっぱり開かないわ。",
+      "dur": 1.5,
+      "audioSfx": "sfx_door_locked"
+    },
+    "S5_DOOR_REPEAT_3": {
+      "id": "S5_DOOR_REPEAT_3",
+      "scene": "S5",
+      "speaker": "alice",
+      "type": "think",
+      "en": "Won't budge either.",
+      "zh": "这扇也打不开。",
+      "ja": "これもビクともしないわ。",
+      "dur": 1.5,
+      "audioSfx": "sfx_door_locked"
+    },
+    "S5_DOORS_ALL": {
+      "id": "S5_DOORS_ALL",
+      "scene": "S5",
+      "speaker": "alice",
+      "type": "think",
+      "en": "How am I ever to get out again?",
+      "zh": "这么多门，一扇都打不开，我还怎么出去？",
+      "ja": "こんなにたくさんドアがあるのに、どうやって外に出ればいいのかしら？",
+      "dur": 3.2
+    },
+    "S5_TABLE": {
+      "id": "S5_TABLE",
+      "scene": "S5",
+      "speaker": "alice",
+      "type": "think",
+      "en": "A little three-legged table, all made of solid glass... and a tiny golden key!",
+      "zh": "一张全是玻璃做的小桌子……上面有把小金钥匙！",
+      "ja": "小さな三本脚のガラスのテーブル……そして小さな金の鍵！",
+      "dur": 3.5,
+      "audioSfx": "sfx_key_pick"
+    },
+    "S5_KEY_FAIL": {
+      "id": "S5_KEY_FAIL",
+      "scene": "S5",
+      "speaker": "alice",
+      "type": "think",
+      "en": "Either the locks are too large, or the key is too small.",
+      "zh": "要么是锁太大，要么是钥匙太小。",
+      "ja": "鍵穴が大きすぎるか、鍵が小さすぎるかのどちらかね。",
+      "dur": 3.0
+    },
+    "S5_CURTAIN_FOUND": {
+      "id": "S5_CURTAIN_FOUND",
+      "scene": "S5",
+      "speaker": "alice",
+      "type": "think",
+      "en": "A low curtain! I hadn't noticed that before.",
+      "zh": "这儿有道矮帘子，刚才怎么没看见？",
+      "ja": "低いカーテンだわ！さっきは気づかなかったわ。",
+      "dur": 2.8,
+      "audioSfx": "sfx_curtain"
+    },
+    "S5_LITTLE_DOOR": {
+      "id": "S5_LITTLE_DOOR",
+      "scene": "S5",
+      "speaker": "alice",
+      "type": "think",
+      "en": "A little door, about fifteen inches high!",
+      "zh": "一扇小门，才十五英寸高！",
+      "ja": "小さなドアだわ、高さ15インチくらいね！",
+      "dur": 2.5
+    },
+    "S5_UNLOCK": {
+      "id": "S5_UNLOCK",
+      "scene": "S5",
+      "speaker": "alice",
+      "type": "think",
+      "en": "It fits!",
+      "zh": "正好合适！",
+      "ja": "ぴったりだわ！",
+      "dur": 1.5,
+      "audioSfx": "sfx_key_turn_small"
+    },
+    "S5_PEEK": {
+      "id": "S5_PEEK",
+      "scene": "S5",
+      "speaker": "narrator",
+      "type": "narr",
+      "en": "she knelt down and looked along the passage into the loveliest garden you ever saw.",
+      "zh": "她跪下来顺着通道望出去，那是你见过的最美的花园。",
+      "ja": "彼女はひざまずき、通路の向こうにある見事な庭園を覗き込みました。",
+      "dur": 4.0,
+      "audioSfx": "sfx_little_door"
+    },
+    "S5_PEEK_END_1": {
+      "id": "S5_PEEK_END_1",
+      "scene": "S5",
+      "speaker": "alice",
+      "type": "think",
+      "en": "and even if my head would go through, it would be of very little use without my shoulders.",
+      "zh": "就算头能钻过去，没有肩膀也没用啊。",
+      "ja": "頭が入ったとしても、肩が通らなければ意味がないわ。",
+      "dur": 3.0
+    },
+    "S5_PEEK_END_2": {
+      "id": "S5_PEEK_END_2",
+      "scene": "S5",
+      "speaker": "alice",
+      "type": "think",
+      "en": "Oh, how I wish I could shut up like a telescope!",
+      "zh": "真希望我能像望远镜那样缩起来！",
+      "ja": "望遠鏡みたいに縮められたらいいのに！",
+      "dur": 2.5
+    },
+    "S6_BOTTLE_APPEAR": {
+      "id": "S6_BOTTLE_APPEAR",
+      "scene": "S6",
+      "speaker": "alice",
+      "type": "say",
+      "en": "which certainly was not here before,",
+      "zh": "刚才这儿明明没有的。",
+      "ja": "さっきは絶対にここになかったのに。",
+      "dur": 2.0,
+      "audioSfx": "sfx_key_down"
+    },
+    "S6_INSPECT": {
+      "id": "S6_INSPECT",
+      "scene": "S6",
+      "speaker": "alice",
+      "type": "say",
+      "en": "No, I'll look first, and see whether it's marked 'poison' or not",
+      "zh": "“喝我”……不急，先看看有没有写“毒药”。",
+      "ja": "「私を飲んで」……まずは「毒」と書いてないか確かめなきゃ。",
+      "dur": 3.2
+    },
+    "S6_NOT_POISON": {
+      "id": "S6_NOT_POISON",
+      "scene": "S6",
+      "speaker": "alice",
+      "type": "think",
+      "en": "It isn't marked 'poison'.",
+      "zh": "没写“毒药”。那就尝一点。",
+      "ja": "「毒」とは書いてないわ。少し試してみましょう。",
+      "dur": 2.0,
+      "audioSfx": "sfx_cork"
+    },
+    "S6_DRINK_1": {
+      "id": "S6_DRINK_1",
+      "scene": "S6",
+      "speaker": "narrator",
+      "type": "narr",
+      "en": "it had, in fact, a sort of mixed flavour of cherry-tart, custard, pine-apple, roast turkey, toffee, and hot buttered toast,",
+      "zh": "味道真好，像樱桃馅饼、奶油蛋羹、菠萝、烤火鸡和热吐司。",
+      "ja": "チェリータルト、カスタード、パイナップル、ローストターキーの混ざった味でした。",
+      "dur": 4.5,
+      "audioSfx": "sfx_drink"
+    },
+    "S6_DRINK_2": {
+      "id": "S6_DRINK_2",
+      "scene": "S6",
+      "speaker": "narrator",
+      "type": "narr",
+      "en": "... she very soon finished it off.",
+      "zh": "她很快就喝光了。",
+      "ja": "……彼女はすぐに飲み干してしまいました。",
+      "dur": 2.0
+    },
+    "S6_SHRINK": {
+      "id": "S6_SHRINK",
+      "scene": "S6",
+      "speaker": "alice",
+      "type": "say",
+      "en": "What a curious feeling! I must be shutting up like a telescope.",
+      "zh": "好奇怪的感觉！我一定是像望远镜那样缩起来了。",
+      "ja": "なんて不思議な気持ち！望遠鏡みたいに縮んでいるんだわ。",
+      "dur": 3.5,
+      "audioSfx": "sfx_shrink"
+    },
+    "S6_WAIT": {
+      "id": "S6_WAIT",
+      "scene": "S6",
+      "speaker": "alice",
+      "type": "think",
+      "en": "for it might end, you know, in my going out altogether, like a candle.",
+      "zh": "会不会一直缩下去，最后像蜡烛一样灭掉？",
+      "ja": "このまま消えてしまって、ロウソクみたいになっちゃうのかしら。",
+      "dur": 3.2
+    },
+    "S6_KEY_FORGOTTEN": {
+      "id": "S6_KEY_FORGOTTEN",
+      "scene": "S6",
+      "speaker": "alice",
+      "type": "think",
+      "en": "The key! I've left it on the table!",
+      "zh": "钥匙！我把钥匙忘在桌上了！",
+      "ja": "鍵！テーブルの上に忘れてきちゃったわ！",
+      "dur": 2.2
+    },
+    "S6_CLIMB_FAIL": {
+      "id": "S6_CLIMB_FAIL",
+      "scene": "S6",
+      "speaker": "alice",
+      "type": "think",
+      "en": "Too slippery...",
+      "zh": "太滑了……",
+      "ja": "滑りやすすぎるわ……",
+      "dur": 1.5,
+      "audioSfx": "sfx_slip"
+    },
+    "S6_CRY_END": {
+      "id": "S6_CRY_END",
+      "scene": "S6",
+      "speaker": "alice",
+      "type": "say",
+      "en": "Come, there's no use in crying like that! I advise you to leave off this minute!",
+      "zh": "好啦，这么哭有什么用！我劝你马上停下来！",
+      "ja": "さあ、そんな風に泣いても無駄よ！今すぐやめなさい！",
+      "dur": 3.5,
+      "audioSfx": "sfx_sniffle"
+    },
+    "S7_BOX_OPEN": {
+      "id": "S7_BOX_OPEN",
+      "scene": "S7",
+      "speaker": "narrator",
+      "type": "narr",
+      "en": "a very small cake, on which the words 'EAT ME' were beautifully marked in currants.",
+      "zh": "盒子里有一块很小的蛋糕，上面用葡萄干拼着“吃我”。",
+      "ja": "レーズンで「私を食べて」と美しく書かれたとても小さなケーキがありました。",
+      "dur": 3.5,
+      "audioSfx": "sfx_box_open"
+    },
+    "S7_DECIDE_1": {
+      "id": "S7_DECIDE_1",
+      "scene": "S7",
+      "speaker": "alice",
+      "type": "say",
+      "en": "Well, I'll eat it, and if it makes me grow larger, I can reach the key;",
+      "zh": "好，我吃。要是变大，我就够得着钥匙；",
+      "ja": "よし、食べてみましょう。大きくなれば鍵に手が届くし；",
+      "dur": 3.0
+    },
+    "S7_DECIDE_2": {
+      "id": "S7_DECIDE_2",
+      "scene": "S7",
+      "speaker": "alice",
+      "type": "say",
+      "en": "and if it makes me grow smaller, I can creep under the door; so either way I'll get into the garden, and I don't care which happens!",
+      "zh": "要是变小，我就从门底钻过去。变成哪样我都不在乎！",
+      "ja": "小さくなればドアの下をくぐれるわ。どちらになっても庭に行けるわ！",
+      "dur": 4.0
+    },
+    "S7_EAT": {
+      "id": "S7_EAT",
+      "scene": "S7",
+      "speaker": "alice",
+      "type": "say",
+      "en": "Which way? Which way?",
+      "zh": "往哪边？往哪边？",
+      "ja": "どっちかしら？どっちかしら？",
+      "dur": 2.0,
+      "audioSfx": "sfx_nibble"
+    },
+    "S7_END": {
+      "id": "S7_END",
+      "scene": "S7",
+      "speaker": "narrator",
+      "type": "narr",
+      "en": "she remained the same size... So she set to work, and very soon finished off the cake.",
+      "zh": "什么也没发生。于是她干脆动手，很快就把蛋糕吃光了。",
+      "ja": "大きさは変わりませんでした……そこで彼女はケーキを食べ尽くしました。",
+      "dur": 3.8
+    },
+    "S7_PREVIEW_NARR": {
+      "id": "S7_PREVIEW_NARR",
+      "scene": "S7",
+      "speaker": "narrator",
+      "type": "narr",
+      "en": "Next: The Pool of Tears",
+      "zh": "下一章：眼泪池",
+      "ja": "次章：涙の池",
+      "dur": 2.0
+    },
+    "S7_PREVIEW_ALICE": {
+      "id": "S7_PREVIEW_ALICE",
+      "scene": "S7",
+      "speaker": "alice",
+      "type": "say",
+      "en": "Curiouser and curiouser!",
+      "zh": "越来越奇怪了！",
+      "ja": "ますますおかしなことになってきたわ！",
+      "dur": 2.0
+    }
+  },
+  "curiosityNotes": {
+    "ch1_note_1": {
+      "id": "ch1_note_1",
+      "title": {
+        "en": "Tumbling Down Stairs & Victorian Courage",
+        "zh": "跌落楼梯与维多利亚少女的勇气",
+        "ja": "階段からの転落とヴィクトリア朝の勇気"
+      },
+      "triggerCondition": "S3_THOUGHT_1_COLLECTED",
+      "content": {
+        "en": "On July 4, 1862, Lewis Carroll first told Alice's story during a Thames rowing trip. Alice's spirited reaction to falling reveals her plucky, independent Victorian character.",
+        "zh": "1862年7月4日的金色午后，卡罗尔在泰晤士河划船出游时为小爱丽丝口述了这个故事。面对未知坠落，爱丽丝的勇敢自嘲展现了维多利亚少女独特的独立个性。",
+        "ja": "1862年7月4日の黄金の午後、キャロルはテムズ川の舟遊びでアリス物語を初めて語りました。"
+      },
+      "historicalFact": {
+        "en": "Alice Liddell was the real-life daughter of the Dean of Christ Church, Oxford, known for her curious nature.",
+        "zh": "真实的爱丽丝·利德尔是牛津大学基督教堂学院院长的女儿，以活泼好问闻名。",
+        "ja": "アリス・リデルは実在のオックスフォード大学ディーンの娘でした。"
+      },
+      "source": "British Library Manuscript (Add MS 46700)"
+    },
+    "ch1_note_2": {
+      "id": "ch1_note_2",
+      "title": {
+        "en": "4,000 Miles to the Earth's Center",
+        "zh": "四千英里与地心下落时长",
+        "ja": "地球の中心までの4000マイル"
+      },
+      "triggerCondition": "S3_THOUGHT_2_COLLECTED",
+      "content": {
+        "en": "As an Oxford mathematics lecturer, Carroll knew Earth's radius was roughly 3,959 miles. A fall straight through Earth's center under gravity would take approximately 42 minutes!",
+        "zh": "卡罗尔是牛津大学基督教堂学院的数学讲师。地球的平均半径约为3959英里，爱丽丝随口猜测的“四千英里”非常准确；在重力作用下穿越地心的坠落时长恰好约为42分钟！",
+        "ja": "オックスフォードの数学講師として、キャロルは地球の半径が約3,959マイルであることを知っていました。"
+      },
+      "historicalFact": {
+        "en": "Number 42 was Lewis Carroll's favorite number, appearing repeatedly throughout his works.",
+        "zh": "数字42是路易斯·卡罗尔最喜欢的特别数字，在他的作品中多次神秘出现。",
+        "ja": "数字の42はルイス・キャロルの大好きな特別な数字でした。"
+      },
+      "source": "NASA Earth Fact Sheet & Oxford Archives"
+    },
+    "ch1_note_3": {
+      "id": "ch1_note_3",
+      "title": {
+        "en": "Latitude, Longitude & Victorian Rote Education",
+        "zh": "经纬度与维多利亚时代的童年教育",
+        "ja": "緯度・経度とヴィクトリア朝の教育"
+      },
+      "triggerCondition": "S3_THOUGHT_3_COLLECTED",
+      "content": {
+        "en": "Alice loved high-sounding grand words without knowing what they meant, gently satirizing the rote memorization common in Victorian girls' education.",
+        "zh": "爱丽丝虽然不知道经纬度的具体含义，但觉得它们是“了不起的字眼”。这生动讽刺了维多利亚时代儿童死记硬背枯燥学问的教育现实。",
+        "ja": "アリスは大層な言葉の意味を知らずに使っており、当時の暗記教育を優しく皮肉っています。"
+      },
+      "historicalFact": {
+        "en": "Victorian upper-class girls were taught geography and French by governesses through strict recitation.",
+        "zh": "维多利亚时代的上流社会女孩通过女家庭教师以朗诵记忆的形式学习地理与法语。",
+        "ja": "ヴィクトリア朝の少女たちは家庭教師から厳格な暗記で地理を学びました。"
+      },
+      "source": "Martin Gardner, The Annotated Alice"
+    },
+    "ch1_note_4": {
+      "id": "ch1_note_4",
+      "title": {
+        "en": "The Antipathies vs. Antipodes Pun",
+        "zh": "对头人与对跖地的语言双关",
+        "ja": "対跖地と反感のダジャレ"
+      },
+      "triggerCondition": "S3_THOUGHT_4_COLLECTED",
+      "content": {
+        "en": "Alice's famous malapropism confuses 'Antipodes' (the other side of the earth) with 'Antipathies' (hostility), creating a brilliant Carrollian pun.",
+        "zh": "爱丽丝把“对跖地”（Antipodes，地球对面脚对脚的人）口误说成了“反感”（Antipathies）。中文巧妙地译为把“对跖人”叫成“对头人”。",
+        "ja": "アリスは「対跖地」（地球の裏側）を「反感」と言い間違え、見事な双関語を生み出しました。"
+      },
+      "historicalFact": {
+        "en": "Carroll delighted in linguistic slips and child malapropisms recorded in his journals.",
+        "zh": "卡罗尔非常喜欢记录儿童口误并将其融入口头文学与童话创作中。",
+        "ja": "キャロルは子供の言い間違いを日記に記録するのが好きでした。"
+      },
+      "source": "Oxford English Dictionary & The Annotated Alice"
+    },
+    "ch1_note_5": {
+      "id": "ch1_note_5",
+      "title": {
+        "en": "Orange Marmalade & Dinah the Oxford Cat",
+        "zh": "橘子酱与牛津小猫黛娜",
+        "ja": "マーマレードとオックスフォードの猫ダイナ"
+      },
+      "triggerCondition": "S3_JAR_PICKED",
+      "content": {
+        "en": "Dinah was the real dark tabby cat belonging to Alice Liddell at Christ Church, Oxford. Her sleepy musings capture a classic child's stream of consciousness.",
+        "zh": "黛娜不仅是小说中的角色，更是真实原型爱丽丝·利德尔在牛津院长官邸饲养的深色花斑猫。橘子酱是维多利亚时代的经典英国早餐果酱。",
+        "ja": "ダイナはオックスフォードの学长館で飼われていた本物の猫でした。"
+      },
+      "historicalFact": {
+        "en": "Orange marmalade preserves were a staple in Victorian pantries, traditionally kept in stoneware jars.",
+        "zh": "橘子酱储藏罐是维多利亚家庭橱柜里的常备食品，通常装在厚重的陶罐或玻璃罐中。",
+        "ja": "オレンジマーマレードはヴィクトリア朝の家庭の定番商品でした。"
+      },
+      "source": "Christ Church Oxford Archives"
+    }
+  },
+  "stuckHints": {
+    "S1": {
+      "tier1_60s": {
+        "en": "Sister is so absorbed in her book... the flowers by the bank are lovely.",
+        "zh": "姐姐看得好入神啊……河边的花开得真好看。",
+        "ja": "お姉さんは本に夢中ね……堤防のお花がきれいだわ。"
+      },
+      "tier2_120s": {
+        "en": "I should pick a couple of daisies to make a daisy chain!",
+        "zh": "去摘两朵雏菊做花环吧！",
+        "ja": "デイジーを摘んで首飾りを作りましょう！"
+      }
+    },
+    "S2": {
+      "tier1_60s": {
+        "en": "The rabbit ran towards that hedge...",
+        "zh": "兔子跑进树篱那边了……",
+        "ja": "ウサギはあの生け垣の方へ走っていったわ……"
+      },
+      "tier2_120s": {
+        "en": "Quick, follow it right into that big rabbit-hole!",
+        "zh": "快跟过去，钻进那个大兔子洞！",
+        "ja": "急いで、あの大きなウサギ穴に続きましょう！"
+      }
+    },
+    "S3": {
+      "tier1_60s": {
+        "en": "There are so many cupboards along the well...",
+        "zh": "井壁上有好多橱柜呢……",
+        "ja": "井戸の壁にたくさんの棚があるわ……"
+      },
+      "tier2_120s": {
+        "en": "Put the empty marmalade jar safely inside an open cupboard.",
+        "zh": "把空罐子稳稳放进路过的橱柜里吧。",
+        "ja": "空のジャム瓶を開いている棚に入れて置きましょう。"
+      }
+    },
+    "S4": {
+      "tier1_60s": {
+        "en": "The White Rabbit went down that passage...",
+        "zh": "白兔好像朝那条通道跑去了……",
+        "ja": "白ウサギはあの通路へ走っていったわ……"
+      },
+      "tier2_120s": {
+        "en": "Run down the passage and turn the corner!",
+        "zh": "沿着通道往前跑，拐过那个弯！",
+        "ja": "通路を走って角を曲がりましょう！"
+      }
+    },
+    "S5": {
+      "tier1_60s": {
+        "en": "All these doors... isn't that a glass table in the center?",
+        "zh": "四周都是门，大厅中间似乎有张桌子？",
+        "ja": "たくさんのドア……中央にガラスのテーブルがあるわ？"
+      },
+      "tier2_120s": {
+        "en": "Try the gold key on the doors, and look carefully behind the low curtain.",
+        "zh": "拿起金钥匙去试门，找不到出路就仔细看看墙角帘子后面。",
+        "ja": "金の鍵を試して、低いカーテンの後ろを覗いてみましょう。"
+      }
+    },
+    "S6": {
+      "tier1_60s": {
+        "en": "The key is still up on the glass table... how do I get up there?",
+        "zh": "钥匙还在玻璃桌上……该怎么上去呢？",
+        "ja": "鍵はまだガラスのテーブルの上にあるわ……どうやって登ろうかしら？"
+      },
+      "tier2_120s": {
+        "en": "Try climbing the table leg, even if it looks very slippery.",
+        "zh": "试着爬爬桌腿吧，虽然它看起来很滑。",
+        "ja": "滑りやすそうだけど、テーブルの脚を登ってみましょう。"
+      }
+    },
+    "S7": {
+      "tier1_60s": {
+        "en": "Something seems to be glimmering under the table...",
+        "zh": "桌子底下好像有什么东西在发光……",
+        "ja": "テーブルの下で何かが光っているわ……"
+      },
+      "tier2_120s": {
+        "en": "Open the glass box under the table and eat the little cake inside.",
+        "zh": "打开桌下的玻璃盒子，尝尝里面的小蛋糕。",
+        "ja": "テーブルの下のガラス箱を開けて、中の小さなケーキを食べましょう。"
+      }
+    }
+  },
+  "ui": {
+    "title_start": {
+      "en": "Start Journey",
+      "zh": "点击 · 开始旅程",
+      "ja": "旅を始める"
+    },
+    "title_continue": {
+      "en": "Continue Journey",
+      "zh": "继续旅程",
+      "ja": "旅を続ける"
+    },
+    "title_quote": {
+      "en": "“Curiouser and curiouser!”",
+      "zh": "“越来越奇怪了！”",
+      "ja": "「ますます奇妙だわ！」"
+    },
+    "inventory_title": {
+      "en": "Parchment Satchel",
+      "zh": "羊皮纸随身包",
+      "ja": "カバン"
+    },
+    "inventory_inspect": {
+      "en": "Examine",
+      "zh": "仔细端详",
+      "ja": "調べる"
+    },
+    "inventory_empty": {
+      "en": "Empty Slot",
+      "zh": "空位",
+      "ja": "空き"
+    },
+    "prompt_interact": {
+      "en": "[E] Interact",
+      "zh": "[E] 交互",
+      "ja": "[E] 調べる"
+    },
+    "prompt_examine": {
+      "en": "[E] Examine",
+      "zh": "[E] 观察",
+      "ja": "[E] 観察"
+    },
+    "prompt_drink": {
+      "en": "[F] Drink Potion",
+      "zh": "[F] 饮用药水",
+      "ja": "[F] 飲む"
+    },
+    "prompt_eat": {
+      "en": "[F] Eat Cake",
+      "zh": "[F] 品尝蛋糕",
+      "ja": "[F] 食べる"
+    },
+    "inspect_rotate_hint": {
+      "en": "Drag or swipe to rotate object 360°",
+      "zh": "拖动或滑动以 360° 旋转观察",
+      "ja": "ドラッグで360度回転"
+    },
+    "inspect_read_both_sides": {
+      "en": "Examine both front and back labels to ensure safety",
+      "zh": "请检查正反面标签以确认安全",
+      "ja": "安全のため表と裏の両方のラベルを確認してください"
+    },
+    "settings_title": {
+      "en": "Settings & Options",
+      "zh": "设置与选项",
+      "ja": "設定"
+    },
+    "settings_volume_master": {
+      "en": "Master Volume",
+      "zh": "主音量",
+      "ja": "主音量"
+    },
+    "settings_volume_music": {
+      "en": "Music Volume",
+      "zh": "音乐音量",
+      "ja": "音楽音量"
+    },
+    "settings_volume_sfx": {
+      "en": "Sound Effects",
+      "zh": "音效音量",
+      "ja": "効果音量"
+    },
+    "settings_language": {
+      "en": "Language",
+      "zh": "语言 / Language",
+      "ja": "言語"
+    },
+    "settings_subtitles": {
+      "en": "Subtitles",
+      "zh": "字幕显示",
+      "ja": "字幕"
+    },
+    "skip_cutscene": {
+      "en": "Hold Esc / Skip",
+      "zh": "按住 Esc 跳过过场",
+      "ja": "Esc長押しでスキップ"
+    },
+    "chapter_complete": {
+      "en": "Chapter Complete",
+      "zh": "本章结束",
+      "ja": "章完了"
+    }
+  }
+}

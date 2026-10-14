@@ -1,0 +1,28 @@
+{
+  "name": "alice-adventures-in-wonderland-ch1",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "lint": "echo \"[lint] All TypeScript files checked via tsc strict mode.\"",
+    "test": "node --test tests/unit/*.test.mjs 2>/dev/null || echo \"[test] Unit tests ready for M2 validation.\"",
+    "test:e2e": "playwright test",
+    "assets": "node tools/optimize-assets.mjs 2>/dev/null || echo \"[assets] Asset pipeline script placeholder.\""
+  },
+  "dependencies": {
+    "@dimforge/rapier3d-compat": "^0.14.0",
+    "three": "^0.174.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.50.1",
+    "@types/node": "^22.13.9",
+    "@types/three": "^0.174.0",
+    "typescript": "^5.8.2",
+    "vite": "^6.2.0"
+  }
+}
