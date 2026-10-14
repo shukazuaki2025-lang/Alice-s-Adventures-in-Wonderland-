@@ -19,7 +19,7 @@ import { SceneLightingManager } from '../engine/SceneLighting';
 import { PaintedSky } from '../world/PaintedSky';
 import { Pollen } from '../world/Pollen';
 
-import { globalEventBus, GameStateSnapshot } from '../core/types';
+import { globalEventBus, GameStateSnapshot, GameStateID } from '../core/types';
 import { GAME_EVENTS } from '../core/events';
 
 export class GameManager {
@@ -129,6 +129,7 @@ export class GameManager {
     this.physicsWorld.setWalkBounds(SceneLoader.getWalkBounds(state));
 
     this.lighting.applyStateLighting(state);
+    this.renderer.setGrade(this.lighting.gradeForState(state as GameStateID));
     // Dinah only drifts through the well's lavender dusk (added at t >= 70 s of S3); she used to linger in every later scene
     if (state !== 'S3_FALL') this.dinahDreamEntity.mesh.removeFromParent();
     const outdoors = state === 'S0_TITLE' || state === 'S1_BANK' || state === 'S2_CHASE';
@@ -398,6 +399,7 @@ export class GameManager {
       }
 
       this.lighting.setS3Progress(t); // amber candlelight -> lavender twilight from t = 70 s
+      if (t >= 70) this.renderer.setGrade(this.lighting.s3Grade(t));
       if (t >= 70 && !this.stateMachine.getFlag('lavenderTwilight')) {
         this.stateMachine.setFlag('lavenderTwilight', true);
         this.scene.add(this.dinahDreamEntity.mesh);

@@ -124,5 +124,8 @@ export function registerTestHarness(gameManager: GameManager): void {
     }
   };
 
+  // dev-only lab hook (?lab=1): lets a scratch spec tune lighting / grade live. Never present in a normal run.
+  if (urlParams.get('lab') === '1') (window as any).__lab = { gm: gameManager };
+
   console.log('[TestHarness] window.__game harness successfully registered for testing');
 }

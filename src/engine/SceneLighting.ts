@@ -1,5 +1,79 @@
 import * as THREE from 'three';
 import { GameStateID as GameState } from '../core/types';
+import { GradeParams, NEUTRAL_GRADE, lerpGrade } from '../shaders/PaperGrain';
+
+/**
+ * Colour grade of each world, applied by the final post pass (src/shaders/PaperGrain.ts).
+ * Every one is a split-tone: lights lean toward warm paper-amber, shadows toward cool violet-teal, so there are always two
+ * temperatures in play; the underground grades hold saturation back (the brick/earth palette is already hot) and open the
+ * contrast so lamp pools read against deep soft shadow.
+ */
+export const GRADE_DAY: GradeParams = {
+  ...NEUTRAL_GRADE,
+  shadowTint: [0.93, 0.96, 1.07],
+  highlightTint: [1.05, 1.01, 0.92],
+  lift: [0.012, 0.008, 0.03],
+  contrast: 0.3,
+  saturation: 0.95,
+  satCompress: 0.15,
+  vignette: 0.28,
+  vignetteTint: [0.62, 0.58, 0.74],
+  clarity: 0.9,
+  clarityBroad: 0.5,
+  bloom: 0.22,
+  bloomTint: [1.0, 0.88, 0.62],
+  bloomThreshold: 0.85,
+  granulation: 0.05,
+  mottle: 0.035,
+};
+
+export const GRADE_WELL: GradeParams = {
+  ...NEUTRAL_GRADE,
+  shadowTint: [0.9, 0.9, 1.12],
+  highlightTint: [1.08, 1.0, 0.88],
+  lift: [0.02, 0.012, 0.04],
+  contrast: 0.45,
+  saturation: 0.82,
+  satCompress: 0.55,
+  vignette: 0.45,
+  vignetteTint: [0.5, 0.42, 0.62],
+  clarity: 1.2,
+  clarityBroad: 0.7,
+  bloom: 0.5,
+  bloomTint: [1.0, 0.72, 0.4],
+  bloomThreshold: 0.7,
+  granulation: 0.06,
+  mottle: 0.04,
+};
+
+export const GRADE_WELL_TWILIGHT: GradeParams = {
+  ...GRADE_WELL,
+  shadowTint: [0.9, 0.88, 1.16],
+  highlightTint: [1.02, 0.96, 1.0],
+  bloomTint: [0.85, 0.68, 0.95],
+  vignetteTint: [0.46, 0.4, 0.66],
+};
+
+export const GRADE_PASSAGE: GradeParams = { ...GRADE_WELL, contrast: 0.4, vignette: 0.4 };
+
+export const GRADE_HALL: GradeParams = {
+  ...NEUTRAL_GRADE,
+  shadowTint: [0.92, 0.93, 1.1],
+  highlightTint: [1.07, 1.01, 0.88],
+  lift: [0.016, 0.01, 0.035],
+  contrast: 0.38,
+  saturation: 0.86,
+  satCompress: 0.4,
+  vignette: 0.38,
+  vignetteTint: [0.52, 0.46, 0.64],
+  clarity: 1.0,
+  clarityBroad: 0.6,
+  bloom: 0.4,
+  bloomTint: [1.0, 0.78, 0.46],
+  bloomThreshold: 0.75,
+  granulation: 0.05,
+  mottle: 0.035,
+};
 
 /**
  * Per-scene lighting and atmospheric fog manager (WP-1).
@@ -177,6 +251,29 @@ export class SceneLightingManager {
         break;
       }
     }
+  }
+
+  /** The colour grade the post pass should use in a game state. */
+  public gradeForState(state: GameState): GradeParams {
+    switch (state) {
+      case 'S3_FALL':
+        return GRADE_WELL;
+      case 'S4_PASSAGE':
+        return GRADE_PASSAGE;
+      case 'S5_HALL':
+      case 'S6_SMALL':
+      case 'S7_CAKE':
+      case 'END':
+        return GRADE_HALL;
+      default:
+        return GRADE_DAY;
+    }
+  }
+
+  /** Grade of the well while the amber candlelight turns to lavender twilight (t >= 70 s). */
+  public s3Grade(elapsedSeconds: number): GradeParams {
+    const t = Math.min(1, Math.max(0, (elapsedSeconds - 70) / 10));
+    return lerpGrade(GRADE_WELL, GRADE_WELL_TWILIGHT, t);
   }
 
   /**
