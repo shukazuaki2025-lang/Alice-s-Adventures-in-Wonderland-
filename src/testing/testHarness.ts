@@ -52,6 +52,28 @@ export function registerTestHarness(gameManager: GameManager): void {
         facing: c.rotation.y,
       };
     },
+    getRenderStats: () => ({ ...gameManager.renderer.sceneStats }),
+    /** visible meshes grouped by their top-level scene group — shows where the draw calls go */
+    getRenderBreakdown: () => {
+      const out: Record<string, { meshes: number; hulls: number; shadowCasters: number; drawn: number }> = {};
+      const isVisible = (o: import('three').Object3D): boolean => {
+        for (let n: import('three').Object3D | null = o; n; n = n.parent) if (!n.visible) return false;
+        return true;
+      };
+      gameManager.scene.traverse((o) => {
+        const m = o as import('three').Mesh;
+        if (!m.isMesh || !isVisible(m)) return;
+        let top: import('three').Object3D = m;
+        while (top.parent && top.parent !== gameManager.scene) top = top.parent;
+        const key = top.name || top.type;
+        const e = (out[key] ??= { meshes: 0, hulls: 0, shadowCasters: 0, drawn: 0 });
+        e.meshes++;
+        if (m.name.endsWith('_ink_outline')) e.hulls++;
+        if (m.castShadow) e.shadowCasters++;
+        e.drawn += Array.isArray(m.material) ? m.material.length : 1;
+      });
+      return out;
+    },
     getAliceAnimation: () => gameManager.aliceEntity.getDebug(),
     getAliceBoneWorld: (name: string) => {
       const v = gameManager.aliceEntity.getBoneWorldPosition(name);

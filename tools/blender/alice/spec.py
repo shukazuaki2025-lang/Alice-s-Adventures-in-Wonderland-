@@ -11,6 +11,9 @@ from mathutils import Vector
 
 from lib.rigkit import Bone
 
+# Uniform scale applied to the finished mesh + rig so the character (ribbon tip included) is exactly 1.20 m tall.
+SCALE = 1.03
+
 # ---------------------------------------------------------------------------------------------------------------
 # palette (CLAUDE.md §3) — all sRGB hex
 # ---------------------------------------------------------------------------------------------------------------

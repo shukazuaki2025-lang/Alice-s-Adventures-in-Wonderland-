@@ -1,5 +1,7 @@
 # 任务书（交给 Antigravity 执行）：整改《Alice: Down the Rabbit-Hole》第一章
 
+> **第二轮（当前有效的停止条件）**：见 [`ROUND2_TASK.md`](./ROUND2_TASK.md)。在 `npm run gate` 退出码为 0 且 `docs/devlog/gate/VERDICT.md` 写明 `Verdict: PASS` 之前，**不得停止**。
+
 > 本文件自包含。请先通读，再按工作包（WP）顺序执行。
 > 问题的完整证据、文件行号、截图见 [`2026-10-14-audit.md`](./2026-10-14-audit.md)（下文用 `A-01`、`B-03` 等编号引用）。证据截图在 [`../devlog/review-2026-10-14/`](../devlog/review-2026-10-14/)。
 

@@ -18,7 +18,12 @@ export function createInkOutlineMaterial(
     shader.vertexShader = shader.vertexShader.replace(
       '#include <project_vertex>',
       `
-      vec3 outlineNormal = normalize(objectNormal);
+      // MeshBasicMaterial only declares objectNormal for skinned / env-mapped meshes; static meshes use the raw attribute
+      #ifdef USE_SKINNING
+        vec3 outlineNormal = normalize( objectNormal );
+      #else
+        vec3 outlineNormal = normalize( normal );
+      #endif
       transformed += outlineNormal * outlineThickness;
       #include <project_vertex>
       `

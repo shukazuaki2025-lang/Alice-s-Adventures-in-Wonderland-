@@ -132,7 +132,12 @@ export class ModelViewer {
         }
       });
       if (shading === 'toon') convertMaterialsToToon(obj);
-      if (shading === 'toon' && withInk) applyInkOutline(obj);
+      if (shading === 'toon' && withInk) {
+        // ink width scales with the object (a 5 cm cake must not get the 2.6 mm line of a 1.2 m girl); ?inkw= overrides
+        const size = new THREE.Box3().setFromObject(obj).getSize(new THREE.Vector3());
+        const auto = Math.max(0.0002, 0.0026 * Math.min(1, Math.max(size.x, size.y, size.z) / 1.2));
+        applyInkOutline(obj, 0x2b2420, num(this.params, 'inkw', auto));
+      }
       obj.traverse((c) => {
         if ((c as THREE.Mesh).isMesh) (c as THREE.Mesh).frustumCulled = false;
       });

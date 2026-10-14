@@ -54,7 +54,7 @@ def skin(size=512):
     return img
 
 
-def head(size=1024):
+def head(size=1024, freckles=True, blush_amt=0.62, lip_tint=None):
     img = paint.wash(P['skin'], size, size, seed=11, tint_var=0.02, blotch=0.025, facets=14, facet_var=0.012, edge=0.018, grain=0.012)
     u, v = _grid(size, size)
     X = (u - 0.5) * 0.25            # metres from the head centre line
@@ -63,7 +63,7 @@ def head(size=1024):
     img = _blend(img, _gaussian2(X, Z, 0, 1.06, 0.045, 0.030), _rgb('#FFE2C8'), 0.30)
     # blush
     for s in (1, -1):
-        img = _blend(img, _gaussian2(X, Z, 0.058 * s, 0.940, 0.026, 0.017), _rgb(P['blush']), 0.62)
+        img = _blend(img, _gaussian2(X, Z, 0.058 * s, 0.940, 0.026, 0.017), _rgb(P['blush']), blush_amt)
         img = _blend(img, _gaussian2(X, Z, 0.058 * s, 0.940, 0.016, 0.010), _rgb('#E8826F'), 0.30)
     # nose tip + under-nose shadow + nostrils
     img = _blend(img, _gaussian2(X, Z, 0, 0.962, 0.010, 0.007), _rgb('#F0A08E'), 0.45)
@@ -83,7 +83,7 @@ def head(size=1024):
         img = _blend(img, _gaussian2(X, Z, 0.0955 * s, HC.z - 0.012, 0.004, 0.012), _rgb('#E58E80'), 0.55)
     # faint freckles over the nose bridge (very light — Tenniel's Alice is fair)
     rng = np.random.default_rng(5)
-    for _ in range(14):
+    for _ in range(14 if freckles else 0):
         fx = rng.normal(0, 0.020)
         fz = 0.982 + rng.normal(0, 0.006)
         if abs(fx) < 0.003:
@@ -288,3 +288,18 @@ def make_all(out_dir=None):
     flat('Alice_Mouth', '#5A2323', 0.6)
     flat('Alice_Buckle', P['brass'], 0.35, 0.8)
     return mats
+
+
+class palette:
+    """Context manager: temporarily override palette entries (used to re-skin the shared head/hair painters)."""
+
+    def __init__(self, **kw):
+        self.kw = kw
+
+    def __enter__(self):
+        self.old = dict(P)
+        P.update(self.kw)
+
+    def __exit__(self, *a):
+        P.clear()
+        P.update(self.old)

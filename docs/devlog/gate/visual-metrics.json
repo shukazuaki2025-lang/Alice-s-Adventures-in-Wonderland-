@@ -1,0 +1,141 @@
+{
+  "capturedAt": "2026-10-14T18:07:10.011Z",
+  "scenes": {
+    "S1_BANK": {
+      "n": 141939,
+      "detail": 7.777,
+      "palette": 0.526,
+      "hueEntropy": 2.671,
+      "saturation": 0.604,
+      "contrast": 0.195,
+      "hardEdge": 0.0333,
+      "dominant3": 0.154,
+      "drawCalls": 88,
+      "triangles": 346316
+    },
+    "S1_BANK_orbit": {
+      "n": 139522,
+      "detail": 8.099,
+      "palette": 0.52,
+      "hueEntropy": 2.562,
+      "saturation": 0.58,
+      "contrast": 0.223,
+      "hardEdge": 0.0339,
+      "dominant3": 0.1746,
+      "drawCalls": 86,
+      "triangles": 336236
+    },
+    "S3_FALL": {
+      "n": 130897,
+      "detail": 5.349,
+      "palette": 0.217,
+      "hueEntropy": 1.708,
+      "saturation": 0.87,
+      "contrast": 0.084,
+      "hardEdge": 0.005,
+      "dominant3": 0.2704,
+      "drawCalls": 89,
+      "triangles": 443350
+    },
+    "S4_PASSAGE": {
+      "n": 109861,
+      "detail": 3.034,
+      "palette": 0.178,
+      "hueEntropy": 1.642,
+      "saturation": 0.687,
+      "contrast": 0.113,
+      "hardEdge": 0.0083,
+      "dominant3": 0.341,
+      "drawCalls": 41,
+      "triangles": 184524
+    },
+    "S5_HALL": {
+      "n": 139164,
+      "detail": 8.271,
+      "palette": 0.39,
+      "hueEntropy": 2.57,
+      "saturation": 0.774,
+      "contrast": 0.176,
+      "hardEdge": 0.0598,
+      "dominant3": 0.1958,
+      "drawCalls": 174,
+      "triangles": 539464
+    },
+    "S6_SMALL": {
+      "n": 145454,
+      "detail": 6.325,
+      "palette": 0.362,
+      "hueEntropy": 2.981,
+      "saturation": 0.775,
+      "contrast": 0.158,
+      "hardEdge": 0.0514,
+      "dominant3": 0.2913,
+      "drawCalls": 144,
+      "triangles": 513012
+    }
+  },
+  "aliceViews": {
+    "front": {
+      "n": 32721,
+      "detail": 16.368,
+      "palette": 0.205,
+      "hueEntropy": 1.701,
+      "saturation": 0.177,
+      "contrast": 0.211,
+      "hardEdge": 0.174,
+      "dominant3": 0.5207
+    },
+    "threeQuarter": {
+      "n": 31510,
+      "detail": 17.297,
+      "palette": 0.199,
+      "hueEntropy": 1.623,
+      "saturation": 0.187,
+      "contrast": 0.221,
+      "hardEdge": 0.1803,
+      "dominant3": 0.5014
+    },
+    "face": {
+      "n": 147290,
+      "detail": 8.602,
+      "palette": 0.25,
+      "hueEntropy": 1.732,
+      "saturation": 0.268,
+      "contrast": 0.236,
+      "hardEdge": 0.1227,
+      "dominant3": 0.3958
+    },
+    "walk": {
+      "n": 29658,
+      "detail": 18.748,
+      "palette": 0.2,
+      "hueEntropy": 1.52,
+      "saturation": 0.211,
+      "contrast": 0.232,
+      "hardEdge": 0.1935,
+      "dominant3": 0.43
+    }
+  },
+  "npcViews": {
+    "sister": {
+      "n": 72302,
+      "detail": 8.435,
+      "palette": 0.206,
+      "hueEntropy": 1.543,
+      "saturation": 0.37,
+      "contrast": 0.168,
+      "hardEdge": 0.0865,
+      "dominant3": 0.6363
+    },
+    "rabbit": {
+      "n": 27539,
+      "detail": 13.478,
+      "palette": 0.212,
+      "hueEntropy": 1.902,
+      "saturation": 0.28,
+      "contrast": 0.22,
+      "hardEdge": 0.1498,
+      "dominant3": 0.4334
+    }
+  }
+}

@@ -14,3 +14,4 @@ playwright-report/
 public/assets/models/dev/
 __pycache__/
 *.pyc
+docs/devlog/gate/logs/

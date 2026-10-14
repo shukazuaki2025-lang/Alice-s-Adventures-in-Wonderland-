@@ -22,7 +22,7 @@ export default defineConfig({
     ignoreHTTPSErrors: true,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
+    video: process.env.PW_NO_VIDEO ? 'off' : 'retain-on-failure',
   },
   projects: [
     {
@@ -30,6 +30,8 @@ export default defineConfig({
       use: {
         ...devices['Desktop Chrome'],
         launchOptions: {
+          // Lets sandboxes without a Playwright-managed browser point at a system Chromium (PW_CHROMIUM_PATH).
+          executablePath: process.env.PW_CHROMIUM_PATH || undefined,
           args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',

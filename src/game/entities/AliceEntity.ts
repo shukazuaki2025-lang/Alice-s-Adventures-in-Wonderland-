@@ -17,6 +17,16 @@ const smoothstep = (a: number, b: number, x: number): number => {
 };
 const damp = (lambda: number, dt: number): number => 1 - Math.exp(-lambda * dt);
 
+/**
+ * Target blend weights of the idle / walk / run clips for a given model-space ground speed (m/s at scale 1.0).
+ * Continuous in speed, so there is never a pop between gaits. Exported for tests.
+ */
+export function locomotionTargets(modelSpeed: number): { idle: number; walk: number; run: number } {
+  const moveAmt = smoothstep(0.06, 0.5, modelSpeed);
+  const runAmt = smoothstep(1.7, 2.3, modelSpeed);
+  return { idle: 1 - moveAmt, walk: moveAmt * (1 - runAmt), run: moveAmt * runAmt };
+}
+
 export interface AliceAnimDebug {
   /** Name of the clip that is currently driving the body (one-shot override wins over locomotion). */
   active: string;
@@ -212,12 +222,7 @@ export class AliceEntity {
 
     // ---- locomotion weights (continuous blend by speed) ---------------------------------------------------------
     const moveAmt = smoothstep(0.06, 0.5, modelSpeed);
-    const runAmt = smoothstep(1.7, 2.3, modelSpeed);
-    const target = {
-      idle: 1 - moveAmt,
-      walk: moveAmt * (1 - runAmt),
-      run: moveAmt * runAmt,
-    };
+    const target = locomotionTargets(modelSpeed);
     const wBlend = damp(12, delta);
     this.weights.idle += (target.idle - this.weights.idle) * wBlend;
     this.weights.walk += (target.walk - this.weights.walk) * wBlend;

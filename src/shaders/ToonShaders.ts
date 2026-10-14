@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { createGlassTableMaterial } from './GlassRefraction';
 
 let sharedGradientMap: THREE.DataTexture | null = null;
 
@@ -128,7 +129,7 @@ export function addInkOutline(mesh: THREE.Mesh, thresholdAngle = 25): void {
 function toToonMatSlot(mat: THREE.Material): THREE.Material {
   const std = mat as THREE.MeshStandardMaterial;
   if (std.name && std.name.includes('Glass')) {
-    return createRefractiveGlassMaterial();
+    return createGlassTableMaterial();      // in-world glass is cheap (no transmission pass); see GlassRefraction.ts
   }
   const map = std.map ?? null;
   // Painted eyes must stay crisp: no light/shadow ramp on the catch-lights.
@@ -138,7 +139,7 @@ function toToonMatSlot(mat: THREE.Material): THREE.Material {
     return unlit;
   }
   const hex = std.color ? std.color.getHex() : 0xe0d4c3;
-  const toon = createToonMaterial(hex, { map });
+  const toon = createToonMaterial(hex, { map, side: std.side });
   if (map) {
     map.anisotropy = 4;
     map.needsUpdate = true;
@@ -148,6 +149,11 @@ function toToonMatSlot(mat: THREE.Material): THREE.Material {
     toon.emissive.copy(std.color);
   }
   toon.name = mat.name;
+  // authored glow (lamp glass, fire, windows) survives the conversion
+  if (std.emissive && std.emissive.r + std.emissive.g + std.emissive.b > 0.05) {
+    toon.emissive.copy(std.emissive);
+    toon.emissiveIntensity = 1.0;
+  }
   if (mat.transparent || (std.opacity !== undefined && std.opacity < 1.0)) {
     toon.transparent = true;
     toon.opacity = std.opacity ?? 0.72;

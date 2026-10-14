@@ -12,6 +12,8 @@ test.describe('E2E Screenshot Artifact Capture & Pixel Integrity Verification', 
   });
 
   test('Capture genuine input-driven screenshots across S0-END and verify unique MD5 hashes', async ({ page }) => {
+    // one long, genuinely input-driven playthrough rendered by software GL on CI: give it room (it takes ~65-90 s)
+    test.setTimeout(300_000);
     const harness = new GameHarnessHelper(page);
     await harness.openGame('/?test=1&forceWebGL=1');
     await page.waitForTimeout(600);

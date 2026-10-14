@@ -14,6 +14,7 @@ export class SceneLightingManager {
   private wellLights: THREE.PointLight[] = [];
   private hallLamps: THREE.PointLight[] = [];
   private vistaLight: THREE.SpotLight;
+  private sunOffset = new THREE.Vector3(18, 28, 14);
 
   constructor(scene: THREE.Scene) {
     this.scene = scene;
@@ -43,13 +44,16 @@ export class SceneLightingManager {
     this.sunLight.shadow.mapSize.height = 2048;
     this.sunLight.shadow.camera.near = 0.5;
     this.sunLight.shadow.camera.far = 90;
-    const d = 28;
+    const d = 16;
     this.sunLight.shadow.camera.left = -d;
     this.sunLight.shadow.camera.right = d;
     this.sunLight.shadow.camera.top = d;
     this.sunLight.shadow.camera.bottom = -d;
     this.sunLight.shadow.bias = -0.0005;
+    this.sunLight.shadow.normalBias = 0.02;
+    this.sunLight.shadow.radius = 3;
     this.scene.add(this.sunLight);
+    this.scene.add(this.sunLight.target);
 
     // Well shaft candle sconces (S3_FALL)
     const wellOffsets: [number, number, number][] = [
@@ -87,6 +91,14 @@ export class SceneLightingManager {
     this.applyStateLighting('S0_TITLE');
   }
 
+  /** Keep the sun's shadow frustum centred on the player so shadows stay crisp wherever Alice walks. */
+  public follow(target: THREE.Vector3): void {
+    const off = this.sunOffset;
+    this.sunLight.position.set(target.x + off.x, off.y, target.z + off.z);
+    this.sunLight.target.position.set(target.x, 0, target.z);
+    this.sunLight.target.updateMatrixWorld();
+  }
+
   public applyStateLighting(state: GameState): void {
     // Reset sub-lights first
     this.wellLights.forEach((l) => (l.visible = false));
@@ -106,6 +118,7 @@ export class SceneLightingManager {
         this.hemiLight.intensity = 0.75;
         this.sunLight.color.setHex(0xfff2cc);
         this.sunLight.intensity = 1.4;
+        this.sunOffset.set(18, 28, 14);
         this.sunLight.position.set(18, 28, 14);
         break;
       }
@@ -120,6 +133,7 @@ export class SceneLightingManager {
         this.hemiLight.intensity = 0.55;
         this.sunLight.color.setHex(0xffb86c);
         this.sunLight.intensity = 0.65;
+        this.sunOffset.set(2, 12, 3);
         this.sunLight.position.set(2, 12, 3);
         this.wellLights.forEach((l) => {
           l.color.setHex(0xffb86c);
@@ -138,6 +152,7 @@ export class SceneLightingManager {
         this.hemiLight.intensity = 0.6;
         this.sunLight.color.setHex(0xf5c26b);
         this.sunLight.intensity = 0.75;
+        this.sunOffset.set(6, 8, 4);
         this.sunLight.position.set(6, 8, 4);
         break;
       }
@@ -155,6 +170,7 @@ export class SceneLightingManager {
         this.hemiLight.intensity = 0.65;
         this.sunLight.color.setHex(0xf5c26b);
         this.sunLight.intensity = 0.85;
+        this.sunOffset.set(4, 10, 5);
         this.sunLight.position.set(4, 10, 5);
         this.hallLamps.forEach((l) => (l.visible = true));
         this.vistaLight.visible = true;

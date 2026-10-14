@@ -1,8 +1,10 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { addInkOutline, createToonMaterial } from '../shaders/ToonShaders';
+import { addInkOutline, convertMaterialsToToon, createToonMaterial } from '../shaders/ToonShaders';
+import { applyInkOutline } from '../shaders/InkOutline';
 import { createGlassTableMaterial } from '../shaders/GlassRefraction';
 import { PhysicsWorld } from '../physics/PhysicsWorld';
+import { Meadow } from '../world/Meadow';
 
 export interface ParsedLogicMarkers {
   spawns: Map<string, THREE.Vector3>;
@@ -40,6 +42,10 @@ export class SceneLoader {
   };
 
   public propsMap: Map<string, THREE.Object3D> = new Map();
+  /** Painted riverbank dressing (grass tufts + wildflowers), animated by update(). */
+  public meadow: Meadow | null = null;
+  private waterMaps: THREE.Texture[] = [];
+  private waterTime = 0;
 
   constructor() {
     this.bankGroup.name = 'Scene_S1_Bank';
@@ -75,10 +81,11 @@ export class SceneLoader {
       this.populateFallbackMarkers(physicsWorld);
     }
 
-    this.buildBankEnvironment();
-    this.buildWellEnvironment();
-    this.buildPassageEnvironment();
-    this.buildHallEnvironment();
+    await this.loadPropAssets();
+    await this.buildBankEnvironment();
+    await this.buildWellEnvironment();
+    await this.buildPassageEnvironment();
+    await this.buildHallEnvironment();
     this.buildProceduralProps();
     if (physicsWorld) this.registerLevelColliders(physicsWorld);
 
@@ -89,9 +96,12 @@ export class SceneLoader {
   /** Solid props, scoped per level so the oak never blocks the hall (and vice-versa). */
   private registerLevelColliders(physics: PhysicsWorld): void {
     // Riverbank (S1/S2): oak trunk, the reading sister, the hedge that hides the burrow.
-    physics.addStaticBox('COL_oak_trunk', new THREE.Vector3(-1.5, 1.8, -2.0), new THREE.Vector3(0.75, 1.8, 0.75), 'bank');
+    physics.addStaticBox('COL_oak_trunk', new THREE.Vector3(-1.5, 1.8, -2.0), new THREE.Vector3(0.85, 1.8, 0.85), 'bank');
     physics.addStaticBox('COL_sister', new THREE.Vector3(-0.2, 0.5, -1.2), new THREE.Vector3(0.3, 0.5, 0.3), 'bank');
-    physics.addStaticBox('COL_hedge', new THREE.Vector3(14.6, 0.9, -2.0), new THREE.Vector3(1.2, 0.9, 2.25), 'bank');
+    physics.addStaticBox('COL_hedge', new THREE.Vector3(15.6, 0.9, -1.4), new THREE.Vector3(1.5, 0.9, 5.0), 'bank');
+    for (const [id, x, z, r] of [['a', 5.5, -5.3, 0.5], ['b', 9.0, -4.7, 0.4], ['c', -4.2, 2.6, 0.45], ['d', 20.5, 6.0, 0.6], ['e', -10.5, -4.9, 0.65]] as Array<[string, number, number, number]>) {
+      physics.addStaticBox(`COL_rock_${id}`, new THREE.Vector3(x, 0.3, z), new THREE.Vector3(r, 0.3, r), 'bank');
+    }
     // Great Hall: the three-legged glass table.
     physics.addStaticBox('COL_glass_table', new THREE.Vector3(0.85, 0.36, -0.6), new THREE.Vector3(0.3, 0.36, 0.3), 'hall');
   }
@@ -220,209 +230,222 @@ export class SceneLoader {
     }
   }
 
-  private buildBankEnvironment(): void {
-    // Sunny Riverbank Meadow (S0 - S2)
-    const groundGeo = new THREE.PlaneGeometry(80, 60);
-    const groundMat = createToonMaterial(0x88b378, { side: THREE.DoubleSide });
-    const groundMesh = new THREE.Mesh(groundGeo, groundMat);
-    groundMesh.rotation.x = -Math.PI / 2;
-    groundMesh.receiveShadow = true;
-    this.bankGroup.add(groundMesh);
+  /**
+   * S1 riverbank: the Blender-built painted set (terrain, river, oak, hedge + burrow, rocks, toadstools, rug and the three
+   * pickable daisies), plus engine-side grass/flower dressing. Falls back to a bare meadow if the GLB cannot load, so the game
+   * remains playable (the interactables below still exist).
+   */
+  private async buildBankEnvironment(): Promise<void> {
+    try {
+      const gltf = await new GLTFLoader().loadAsync('/assets/models/ch1_s1_bank.glb');
+      const root = gltf.scene;
+      root.name = 'S1_Bank_Set';
+      convertMaterialsToToon(root);
+      // heavier ink on big soft masses, finer on small props (object-space thickness, metres)
+      const ink: Array<[RegExp, number]> = [
+        [/Oak_Trunk|Burrow_Arch/, 0.012],
+        [/Oak_Canopy|Hedge/, 0.04],
+        [/Rocks/, 0.016],
+        [/Toadstool/, 0.006],
+        [/Daisy|INT_daisy/, 0.0035],
+      ];
+      root.traverse((obj) => {
+        const mesh = obj as THREE.Mesh;
+        if (mesh.isMesh) {
+          const n = mesh.name;
+          if (/Terrain|PicnicRug/.test(n)) mesh.receiveShadow = true;
+          if (/Oak_|Hedge|Rocks|Burrow|Toadstool/.test(n)) mesh.castShadow = true;
+          const rule = ink.find(([re]) => re.test(n) || re.test(mesh.parent?.name ?? ''));
+          if (rule) applyInkOutline(mesh, 0x2b2420, rule[1]);
+          if (/^Water_/.test(n)) {
+            const mat = mesh.material as THREE.MeshToonMaterial;
+            if (mat.map) {
+              mat.map.wrapS = mat.map.wrapT = THREE.RepeatWrapping;
+              this.waterMaps.push(mat.map);
+            }
+            mat.emissiveIntensity = 0.32;
+            mesh.receiveShadow = false;
+          }
+        }
+        if (obj.name.startsWith('INT_')) this.propsMap.set(obj.name, obj);
+      });
+      this.bankGroup.add(root);
+    } catch (e) {
+      console.warn('[SceneLoader] Bank GLB unavailable, building a bare meadow:', e);
+      const ground = new THREE.Mesh(new THREE.PlaneGeometry(160, 120), createToonMaterial(0x88b378));
+      ground.rotation.x = -Math.PI / 2;
+      ground.receiveShadow = true;
+      this.bankGroup.add(ground);
+      const pts: Array<[string, number, number]> = [
+        ['INT_daisy_1', 3.6, -1.2],
+        ['INT_daisy_2', 5.2, 1.1],
+        ['INT_daisy_3', 7.0, -0.6],
+        ['INT_rabbit_hole', 14.0, -2.0],
+      ];
+      for (const [id, x, z] of pts) {
+        const g = new THREE.Group();
+        g.name = id;
+        g.position.set(x, 0, z);
+        this.bankGroup.add(g);
+        this.propsMap.set(id, g);
+      }
+    }
 
-    // Gently winding River stream along Z = -10..12
-    const riverGeo = new THREE.PlaneGeometry(80, 7);
-    const riverMat = createToonMaterial(0x6ba4b8, {
-      side: THREE.DoubleSide,
-      emissive: 0x3b6e82,
-      emissiveIntensity: 0.25,
-    });
-    const riverMesh = new THREE.Mesh(riverGeo, riverMat);
-    riverMesh.rotation.x = -Math.PI / 2;
-    riverMesh.position.set(0, 0.02, -9.5);
-    this.bankGroup.add(riverMesh);
-
-    // Ancient Oak Tree at (-1.5, 0, -2.0)
-    const oakGroup = new THREE.Group();
-    oakGroup.position.set(-1.5, 0, -2.0);
-    const trunkMesh = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.55, 0.85, 3.6, 12),
-      createToonMaterial(0x6e4f3a)
-    );
-    trunkMesh.position.y = 1.8;
-    addInkOutline(trunkMesh);
-    oakGroup.add(trunkMesh);
-
-    const canopyPositions = [
-      [0, 4.2, 0, 2.4],
-      [-1.4, 3.7, 0.6, 1.8],
-      [1.5, 3.8, -0.4, 1.9],
-      [0.3, 4.9, -0.8, 1.7],
-    ];
-    canopyPositions.forEach(([cx, cy, cz, r]) => {
-      const leafMesh = new THREE.Mesh(
-        new THREE.DodecahedronGeometry(r, 1),
-        createToonMaterial(0x5b8c4a)
-      );
-      leafMesh.position.set(cx, cy, cz);
-      addInkOutline(leafMesh);
-      oakGroup.add(leafMesh);
-    });
-    this.bankGroup.add(oakGroup);
-
-    // Alice's Sister sitting by the oak tree reading a book at (-0.2, 0, -1.2)
+    // character placeholders: GameManager swaps the real entities in
     this.sisterMesh = new THREE.Group();
     this.sisterMesh.name = 'chr_sister';
     this.sisterMesh.position.set(-0.2, 0, -1.2);
-    const sisterSkirt = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.18, 0.34, 0.65, 12),
-      createToonMaterial(0x7c5268)
-    );
-    sisterSkirt.position.y = 0.35;
-    const sisterHead = new THREE.Mesh(
-      new THREE.SphereGeometry(0.13, 12, 12),
-      createToonMaterial(0xfbe3d6)
-    );
-    sisterHead.position.y = 0.82;
-    const sisterBook = new THREE.Mesh(
-      new THREE.BoxGeometry(0.24, 0.04, 0.18),
-      createToonMaterial(0x8c2d2d)
-    );
-    sisterBook.position.set(0.18, 0.48, 0.18);
-    addInkOutline(sisterBook);
-    this.sisterMesh.add(sisterSkirt, sisterHead, sisterBook);
     this.bankGroup.add(this.sisterMesh);
     this.propsMap.set('INT_sister_book', this.sisterMesh);
 
-    // 3 Pickable Meadow Daisies
-    const daisyCoords: Array<[string, number, number]> = [
-      ['INT_daisy_1', 3.6, -1.2],
-      ['INT_daisy_2', 5.2, 1.1],
-      ['INT_daisy_3', 7.0, -0.6],
-    ];
-    daisyCoords.forEach(([id, dx, dz]) => {
-      const daisyGroup = new THREE.Group();
-      daisyGroup.name = id;
-      daisyGroup.position.set(dx, 0, dz);
-
-      const stem = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.02, 0.02, 0.35, 8),
-        createToonMaterial(0x4d7c3f)
-      );
-      stem.position.y = 0.175;
-      const petals = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.18, 0.18, 0.03, 12),
-        createToonMaterial(0xffffff)
-      );
-      petals.position.y = 0.36;
-      const center = new THREE.Mesh(
-        new THREE.SphereGeometry(0.07, 10, 10),
-        createToonMaterial(0xe8b838)
-      );
-      center.position.y = 0.38;
-      daisyGroup.add(stem, petals, center);
-      this.bankGroup.add(daisyGroup);
-      this.propsMap.set(id, daisyGroup);
-    });
-
-    // White Rabbit in Red Waistcoat with Pocket Watch
     this.rabbitMesh = new THREE.Group();
     this.rabbitMesh.name = 'chr_rabbit';
     this.rabbitMesh.position.set(8.5, 0, -1.8);
-    const rabbitBody = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.14, 0.2, 0.48, 12),
-      createToonMaterial(0xb0303c) // Crimson tweed waistcoat
-    );
-    rabbitBody.position.y = 0.32;
-    const rabbitHead = new THREE.Mesh(
-      new THREE.SphereGeometry(0.13, 12, 12),
-      createToonMaterial(0xfaf6f0)
-    );
-    rabbitHead.position.y = 0.66;
-    const earL = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.03, 0.04, 0.28, 8),
-      createToonMaterial(0xfaf6f0)
-    );
-    earL.position.set(-0.05, 0.9, 0);
-    const earR = earL.clone();
-    earR.position.set(0.05, 0.9, 0);
-    const watch = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.06, 0.06, 0.02, 12),
-      createToonMaterial(0xd4af37)
-    );
-    watch.rotation.x = Math.PI / 2;
-    watch.position.set(0.16, 0.42, 0.12);
-    this.rabbitMesh.add(rabbitBody, rabbitHead, earL, earR, watch);
     this.bankGroup.add(this.rabbitMesh);
     this.propsMap.set('chr_rabbit', this.rabbitMesh);
 
-    // Hedgerow & Rabbit-Hole Burrow at (14.0, 0, -2.0)
-    const burrowGroup = new THREE.Group();
-    burrowGroup.name = 'INT_rabbit_hole';
-    burrowGroup.position.set(14.0, 0, -2.0);
-    const hedgeMesh = new THREE.Mesh(
-      new THREE.BoxGeometry(2.4, 1.8, 4.5),
-      createToonMaterial(0x3f6a34)
-    );
-    hedgeMesh.position.set(0.6, 0.9, 0);
-    addInkOutline(hedgeMesh);
-
-    const holeArch = new THREE.Mesh(
-      new THREE.TorusGeometry(0.65, 0.16, 10, 20, Math.PI),
-      createToonMaterial(0x594130)
-    );
-    holeArch.rotation.y = -Math.PI / 2;
-    holeArch.position.set(-0.62, 0.05, 0);
-
-    const holeDark = new THREE.Mesh(
-      new THREE.CircleGeometry(0.62, 20),
-      new THREE.MeshBasicMaterial({ color: 0x1a1412, side: THREE.DoubleSide })
-    );
-    holeDark.rotation.y = -Math.PI / 2;
-    holeDark.position.set(-0.6, 0.35, 0);
-
-    burrowGroup.add(hedgeMesh, holeArch, holeDark);
-    this.bankGroup.add(burrowGroup);
-    this.propsMap.set('INT_rabbit_hole', burrowGroup);
+    // grass + wildflowers (kept clear of the tree, rug, daisies and the burrow mouth)
+    this.meadow = new Meadow({
+      area: { minX: -32, maxX: 30, minZ: -6.2, maxZ: 22 },
+      keepOut: [
+        [-1.5, -2.0, 1.5],
+        [-0.9, -0.1, 1.35],
+        [3.6, -1.2, 0.45],
+        [5.2, 1.1, 0.45],
+        [7.0, -0.6, 0.45],
+        [13.5, -2.0, 1.4],
+        [15.5, -1.4, 1.7],
+      ],
+      hotSpots: [
+        [-1.5, -2.0, 5.5],
+        [4.5, -5.0, 6.0],
+        [-12, -5.0, 6.0],
+        [13.2, -4.5, 3.0],
+        [13.2, 1.5, 3.0],
+        [3.0, 0.0, 9.0],
+      ],
+      grassCount: 5200,
+      flowerCount: 1100,
+      grassHeight: 0.55,
+    });
+    this.bankGroup.add(this.meadow.group);
   }
 
-  private buildWellEnvironment(): void {
-    // Deep Well Shaft (S3_FALL) — radius 4.8m so camera at z=3.2m is inside the well
-    const shaftGeo = new THREE.CylinderGeometry(4.8, 4.8, 24, 24, 1, true);
-    const shaftMat = createToonMaterial(0x6e5a4f, { side: THREE.DoubleSide });
-    const shaftMesh = new THREE.Mesh(shaftGeo, shaftMat);
-    shaftMesh.position.set(0, 0, 0);
-    this.wellGroup.add(shaftMesh);
+  /** Per-frame world animation (river flow, wind). */
+  public update(dt: number): void {
+    if (this.littleDoorLeaf) {
+      const cur = this.littleDoorLeaf.rotation.y;
+      const k = 1 - Math.exp(-5 * dt);
+      this.littleDoorLeaf.rotation.y = cur + (this.littleDoorTarget - cur) * k;
+    }
+    this.waterTime += dt;
+    for (const m of this.waterMaps) {
+      m.offset.set((this.waterTime * 0.012) % 1, (this.waterTime * 0.004) % 1);
+    }
+    if (this.bankGroup.visible) this.meadow?.update(dt);
+  }
 
-    // Scrolling cupboards, bookshelves, maps, and Marmalade Jar along the rear wall of the shaft
+  private wellReturnCupboard: THREE.Group | null = null;
+
+  /** Painted hand props (true-scale GLBs); anything that fails to load falls back to the primitive stand-in at its call site. */
+  private propAssets = new Map<string, THREE.Object3D>();
+
+  private async loadPropAssets(): Promise<void> {
+    const names = ['prop_key_gold', 'prop_bottle_drinkme', 'prop_box_glass', 'prop_cake_eatme', 'prop_jar_marmalade'];
+    await Promise.all(
+      names.map(async (name) => {
+        try {
+          const gltf = await new GLTFLoader().loadAsync(`/assets/models/${name}.glb`);
+          const root = gltf.scene;
+          convertMaterialsToToon(root);
+          // ink widths are in object-space metres: a 5 cm cake needs a hair-line, not the 2.6 mm line used for a 1.2 m girl
+          applyInkOutline(root, 0x2b2420, 0.00035);
+          this.propAssets.set(name, root);
+        } catch (e) {
+          console.warn(`[SceneLoader] ${name}.glb unavailable, using a primitive stand-in:`, e);
+        }
+      })
+    );
+  }
+
+  private cloneProp(name: string): THREE.Object3D | null {
+    const src = this.propAssets.get(name);
+    return src ? src.clone(true) : null;
+  }
+
+  /**
+   * The painted S3 shaft: four stacked copies of ONE seamless 6 m segment (brick wall, bookshelves, cupboards, jar shelves,
+   * maps, pictures, lanterns), scrolled upward by GameManager at fall speed so the wall really streams past Alice.
+   */
+  private async loadWellSet(): Promise<boolean> {
+    try {
+      const gltf = await new GLTFLoader().loadAsync('/assets/models/ch1_s3_well.glb');
+      const root = gltf.scene;
+      convertMaterialsToToon(root);
+      const segment = new THREE.Group();
+      segment.name = 'S3_WellSegment';
+      const returnCupboard = new THREE.Group();
+      returnCupboard.name = 'S3_ReturnCupboard';
+      for (const child of [...root.children]) {
+        if (child.name.startsWith('S3_WellSegment')) segment.add(child);
+        else if (child.name.startsWith('S3_ReturnCupboard')) returnCupboard.add(child);
+      }
+      segment.traverse((obj) => {
+        const mesh = obj as THREE.Mesh;
+        if (mesh.isMesh && /Wood|Brass|Porcelain|Books|Stone/.test(mesh.name)) applyInkOutline(mesh, 0x2b2420, 0.0022);
+      });
+      returnCupboard.traverse((obj) => {
+        if ((obj as THREE.Mesh).isMesh) applyInkOutline(obj as THREE.Mesh, 0x2b2420, 0.003);
+      });
+      for (let k = 0; k < 4; k++) {
+        const tile = k === 0 ? segment : segment.clone(true);
+        tile.position.y = -12 + 6 * k;
+        this.wellScrollingGroup.add(tile);
+      }
+      this.wellReturnCupboard = returnCupboard;
+      return true;
+    } catch (e) {
+      console.warn('[SceneLoader] Well GLB unavailable, building the placeholder shaft:', e);
+      return false;
+    }
+  }
+
+  private async buildWellEnvironment(): Promise<void> {
     this.wellScrollingGroup = new THREE.Group();
-    const rearAngles = [-2.6, -2.1, -1.6, -1.1, -0.6, -2.4, -1.8, -0.8];
-    for (let i = 0; i < 8; i++) {
-      const angle = rearAngles[i];
-      const yOffset = -5.5 + i * 1.8;
-      const cupboard = new THREE.Mesh(
-        new THREE.BoxGeometry(0.85, 1.05, 0.35),
-        createToonMaterial(i % 2 === 0 ? 0x8c5e3c : 0xa87e58)
-      );
-      cupboard.position.set(Math.cos(angle) * 2.6, yOffset, Math.sin(angle) * 2.6);
-      cupboard.lookAt(0, yOffset, 0);
-      addInkOutline(cupboard);
-      this.wellScrollingGroup.add(cupboard);
+    if (!(await this.loadWellSet())) {
+      // placeholder shaft: radius 4.8m so the camera at z=3.2m is inside the well
+      const shaftGeo = new THREE.CylinderGeometry(4.8, 4.8, 24, 24, 1, true);
+      this.wellGroup.add(new THREE.Mesh(shaftGeo, createToonMaterial(0x6e5a4f, { side: THREE.DoubleSide })));
+      const rearAngles = [-2.6, -2.1, -1.6, -1.1, -0.6, -2.4, -1.8, -0.8];
+      for (let i = 0; i < 8; i++) {
+        const angle = rearAngles[i];
+        const yOffset = -5.5 + i * 1.8;
+        const cupboard = new THREE.Mesh(
+          new THREE.BoxGeometry(0.85, 1.05, 0.35),
+          createToonMaterial(i % 2 === 0 ? 0x8c5e3c : 0xa87e58)
+        );
+        cupboard.position.set(Math.cos(angle) * 2.6, yOffset, Math.sin(angle) * 2.6);
+        cupboard.lookAt(0, yOffset, 0);
+        addInkOutline(cupboard);
+        this.wellScrollingGroup.add(cupboard);
+      }
     }
 
     // Floating ORANGE MARMALADE jar within reach beside Alice
     const jarGroup = new THREE.Group();
     jarGroup.name = 'INT_jar_marmalade';
     jarGroup.position.set(0.75, 0.75, 0.25);
-    const jarBody = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.14, 0.14, 0.32, 14),
-      createToonMaterial(0xe09540)
-    );
-    const jarLabel = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.145, 0.145, 0.14, 14),
-      createToonMaterial(0xf7f3ea)
-    );
-    addInkOutline(jarBody);
-    jarGroup.add(jarBody, jarLabel);
+    const paintedJar = this.cloneProp('prop_jar_marmalade');
+    if (paintedJar) {
+      paintedJar.scale.setScalar(1.6);                 // generous: it has to be spotted while falling past
+      paintedJar.position.y = -0.14;
+      jarGroup.add(paintedJar);
+    } else {
+      const jarBody = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.32, 14), createToonMaterial(0xe09540));
+      const jarLabel = new THREE.Mesh(new THREE.CylinderGeometry(0.145, 0.145, 0.14, 14), createToonMaterial(0xf7f3ea));
+      addInkOutline(jarBody);
+      jarGroup.add(jarBody, jarLabel);
+    }
     this.wellScrollingGroup.add(jarGroup);
     this.propsMap.set('prop_jar_marmalade', jarGroup);
     this.propsMap.set('INT_jar_marmalade', jarGroup);
@@ -431,13 +454,37 @@ export class SceneLoader {
     const returnCupboard = new THREE.Group();
     returnCupboard.name = 'INT_cupboard_return';
     returnCupboard.position.set(-0.75, 0.5, 0.25);
+    if (this.wellReturnCupboard) {
+      this.wellReturnCupboard.rotation.y = Math.PI / 2;
+      returnCupboard.add(this.wellReturnCupboard);
+    }
     this.wellScrollingGroup.add(returnCupboard);
     this.propsMap.set('INT_cupboard_return', returnCupboard);
 
     this.wellGroup.add(this.wellScrollingGroup);
   }
 
-  private buildPassageEnvironment(): void {
+  private async buildPassageEnvironment(): Promise<void> {
+    try {
+      const gltf = await new GLTFLoader().loadAsync('/assets/models/ch1_s4_passage.glb');
+      const root = gltf.scene;
+      root.name = 'S4_Passage_Set';
+      convertMaterialsToToon(root);
+      root.traverse((obj) => {
+        const mesh = obj as THREE.Mesh;
+        if (!mesh.isMesh) return;
+        if (/S4_(Flag|Wood|Brass|Stone)/.test(mesh.name)) applyInkOutline(mesh, 0x2b2420, 0.0025);
+        if (/S4_Flag/.test(mesh.name)) mesh.receiveShadow = true;
+      });
+      this.passageGroup.add(root);
+    } catch (e) {
+      console.warn('[SceneLoader] Passage GLB unavailable, building the placeholder corridor:', e);
+      this.buildPassagePlaceholder();
+    }
+    this.addPassageExit();
+  }
+
+  private buildPassagePlaceholder(): void {
     // Low Underground Passage (S4_PASSAGE)
     const floor = new THREE.Mesh(
       new THREE.PlaneGeometry(26, 3.2),
@@ -465,7 +512,9 @@ export class SceneLoader {
       arch.position.set(x, 1.0, 0);
       this.passageGroup.add(arch);
     }
+  }
 
+  private addPassageExit(): void {
     const exitMarker = new THREE.Group();
     exitMarker.name = 'TRG_S4_exit';
     exitMarker.position.set(18.0, 0, 0);
@@ -473,7 +522,54 @@ export class SceneLoader {
     this.propsMap.set('TRG_S4_exit', exitMarker);
   }
 
-  private buildHallEnvironment(): void {
+  /** True once the Blender-built, painted hall shell replaced the procedural placeholder shell. */
+  private hallPainted = false;
+  private littleDoorLeaf: THREE.Object3D | null = null;
+  private hallCurtainNode: THREE.Object3D | null = null;
+  private littleDoorTarget = 0;
+
+  /** Swing the Little Door's hinged leaf open (into its 1.2 m passage) or shut; animated in update(). */
+  public setLittleDoorOpen(open: boolean): void {
+    this.littleDoorTarget = open ? 1.6 : 0;
+  }
+
+  /**
+   * S5–S7 Great Hall: the painted Blender set (parquet + runner, damask wallpaper over a raised-panel dado, mouldings, beamed ceiling,
+   * doors, pictures, consoles, settees, bookcases, clock, fireplace, hanging lamps). The interactive anchors (doors, table, curtain,
+   * little door, key, bottle) are still created here so gameplay never depends on the art asset; if the GLB cannot load, the old
+   * primitive shell is built instead.
+   */
+  private async buildHallEnvironment(): Promise<void> {
+    try {
+      const gltf = await new GLTFLoader().loadAsync('/assets/models/ch1_s5_hall.glb');
+      const root = gltf.scene;
+      root.name = 'S5_Hall_Set';
+      convertMaterialsToToon(root);
+      root.traverse((obj) => {
+        const mesh = obj as THREE.Mesh;
+        if (!mesh.isMesh) return;
+        const n = mesh.name;
+        if (/Parquet|Runner/.test(n)) mesh.receiveShadow = true;
+        if (/S5_(Wood|Door|Brass|Marble|Porcelain|Books|Velvet|Clock)|Hall_LittleDoor/.test(n)) applyInkOutline(mesh, 0x2b2420, 0.0022);
+        // the garden beyond the Little Door is the one place the chapter is allowed full-saturation sunshine: self-lit, not lamp-lit
+        const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+        for (const m of mats) {
+          if (/^M_S5_G_/.test(m.name)) (m as THREE.MeshToonMaterial).emissiveIntensity = /Sky/.test(m.name) ? 1.0 : 0.78;
+        }
+      });
+      this.littleDoorLeaf = root.getObjectByName('Hall_LittleDoor') ?? null;
+      this.hallCurtainNode = root.getObjectByName('Hall_Curtain') ?? null;
+      this.hallCurtainNode?.removeFromParent();           // re-parented into INT_curtain so the game can slide it aside
+      this.hallGroup.add(root);
+      this.hallPainted = true;
+    } catch (e) {
+      console.warn('[SceneLoader] Hall GLB unavailable, building the placeholder hall:', e);
+    }
+    if (!this.hallPainted) this.buildHallPlaceholderShell();
+    this.buildHallAnchors();
+  }
+
+  private buildHallPlaceholderShell(): void {
     // Great Hall of Doors (24m x 7m x 2.85m)
     const floorGeo = new THREE.PlaneGeometry(24, 7);
     const floorMat = createToonMaterial(0x9e8264, { side: THREE.DoubleSide });
@@ -502,25 +598,6 @@ export class SceneLoader {
 
     this.hallGroup.add(northWall, southWall, westWall, eastWall);
 
-    // Locked Full-Size Doors along North & South walls
-    const doorX = [-8, -3, 2, 7];
-    doorX.forEach((dx, idx) => {
-      [-3.4, 3.4].forEach((dz, sideIdx) => {
-        const doorNum = idx * 2 + sideIdx + 1;
-        const doorMesh = new THREE.Mesh(
-          new THREE.BoxGeometry(1.0, 2.1, 0.08),
-          createToonMaterial(0x5c3c24)
-        );
-        doorMesh.position.set(dx, 1.05, dz);
-        const paddedName = `INT_door_0${doorNum}`;
-        doorMesh.name = paddedName;
-        addInkOutline(doorMesh);
-        this.hallGroup.add(doorMesh);
-        this.propsMap.set(paddedName, doorMesh);
-        this.propsMap.set(`INT_door_${doorNum}`, doorMesh);
-      });
-    });
-
     // 6 Warm Hanging Lamps along the Hall
     [-9, -5, -1, 3, 7, 10.5].forEach((lx) => {
       const lampMesh = new THREE.Mesh(
@@ -529,6 +606,27 @@ export class SceneLoader {
       );
       lampMesh.position.set(lx, 2.65, 0);
       this.hallGroup.add(lampMesh);
+    });
+  }
+
+  private buildHallAnchors(): void {
+    // Locked Full-Size Doors along North & South walls
+    const doorX = [-8, -3, 2, 7];
+    doorX.forEach((dx, idx) => {
+      [-3.4, 3.4].forEach((dz, sideIdx) => {
+        const doorNum = idx * 2 + sideIdx + 1;
+        // painted doors come from the GLB; the anchor is an invisible group at the same spot
+        const doorMesh: THREE.Object3D = this.hallPainted
+          ? new THREE.Group()
+          : new THREE.Mesh(new THREE.BoxGeometry(1.0, 2.1, 0.08), createToonMaterial(0x5c3c24));
+        doorMesh.position.set(dx, 1.05, dz);
+        const paddedName = `INT_door_0${doorNum}`;
+        doorMesh.name = paddedName;
+        if (!this.hallPainted) addInkOutline(doorMesh as THREE.Mesh);
+        this.hallGroup.add(doorMesh);
+        this.propsMap.set(paddedName, doorMesh);
+        this.propsMap.set(`INT_door_${doorNum}`, doorMesh);
+      });
     });
 
     // Sunlit Garden Vista beyond the Little Door at (-0.8, 0, -5.2)
@@ -546,7 +644,7 @@ export class SceneLoader {
     );
     fountain.position.set(0, 0.4, 0);
     vistaGroup.add(vistaLawn, fountain);
-    this.hallGroup.add(vistaGroup);
+    if (!this.hallPainted) this.hallGroup.add(vistaGroup);   // the painted hall already contains the Garden Vista
   }
 
   private buildProceduralProps(): void {
@@ -580,11 +678,18 @@ export class SceneLoader {
     const keyGroup = new THREE.Group();
     keyGroup.name = 'INT_gold_key';
     keyGroup.position.set(0.92, 0.74, -0.6);
-    const keyGeo = new THREE.TorusGeometry(0.04, 0.012, 8, 16);
-    const keyMat = createToonMaterial(0xd4af37, { emissive: 0xd4af37, emissiveIntensity: 0.55 });
-    const keyMesh = new THREE.Mesh(keyGeo, keyMat);
-    keyMesh.rotation.x = Math.PI / 2;
-    keyGroup.add(keyMesh);
+    const paintedKey = this.cloneProp('prop_key_gold');
+    if (paintedKey) {
+      paintedKey.rotation.x = Math.PI / 2;               // lies flat on the glass
+      paintedKey.position.y = -0.016;                    // the group sits 4 cm above the table top
+      keyGroup.add(paintedKey);
+    } else {
+      const keyGeo = new THREE.TorusGeometry(0.04, 0.012, 8, 16);
+      const keyMat = createToonMaterial(0xd4af37, { emissive: 0xd4af37, emissiveIntensity: 0.55 });
+      const keyMesh = new THREE.Mesh(keyGeo, keyMat);
+      keyMesh.rotation.x = Math.PI / 2;
+      keyGroup.add(keyMesh);
+    }
     this.hallGroup.add(keyGroup);
     this.propsMap.set('prop_key_gold', keyGroup);
     this.propsMap.set('INT_gold_key', keyGroup);
@@ -593,11 +698,16 @@ export class SceneLoader {
     const bottleGroup = new THREE.Group();
     bottleGroup.name = 'INT_bottle_drinkme';
     bottleGroup.position.set(0.76, 0.78, -0.54);
-    const bottleGeo = new THREE.CylinderGeometry(0.035, 0.045, 0.14, 16);
-    const bottleMat = createToonMaterial(0x64b5c6);
-    const bottleMesh = new THREE.Mesh(bottleGeo, bottleMat);
-    addInkOutline(bottleMesh);
-    bottleGroup.add(bottleMesh);
+    const paintedBottle = this.cloneProp('prop_bottle_drinkme');
+    if (paintedBottle) {
+      paintedBottle.position.y = -0.06;                  // group origin is 6 cm above the table top
+      paintedBottle.rotation.y = 0.5;                    // label turned a little towards the player
+      bottleGroup.add(paintedBottle);
+    } else {
+      const bottleMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.045, 0.14, 16), createToonMaterial(0x64b5c6));
+      addInkOutline(bottleMesh);
+      bottleGroup.add(bottleMesh);
+    }
     this.hallGroup.add(bottleGroup);
     this.propsMap.set('prop_bottle_drinkme', bottleGroup);
     this.propsMap.set('INT_bottle_drinkme', bottleGroup);
@@ -606,16 +716,22 @@ export class SceneLoader {
     const boxGroup = new THREE.Group();
     boxGroup.name = 'INT_glass_box';
     boxGroup.position.set(0.88, 0.035, -0.62);
-    const boxGeo = new THREE.BoxGeometry(0.16, 0.07, 0.12);
-    const boxMesh = new THREE.Mesh(boxGeo, glassMat);
-    addInkOutline(boxMesh);
-    boxGroup.add(boxMesh);
-
-    const cakeGeo = new THREE.CylinderGeometry(0.045, 0.045, 0.035, 14);
-    const cakeMat = createToonMaterial(0xc99650);
-    const cakeMesh = new THREE.Mesh(cakeGeo, cakeMat);
-    cakeMesh.position.set(0, 0.015, 0);
-    boxGroup.add(cakeMesh);
+    const paintedBox = this.cloneProp('prop_box_glass');
+    const paintedCake = this.cloneProp('prop_cake_eatme');
+    if (paintedBox && paintedCake) {
+      paintedBox.position.y = -0.035;                    // group origin is the box centre height
+      paintedBox.scale.setScalar(1.5);                   // 15 × 10.5 × 7.5 cm: big enough to read from the hall
+      paintedCake.position.set(0, -0.026, 0);
+      paintedCake.scale.setScalar(1.5);
+      boxGroup.add(paintedBox, paintedCake);
+    } else {
+      const boxMesh = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.07, 0.12), glassMat);
+      addInkOutline(boxMesh);
+      boxGroup.add(boxMesh);
+      const cakeMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.035, 14), createToonMaterial(0xc99650));
+      cakeMesh.position.set(0, 0.015, 0);
+      boxGroup.add(cakeMesh);
+    }
 
     this.hallGroup.add(boxGroup);
     this.propsMap.set('INT_glass_box', boxGroup);
@@ -630,7 +746,7 @@ export class SceneLoader {
       createToonMaterial(0x5e3c24)
     );
     addInkOutline(doorFrame);
-    doorGroup.add(doorFrame);
+    if (!this.hallPainted) doorGroup.add(doorFrame);   // the painted hall carries its own Little Door
     this.hallGroup.add(doorGroup);
     this.propsMap.set('ch1_hall_door_little', doorGroup);
     this.propsMap.set('INT_little_door', doorGroup);
@@ -638,12 +754,16 @@ export class SceneLoader {
     const curtainGroup = new THREE.Group();
     curtainGroup.name = 'INT_curtain';
     curtainGroup.position.set(-0.8, 0.3, -3.32);
-    const curtainMesh = new THREE.Mesh(
-      new THREE.BoxGeometry(0.55, 0.6, 0.03),
-      createToonMaterial(0x8a1c2b)
-    );
-    addInkOutline(curtainMesh);
-    curtainGroup.add(curtainMesh);
+    if (this.hallCurtainNode) {
+      curtainGroup.add(this.hallCurtainNode);
+    } else {
+      const curtainMesh = new THREE.Mesh(
+        new THREE.BoxGeometry(0.55, 0.6, 0.03),
+        createToonMaterial(0x8a1c2b)
+      );
+      addInkOutline(curtainMesh);
+      curtainGroup.add(curtainMesh);
+    }
     this.hallGroup.add(curtainGroup);
     this.propsMap.set('INT_curtain', curtainGroup);
   }

@@ -23,6 +23,8 @@ declare global {
       getPlayerMotion: () => {
         velocity: { x: number; y: number; z: number }; speed: number; running: boolean; facing: number;
       };
+      getRenderStats: () => { calls: number; triangles: number };
+      getRenderBreakdown: () => Record<string, { meshes: number; hulls: number; shadowCasters: number; drawn: number }>;
       getAliceAnimation: () => unknown;
       getAliceBoneWorld: (name: string) => { x: number; y: number; z: number } | null;
       getSceneMetrics: () => unknown;

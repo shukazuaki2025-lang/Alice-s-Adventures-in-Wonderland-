@@ -20,10 +20,10 @@ from lib.meshkit import clamp, lerp, smoothstep
 from . import spec
 
 FPS = 30
-L1 = spec.HIP_Z - spec.KNEE_Z          # thigh 0.245
-L2 = spec.KNEE_Z - spec.ANKLE_Z        # shin 0.200
-HIP_Z = spec.HIP_Z
-ANKLE_Z = spec.ANKLE_Z
+L1 = (spec.HIP_Z - spec.KNEE_Z) * spec.SCALE          # thigh ≈ 0.252 m after the final 1.03 scale
+L2 = (spec.KNEE_Z - spec.ANKLE_Z) * spec.SCALE        # shin ≈ 0.206 m
+HIP_Z = spec.HIP_Z * spec.SCALE
+ANKLE_Z = spec.ANKLE_Z * spec.SCALE
 
 # nominal ground speeds the clips are authored for (the engine plays them at speed / nominal)
 WALK_SPEED = 1.2
@@ -367,21 +367,28 @@ def eat_keys():
 
 
 def look_down_keys():
-    def pose(k, sway):
+    """Alice (suddenly very tall) examines her hands, then peers down a long way at her feet."""
+    def pose(hands, feet, sway):
         p = base_pose()
-        stand_legs(p, 0.0, 0.4 + 2 * k, hip_f=0.0)
-        p.r('Spine', 6 * k).r('Chest', 5 * k)
-        p.r('Neck', 12 * k).r('Head', 26 * k, 0, 4 * sway)
-        p.r('UpperArm_L', -18 * k, 5 * k, 0).r('UpperArm_R', -18 * k, -5 * k, 0)
-        p.r('LowerArm_L', -28 * k).r('LowerArm_R', -28 * k)
-        p.r('Hand_L', -8 * k).r('Hand_R', -8 * k)
-        p.r('Shoulder_L', 0, 0, -4 * k).r('Shoulder_R', 0, 0, 4 * k)
+        k = max(hands, feet)
+        stand_legs(p, 0.035 * feet, 0.4 + 3 * feet)
+        p.r('Hips', 0, 0, 2.5 * sway)
+        p.r('Spine', 5 * hands + 9 * feet).r('Chest', 4 * hands + 7 * feet)
+        p.r('Neck', 8 * hands + 14 * feet).r('Head', 20 * hands + 30 * feet, 0, 4 * sway)
+        for side, s_ in (('L', 1.0), ('R', -1.0)):
+            p.r(f'UpperArm_{side}', -34 * hands + 22 * feet, -s_ * (6 * hands), 0)
+            p.r(f'LowerArm_{side}', -62 * hands + 40 * feet)
+            p.r(f'Hand_{side}', -18 * hands, 0, s_ * 10 * hands)
+            finger_curl(p, side, 0.1 + 0.3 * hands)
+        p.r('Shoulder_L', 0, 0, -5 * k).r('Shoulder_R', 0, 0, 5 * k)
+        p.r('Skirt_F_1', -8 * feet).r('HairB_C_1', 6 * feet).r('HairB_C_2', 10 * feet)
         return p
     return [
-        (0.00, pose(0, 0), 'smooth'),
-        (0.70, pose(1.0, 0), 'smooth'),
-        (1.30, pose(1.0, 1.0), 'smooth'),
-        (2.04, pose(1.0, -1.0), 'smooth'),
+        (0.00, pose(0, 0, 0), 'smooth'),
+        (0.60, pose(1.0, 0, 0), 'smooth'),
+        (1.20, pose(0.7, 0.7, 1.0), 'smooth'),
+        (1.70, pose(0.2, 1.0, -1.0), 'smooth'),
+        (2.04, pose(0.0, 1.0, 0.0), 'smooth'),
     ]
 
 

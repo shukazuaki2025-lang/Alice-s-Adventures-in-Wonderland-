@@ -19,7 +19,12 @@ export class GameHarnessHelper {
   /**
    * Navigates to the game with ?test=1&forceWebGL=1 and waits for window.__game to be registered.
    */
+  /**
+   * Opens the game. Behavioural specs render at half resolution without MSAA (`?scale=0.5&msaa=0`) because the CI browser draws
+   * with a software GPU; the gate's visual specs pass `scale=1&msaa=4` explicitly to capture the real picture.
+   */
   async openGame(path = '/?test=1&forceWebGL=1'): Promise<void> {
+    if (!/[?&]scale=/.test(path)) path += `${path.includes('?') ? '&' : '?'}scale=0.5&msaa=0`;
     await this.page.goto(path);
     await this.page.waitForLoadState('domcontentloaded');
 

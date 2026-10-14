@@ -1,0 +1,25 @@
+{
+  "pass": false,
+  "quick": false,
+  "noRun": true,
+  "at": "2026-10-14T18:07:56.404Z",
+  "commit": "903e15f",
+  "failing": [
+    "model:chr_rabbit",
+    "model:chr_dinah_dream",
+    "model:prop_bottle_drinkme",
+    "model:prop_cake_eatme",
+    "model:prop_jar_marmalade",
+    "model:prop_key_gold",
+    "model:prop_watch",
+    "model:prop_box_glass",
+    "S1_BANK",
+    "S1_BANK_orbit",
+    "S3_FALL",
+    "S4_PASSAGE",
+    "S5_HALL",
+    "S6_SMALL",
+    "npc:sister",
+    "verdict"
+  ]
+}

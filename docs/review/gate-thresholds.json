@@ -1,0 +1,359 @@
+{
+ "_comment": "Hard acceptance thresholds read by tools/quality-gate.mjs (see docs/review/ROUND2_TASK.md). They may only be RAISED, never lowered: the gate compares this file with the version in which it was first committed (git history is the floor). Keys beginning 'min' / paths under '.min.' may only go up; 'max' / '.max.' only down.",
+ "version": 2,
+ "alice": {
+  "height": 1.2,
+  "heightTol": 0.03,
+  "headRatio": [
+   4.0,
+   5.2
+  ],
+  "trisMin": 8000,
+  "trisMax": 95000,
+  "maxBytes": 7000000,
+  "minTextures": 10,
+  "minTexturedMaterials": 10,
+  "materials": [
+   "M_Alice_Skin",
+   "M_Alice_Face",
+   "M_Alice_Eye",
+   "M_Alice_Hair",
+   "M_Alice_HairCap",
+   "M_Alice_Ribbon",
+   "M_Alice_Dress",
+   "M_Alice_Collar",
+   "M_Alice_Apron",
+   "M_Alice_Stockings",
+   "M_Alice_Shoes",
+   "M_Alice_Lid",
+   "M_Alice_Lips",
+   "M_Alice_Brow",
+   "M_Alice_Mouth"
+  ],
+  "minBones": 60,
+  "requiredBones": [
+   "Hips",
+   "Spine",
+   "Chest",
+   "Neck",
+   "Head",
+   "Jaw",
+   "Eye_L",
+   "Eye_R",
+   "UpperArm_L",
+   "LowerArm_L",
+   "Hand_L",
+   "UpperArm_R",
+   "LowerArm_R",
+   "Hand_R",
+   "Thigh_L",
+   "Calf_L",
+   "Foot_L",
+   "Toe_L",
+   "Thigh_R",
+   "Calf_R",
+   "Foot_R",
+   "Toe_R",
+   "Index_L_1",
+   "Thumb_L_1",
+   "Index_R_1",
+   "Thumb_R_1",
+   "Skirt_F_1",
+   "Skirt_B_1",
+   "HairB_C_1",
+   "SashTail_L_1",
+   "Bow"
+  ],
+  "morphs": [
+   "Neutral",
+   "Blink",
+   "Smile",
+   "Surprised",
+   "Crying",
+   "MouthOpen"
+  ],
+  "clips": {
+   "Alice_Idle": [
+    2.5,
+    4.0
+   ],
+   "Alice_Walk": [
+    0.6,
+    1.1
+   ],
+   "Alice_Run": [
+    0.4,
+    0.8
+   ],
+   "Alice_TryDoor": [
+    1.4,
+    2.2
+   ],
+   "Alice_CrawlIn": [
+    1.5,
+    2.4
+   ],
+   "Alice_Land": [
+    1.2,
+    2.0
+   ],
+   "Alice_CurtseyAir": [
+    1.6,
+    2.5
+   ],
+   "Alice_KneelPeek_In": [
+    1.2,
+    2.0
+   ],
+   "Alice_KneelPeek_Out": [
+    1.2,
+    2.0
+   ],
+   "Alice_Drink": [
+    1.6,
+    2.5
+   ],
+   "Alice_ShrinkReact": [
+    1.5,
+    2.4
+   ],
+   "Alice_Slip": [
+    1.2,
+    2.0
+   ],
+   "Alice_SitCry": [
+    2.0,
+    3.2
+   ],
+   "Alice_Eat": [
+    1.6,
+    2.5
+   ],
+   "Alice_LookDown": [
+    1.6,
+    2.5
+   ]
+  },
+  "loops": [
+   "Alice_Idle",
+   "Alice_Walk",
+   "Alice_Run",
+   "Alice_SitCry"
+  ],
+  "loopToleranceDeg": 1.5,
+  "walk": {
+   "thighDeg": 25,
+   "kneeDeg": 20,
+   "armDeg": 15,
+   "pelvisBob": 0.008,
+   "antiPhaseCorr": -0.3,
+   "halfCycleMatch": 0.9
+  },
+  "run": {
+   "thighDeg": 35,
+   "kneeDeg": 50
+  },
+  "idle": {
+   "movingBones": 20
+  },
+  "storyClips": [
+   "Alice_TryDoor",
+   "Alice_CrawlIn",
+   "Alice_Land",
+   "Alice_CurtseyAir",
+   "Alice_KneelPeek_In",
+   "Alice_KneelPeek_Out",
+   "Alice_Drink",
+   "Alice_ShrinkReact",
+   "Alice_Slip",
+   "Alice_SitCry",
+   "Alice_Eat",
+   "Alice_LookDown"
+  ],
+  "story": {
+   "boneDeg": 8,
+   "movingBones": 8,
+   "overrides": {
+    "Alice_SitCry": {
+     "boneDeg": 2.0,
+     "movingBones": 8
+    }
+   }
+  },
+  "minTexturePixels": 4000000
+ },
+ "scenes": {
+  "required": [
+   "S1_BANK",
+   "S1_BANK_orbit",
+   "S3_FALL",
+   "S4_PASSAGE",
+   "S5_HALL",
+   "S6_SMALL"
+  ],
+  "min": {
+   "detail": 8.0,
+   "palette": 0.6,
+   "hueEntropy": 2.0,
+   "contrast": 0.2,
+   "saturation": 0.3
+  },
+  "max": {
+   "hardEdge": 0.12,
+   "dominant3": 0.3,
+   "saturation": 0.8,
+   "drawCalls": 150
+  }
+ },
+ "aliceViews": {
+  "required": [
+   "front",
+   "threeQuarter",
+   "face",
+   "walk"
+  ],
+  "min": {
+   "detail": 12.0,
+   "palette": 0.18,
+   "hueEntropy": 1.4,
+   "contrast": 0.2
+  },
+  "max": {
+   "hardEdge": 0.22,
+   "dominant3": 0.6
+  },
+  "perView": {
+   "face": {
+    "min": {
+     "detail": 6.0,
+     "palette": 0.22,
+     "hueEntropy": 1.5,
+     "contrast": 0.2
+    },
+    "max": {
+     "hardEdge": 0.16,
+     "dominant3": 0.5
+    }
+   }
+  }
+ },
+ "npcViews": {
+  "required": [
+   "sister",
+   "rabbit"
+  ],
+  "min": {
+   "detail": 12.0,
+   "palette": 0.18,
+   "hueEntropy": 1.4,
+   "contrast": 0.2
+  },
+  "max": {
+   "hardEdge": 0.22,
+   "dominant3": 0.6
+  }
+ },
+ "models": {
+  "chr_sister": {
+   "minTris": 20000,
+   "minTexturedMaterials": 8,
+   "minTexturePixels": 3000000,
+   "maxBytes": 6000000,
+   "requiredAnimations": [
+    "Sister_ReadIdle"
+   ]
+  },
+  "chr_rabbit": {
+   "minTris": 15000,
+   "minTexturedMaterials": 6,
+   "minTexturePixels": 3000000,
+   "maxBytes": 8000000,
+   "requiredAnimations": [
+    "Rabbit_CheckWatch",
+    "Rabbit_Hurry",
+    "Rabbit_LookBack",
+    "Rabbit_Scurry"
+   ]
+  },
+  "chr_dinah_dream": {
+   "minTris": 6000,
+   "minTexturedMaterials": 2,
+   "minTexturePixels": 1500000,
+   "maxBytes": 5000000,
+   "requiredAnimations": [
+    "Dinah_Float"
+   ]
+  },
+  "ch1_s1_bank": {
+   "minTris": 30000,
+   "minTexturedMaterials": 6,
+   "minTexturePixels": 2000000,
+   "maxBytes": 8000000
+  },
+  "ch1_s3_well": {
+   "minTris": 30000,
+   "minTexturedMaterials": 8,
+   "minTexturePixels": 4000000,
+   "maxBytes": 12000000
+  },
+  "ch1_s4_passage": {
+   "minTris": 10000,
+   "minTexturedMaterials": 5,
+   "minTexturePixels": 2500000,
+   "maxBytes": 10000000
+  },
+  "ch1_s5_hall": {
+   "minTris": 50000,
+   "minTexturedMaterials": 10,
+   "minTexturePixels": 5000000,
+   "maxBytes": 14000000
+  },
+  "prop_bottle_drinkme": {
+   "minTris": 800,
+   "minTexturedMaterials": 1,
+   "minTexturePixels": 250000,
+   "maxBytes": 2000000
+  },
+  "prop_cake_eatme": {
+   "minTris": 800,
+   "minTexturedMaterials": 1,
+   "minTexturePixels": 250000,
+   "maxBytes": 2000000
+  },
+  "prop_jar_marmalade": {
+   "minTris": 400,
+   "minTexturedMaterials": 1,
+   "minTexturePixels": 250000,
+   "maxBytes": 2000000
+  },
+  "prop_key_gold": {
+   "minTris": 2000,
+   "minTexturedMaterials": 1,
+   "minTexturePixels": 250000,
+   "maxBytes": 2000000
+  },
+  "prop_watch": {
+   "minTris": 800,
+   "minTexturedMaterials": 1,
+   "minTexturePixels": 250000,
+   "maxBytes": 2000000
+  },
+  "prop_box_glass": {
+   "minTris": 300,
+   "minTexturedMaterials": 1,
+   "minTexturePixels": 250000,
+   "maxBytes": 2000000
+  }
+ },
+ "budget": {
+  "maxTotalModelBytes": 45000000
+ },
+ "reference": {
+  "file": "docs/art/benchmark/littleprince-keyart-metrics.json",
+  "note": "Scene bars are set at about 90-100% of the benchmark full-frame numbers on detail/palette/hueEntropy/contrast. They are proxies; the human-eye board (docs/devlog/gate/board.png + VERDICT.md) is the final judge."
+ },
+ "integrity": {
+  "metricsSha256": "d8aa517e2e530f4e7eba1fa29c66e7e5eecf3d038ff058c6bad5575eaf04b77f",
+  "requireVerdict": true
+ }
+}

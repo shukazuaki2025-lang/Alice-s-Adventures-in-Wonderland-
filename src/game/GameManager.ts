@@ -15,6 +15,10 @@ import { AliceEntity } from './entities/AliceEntity';
 import { RabbitEntity } from './entities/RabbitEntity';
 import { SisterEntity, DinahDreamEntity } from './entities/NpcEntities';
 
+import { SceneLightingManager } from '../engine/SceneLighting';
+import { PaintedSky } from '../world/PaintedSky';
+import { Pollen } from '../world/Pollen';
+
 import { globalEventBus, GameStateSnapshot } from '../core/types';
 import { GAME_EVENTS } from '../core/events';
 
@@ -37,16 +41,20 @@ export class GameManager {
   public dinahDreamEntity: DinahDreamEntity;
 
   public scene: THREE.Scene;
+  public lighting: SceneLightingManager;
+  public sky: PaintedSky;
+  public pollen: Pollen;
   private elapsedTime = 0;
   private stateElapsedTime = 0; // Tracks time spent in current state
   private fallThoughtsTriggered = [false, false, false, false, false];
 
   constructor(canvas: HTMLCanvasElement) {
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0xe8eff2);
-    this.scene.fog = new THREE.FogExp2(0xe8eff2, 0.018);
-
-    this.setupLighting();
+    this.lighting = new SceneLightingManager(this.scene);
+    this.sky = new PaintedSky();
+    this.scene.add(this.sky.mesh);
+    this.pollen = new Pollen();
+    this.scene.add(this.pollen.points);
 
     this.renderer = new RenderEngine(canvas);
     this.physicsWorld = new PhysicsWorld();
@@ -79,29 +87,6 @@ export class GameManager {
     this.gameLoop.addUpdateCallback((dt) => this.onUpdate(dt));
     this.setupEventListeners();
     this.setupResizeHandler();
-  }
-
-  private setupLighting(): void {
-    const hemiLight = new THREE.HemisphereLight(0xfff8e7, 0x7c6a58, 1.35);
-    hemiLight.position.set(0, 15, 0);
-    this.scene.add(hemiLight);
-
-    const ambientLight = new THREE.AmbientLight(0xf7f3ea, 0.85);
-    this.scene.add(ambientLight);
-
-    const dirLight = new THREE.DirectionalLight(0xfff0d0, 1.6);
-    dirLight.position.set(8, 16, 10);
-    dirLight.castShadow = true;
-    dirLight.shadow.mapSize.width = 1024;
-    dirLight.shadow.mapSize.height = 1024;
-    this.scene.add(dirLight);
-
-    // Warm chandelier point lights along the hall
-    [-8, 0, 8].forEach((lx) => {
-      const pt = new THREE.PointLight(0xffcb78, 1.2, 16);
-      pt.position.set(lx, 2.5, 0);
-      this.scene.add(pt);
-    });
   }
 
   private setupResizeHandler(): void {
@@ -143,20 +128,11 @@ export class GameManager {
     this.physicsWorld.setActiveGroup(SceneLoader.getColliderGroup(state));
     this.physicsWorld.setWalkBounds(SceneLoader.getWalkBounds(state));
 
-    if (state === 'S0_TITLE' || state === 'S1_BANK' || state === 'S2_CHASE') {
-      this.scene.background = new THREE.Color(0xe6eff0);
-      this.scene.fog = new THREE.FogExp2(0xe6eff0, 0.016);
-    } else if (state === 'S3_FALL') {
-      this.scene.background = new THREE.Color(0x281f1b);
-      this.scene.fog = new THREE.FogExp2(0x281f1b, 0.045);
-      this.characterController.setPosition(new THREE.Vector3(0, 0, 0));
-    } else if (state === 'S4_PASSAGE') {
-      this.scene.background = new THREE.Color(0x322620);
-      this.scene.fog = new THREE.FogExp2(0x322620, 0.035);
-      this.characterController.setPosition(new THREE.Vector3(0, 0, 0));
-    } else {
-      this.scene.background = new THREE.Color(0x3d3028);
-      this.scene.fog = new THREE.FogExp2(0x3d3028, 0.025);
+    this.lighting.applyStateLighting(state);
+    const outdoors = state === 'S0_TITLE' || state === 'S1_BANK' || state === 'S2_CHASE';
+    this.sky.mesh.visible = outdoors;
+    this.pollen.points.visible = outdoors;
+    if (!outdoors) {
       this.characterController.setPosition(new THREE.Vector3(0, 0, 0));
     }
 
@@ -356,6 +332,10 @@ export class GameManager {
     this.aliceEntity.setPosition(this.characterController.position);
     this.aliceEntity.mesh.rotation.y = this.characterController.rotation.y;
     this.aliceEntity.update(deltaTime, this.characterController.velocity, this.characterController.turnRate);
+    this.sceneLoader.update(deltaTime);
+    this.sky.update(deltaTime, this.cameraRig.camera.position);
+    this.pollen.update(deltaTime, this.characterController.position);
+    this.lighting.follow(this.characterController.position);
     this.sisterEntity.update(deltaTime);
     this.rabbitEntity.update(deltaTime);
     this.puzzleManager.update(deltaTime);
@@ -415,10 +395,9 @@ export class GameManager {
         }
       }
 
+      this.lighting.setS3Progress(t); // amber candlelight -> lavender twilight from t = 70 s
       if (t >= 70 && !this.stateMachine.getFlag('lavenderTwilight')) {
         this.stateMachine.setFlag('lavenderTwilight', true);
-        this.scene.background = new THREE.Color(0x3a3045); // Lavender
-        this.scene.fog = new THREE.FogExp2(0x3a3045, 0.045);
         this.scene.add(this.dinahDreamEntity.mesh);
       }
 
@@ -582,6 +561,10 @@ export class GameManager {
         }
       } else if (interactable === 'INT_little_door' && curtainFound && !peekDone) {
         this.stateMachine.setFlag('littleDoorUnlocked', true);
+        // kneel beside the door (not in front of it) so the glide camera can look straight down the passage into the garden
+        this.characterController.setPosition(new THREE.Vector3(-1.45, 0, -3.0));
+        this.characterController.setFacing(Math.PI);
+        this.sceneLoader.setLittleDoorOpen(true);
         globalEventBus.emit(GAME_EVENTS.DIALOGUE_TRIGGER, {
           id: 'S5_PEEK',
           speaker: 'narrator',

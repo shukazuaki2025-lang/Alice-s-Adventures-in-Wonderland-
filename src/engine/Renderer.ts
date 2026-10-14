@@ -7,14 +7,20 @@ import { createPaperGrainOverlayMaterial } from '../shaders/PaperGrain';
  */
 export class RenderEngine {
   public renderer: THREE.WebGLRenderer;
+  /** draw calls / triangles of the last *scene* pass (excludes the full-screen paper-grain overlay); read by the quality gate */
+  public readonly sceneStats = { calls: 0, triangles: 0 };
   private overlayScene: THREE.Scene;
   private overlayCamera: THREE.OrthographicCamera;
   private overlayMaterial: THREE.ShaderMaterial;
   private renderTarget: THREE.WebGLRenderTarget;
+  /** device pixel ratio × optional ?scale= (0.25–1): lets software-GPU CI render fewer pixels without touching the layout */
+  private pixelRatio: number;
 
   constructor(canvas: HTMLCanvasElement) {
     const urlParams = new URLSearchParams(window.location.search);
     const forceWebGL = urlParams.get('forceWebGL') === '1';
+    const renderScale = Math.min(1, Math.max(0.25, parseFloat(urlParams.get('scale') ?? '1') || 1));
+    const msaa = Math.max(0, Math.min(8, parseInt(urlParams.get('msaa') ?? '4', 10) || 0));
 
     if (!forceWebGL && typeof navigator !== 'undefined' && 'gpu' in navigator) {
       console.log('[RenderEngine] WebGPU capability detected; using WebGL2 compatible pipeline for custom GLSL shaders.');
@@ -30,7 +36,8 @@ export class RenderEngine {
       preserveDrawingBuffer: true,
     });
 
-    const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+    const pixelRatio = Math.min(window.devicePixelRatio || 1, 2) * renderScale;
+    this.pixelRatio = pixelRatio;
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.setPixelRatio(pixelRatio);
     this.renderer.shadowMap.enabled = true;
@@ -48,7 +55,7 @@ export class RenderEngine {
         magFilter: THREE.LinearFilter,
         format: THREE.RGBAFormat,
         type: THREE.HalfFloatType,
-        samples: 4,
+        samples: msaa,
       }
     );
 
@@ -89,6 +96,8 @@ export class RenderEngine {
     this.renderer.setRenderTarget(this.renderTarget);
     this.renderer.clear();
     this.renderer.render(scene, camera);
+    this.sceneStats.calls = this.renderer.info.render.calls;
+    this.sceneStats.triangles = this.renderer.info.render.triangles;
 
     // Render overlay to screen
     this.renderer.setRenderTarget(null);
@@ -97,7 +106,7 @@ export class RenderEngine {
   }
 
   public resize(width: number, height: number): void {
-    const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+    const pixelRatio = this.pixelRatio;
     this.renderer.setSize(width, height);
     this.renderer.setPixelRatio(pixelRatio);
     this.renderTarget.setSize(width * pixelRatio, height * pixelRatio);

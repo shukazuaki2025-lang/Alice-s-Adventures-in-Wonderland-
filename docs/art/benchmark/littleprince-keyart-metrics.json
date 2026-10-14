@@ -1,0 +1,45 @@
+{
+  "fullFrame": {
+    "n": 144910,
+    "detail": 8.304,
+    "palette": 0.638,
+    "hueEntropy": 2.096,
+    "saturation": 0.653,
+    "contrast": 0.213,
+    "hardEdge": 0.0332,
+    "dominant3": 0.5255,
+    "crop": "full"
+  },
+  "planet": {
+    "n": 291375,
+    "detail": 10.636,
+    "palette": 0.803,
+    "hueEntropy": 3.175,
+    "saturation": 0.502,
+    "contrast": 0.254,
+    "hardEdge": 0.0645,
+    "dominant3": 0.2208,
+    "crop": [
+      780,
+      20,
+      700,
+      921
+    ]
+  },
+  "focal": {
+    "n": 141573,
+    "detail": 9.579,
+    "palette": 0.745,
+    "hueEntropy": 2.756,
+    "saturation": 0.554,
+    "contrast": 0.245,
+    "hardEdge": 0.0774,
+    "dominant3": 0.1022,
+    "crop": [
+      900,
+      230,
+      570,
+      330
+    ]
+  }
+}

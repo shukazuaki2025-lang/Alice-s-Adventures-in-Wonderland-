@@ -63,3 +63,52 @@ This document records the remediation of all findings from [`docs/review/2026-10
 - **`F-03` & `F-04` (Genuine Input E2E Playthrough & Unique Screenshots)**: Rewrote `tests/e2e/*.spec.ts` (`21/21` passing) using real UI clicks, keyboard movement/interaction, and simulation stepping—capturing 7 visually verified screenshots in `docs/devlog/screens/e2e/` with 7 unique MD5 hashes.
 - **`F-05` (Read-Only `?test=1` Harness)**: Restricted `window.__game` (`src/testing/testHarness.ts`) to `?test=1` mode only, exposing read-only inspection and simulation acceleration helpers without state/flag mutation backdoors.
 - **`G-01` – `G-04` (Repository Hygiene & Documentation)**: Removed duplicate lowercase `public/assets/cutscenes/ch1/c1.json..c8.json`, added `public/assets/i18n/ch1_notes.json`, `docs/ui/ch1-ui-spec.md`, `LICENSE`, updated `README.md` and `CLAUDE.md`, and added the audit notice to `.agents/teamwork/prompts/teamwork_preview_victory_auditor_1/handoff.md`.
+
+---
+
+# Round 2 — controls, locomotion, painted rebuild, and the hard quality gate (`2026-10-14`)
+
+Reported by the user: the mouse cannot orbit/turn the camera, press-and-drag does not adjust the view, character animation is very stiff, the Blender modelling is poor.
+Then: *match the Little Prince (littleprince.dev) in painting style, finish and modelling — and do not let the follow-up agent stop until it does.*
+The follow-up brief is [`ROUND2_TASK.md`](./ROUND2_TASK.md); the machine-enforced stop condition is `npm run gate`.
+
+## R2-1 Camera / mouse controls (user report #1, #2) — **VERIFIED**
+Root cause: `InputManager` never handled pointer drag (only keyboard), `CameraRig` had a fixed follow offset, and movement was world-relative.
+Fix: pointer-event drag-orbit (any button), wheel zoom, touch drag + pinch, `M` pointer-lock, camera-relative WASD, Shift sprint, blur clears keys
+(`src/engine/InputManager.ts`, `src/engine/CameraRig.ts`, `src/engine/GameLoop.ts`, `src/physics/CharacterController.ts`).
+Evidence: `tests/e2e/controls.spec.ts` CTRL-01…08 drive **real** mouse/keyboard events and read the camera/player through the read-only `?test=1` harness (8/8);
+`tests/unit/controls.test.mjs` (19 unit tests).
+
+## R2-2 Stiff animation (user report #3) — **VERIFIED (numbers) / needs a real-GPU eyeball**
+Fix: exponential velocity smoothing, weight-blended Idle/Walk/Run from model-space speed with one shared gait phase, smoothed turning, lean/bank, blinking
+(`src/game/entities/AliceEntity.ts`); the clips themselves were re-authored with analytic 2-bone leg IK so feet plant (`tools/blender/alice/anim.py`).
+Evidence: `tools/check-alice-rig.mjs` (17 checks: amplitude floors, anti-phase legs, half-cycle gait symmetry, loop closure, 73 joints, no stacked bones).
+
+## R2-3 Modelling (user report #4) — **PARTIAL**
+Done (new loft/bmesh toolkit in `tools/blender/lib/`, generators in `tools/blender/alice/`, `tools/blender/world/`):
+* Alice: 73 k tris, 73 bones, 15 clips, 6 morph targets, 12 painted textures (4.8 Mpx), 1.20 m, canonical palette. 
+* Sister: seated reading pose, 44 k tris, `Sister_ReadIdle` (viewer-verified; in-game placement verified in `docs/devlog/gate/screens`).
+* S1 riverbank: painted terrain/oak/hedge/rocks/rug (1.9 MB).
+* Rendering: texture-preserving toon + wet-edge finish, HDR linear target + paper grain + neutral tone-map, painted sky dome, instanced wind-swept grass/flowers, pollen.
+
+Also delivered later in the same round (all via `tools/blender/*`, painted procedural textures, no third-party assets):
+* S3 well (69 k tris, 11 painted materials, 5.3 Mpx), S4 passage (37 k tris), S5–S7 hall (85 k tris, 26 painted materials, 13 Mpx) including a real Little Door →
+  1.2 m passage → sunlit garden (the C5 peek now has camera work and the leaf swings open), six painted props with lettered labels.
+* Engine fixes found on the way: ink-hull shader failed to compile on static meshes, double-sided materials were flattened to single-sided,
+  authored emissive was dropped, transmissive glass doubled the draw calls (hall 174 → 101), favicon 404 broke the zero-console-error test,
+  `screenshots.spec` needed a longer timeout (it is one long software-GL playthrough).
+
+**Not done (this is what the gate now measures — see `ROUND2_TASK.md` §1):**
+White Rabbit and Dinah are still flat-colour, every scene's *picture* metrics are still below the Little Prince bar (S1 7.8/0.53/0.195 detail/palette/contrast, S3 5.3/0.22/0.08,
+S4 3.0/0.18, S5 palette 0.39, S6 6.3/0.36), the sister's skirt is a smooth dome, facial expressions are not yet wired into the cutscenes.
+
+## R2-4 Hard quality gate — **DELIVERED**
+* `tools/quality-gate.mjs` (`npm run gate`, `gate:quick`, `gate:check`), `tools/check-assets.mjs`, `tools/lib/image-metrics.mjs`, `tools/lib/board.mjs`,
+  thresholds in `docs/review/gate-thresholds.json` (ratcheted against git history), benchmark numbers in `docs/art/benchmark/`.
+* Honest limitation: the benchmark game never rendered past its loading screen in the headless software-GPU browser available here,
+  so only its **key art** was measured; **no in-game footage of the benchmark was captured or compared** (see `docs/art/benchmark/README.md`).
+* State at hand-over: `npm run gate -- --no-run` → **16 of 30 checks failing** (rabbit, Dinah, 6 scenes' picture metrics, `npc:sister`, the human verdict; the props and the three Blender environments now pass their model floors). That is intentional: it is the work list.
+
+### Round 2 — current progress (update this block whenever you stop for any reason)
+* Failing checks: run `npm run gate -- --no-run` and paste the "Failing:" line here.
+* Next step: WP-A (S3 well) → WP-C (hall) → WP-B (passage) → WP-D (rabbit) → WP-E (props) → WP-F (S1 up to the bar) → WP-G.

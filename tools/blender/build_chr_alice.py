@@ -353,15 +353,39 @@ def main():
     rigkit.apply_weights(straps, lambda co: skin.w_sash_tail(co) if co.z < 0.78 and co.y > 0.04 and abs(co.x) < 0.2 and co.z < 0.69 else skin.w_dress_body(co))
     rigkit.bind(straps, rig)
 
-    rig['height'] = spec.ARM_ANGLES and 1.2
+    rig['height'] = 1.2
     rig['character'] = 'Alice'
     rig['source'] = 'tools/blender/build_chr_alice.py'
+
+    apply_character_scale(rig, objs)
 
     if not os.environ.get('ALICE_SKIP_ANIM'):
         from alice import anim
         anim.build_all(rig)
 
     export(rig)
+
+
+def apply_character_scale(rig, objs):
+    """
+    Bake spec.SCALE into mesh data (including shape keys) and the armature's rest pose, leaving every object transform at
+    identity. Done after weighting (weights are scale-independent) and before animation (keys are authored in final metres).
+    """
+    from mathutils import Matrix
+
+    k = spec.SCALE
+    mat = Matrix.Scale(k, 4)
+    for o in objs.values():
+        o.data.transform(mat, shape_keys=True)
+        o.data.update()
+    bpy.ops.object.select_all(action='DESELECT')
+    bpy.context.view_layer.objects.active = rig
+    rig.select_set(True)
+    bpy.ops.object.mode_set(mode='EDIT')
+    for eb in rig.data.edit_bones:
+        eb.head = eb.head * k
+        eb.tail = eb.tail * k
+    bpy.ops.object.mode_set(mode='OBJECT')
 
 
 def export(rig):

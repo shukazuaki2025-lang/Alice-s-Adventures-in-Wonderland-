@@ -119,7 +119,7 @@ def build_back_hair(bm, rng):
     return descr
 
 
-def build_side_locks(bm, rng):
+def build_side_locks(bm, rng, max_frac=1.0):
     descr = []
     for s in (1.0, -1.0):
         for j, (xo, yo, ln, w0) in enumerate(((0.0, 0.0, 0.36, 0.038), (0.016, -0.006, 0.28, 0.028))):
@@ -144,7 +144,7 @@ def build_side_locks(bm, rng):
                 p = p + V(wave * s + 0.020 * s * curl, -0.012 * curl, 0.0)
                 pts.append(p)
             cut = int(len(pts) * (ln / 0.36))
-            pts = pts[:max(8, cut)]
+            pts = pts[:max(8, int(cut * max_frac))]
             up = V(0.4 * s, -1.0, 0.0)
             u0 = rng.range(0.0, 0.76)
             clump_tube(bm, pts, w0=w0, thick=0.015, up_hint=up, n=8, tip_taper=0.08, u_window=(u0, u0 + 0.22))
