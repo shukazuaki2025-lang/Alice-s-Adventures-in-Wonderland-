@@ -223,7 +223,8 @@ def rect_mask(W, H, rects, wrap=True):
     d = ImageDraw.Draw(im)
     for x0, y0, x1, y1 in rects:
         for dx in ((0, W, -W) if wrap else (0,)):
-            d.rectangle([x0 + dx, y0, x1 + dx, y1], fill=255)
+            for dy in ((0, H, -H) if wrap else (0,)):
+                d.rectangle([x0 + dx, y0 + dy, x1 + dx, y1 + dy], fill=255)
     return np.asarray(im, np.float32) / 255.0
 
 
@@ -635,11 +636,13 @@ def _bake_well_light(img, items, W, H, C, ppm_u, ppm_v, Vz, U, seed, log):
     # ---- ambient occlusion behind and under every unit / frame
     rects, under, frames = [], [], []
     for deg, z0, w, h in items.get('units', []):
-        a0, a1 = X(deg - dw(w) / 2) - 8, X(deg + dw(w) / 2) + 8
+        cx, hw = X(deg), dw(w) / 2 * deg_px
+        a0, a1 = cx - hw - 8, cx + hw + 8
         rects.append((a0, Y(z0 - 0.30), a1, Y(z0 + h + 0.10)))
         under.append((a0 - 12, Y(z0 - 0.62), a1 + 12, Y(z0 + 0.02)))
     for deg, z0, w, h in items.get('frames', []):
-        frames.append((X(deg - dw(w) / 2) - 5, Y(z0 - 0.03), X(deg + dw(w) / 2) + 5, Y(z0 + h + 0.03)))
+        cx, hw = X(deg), dw(w) / 2 * deg_px
+        frames.append((cx - hw - 5, Y(z0 - 0.03), cx + hw + 5, Y(z0 + h + 0.03)))
     ao = 0.0
     if rects:
         ao = ao + 0.42 * blur_mask(rect_mask(W, H, rects), 26)
@@ -736,7 +739,7 @@ def _clamp_uv(u, v, rect, eps=0.0015):
     return (min(max(u, rect[0] + eps), rect[2] - eps), min(max(v, rect[1] + eps), rect[3] - eps))
 
 
-def abox(bm, lo, hi, rect, scale=1.8, skip=(), grain_long=True, face_rect=None, uv_name='UVMap'):
+def abox(bm, lo, hi, rect, scale=1.8, skip=(), grain_long=True, face_rect=None, face_rot=(), uv_name='UVMap'):
     """Axis-aligned box whose faces sample the atlas cell `rect` = (u0, v0, u1, v1): one isotropic scale (`scale` metres per cell), anchored
     at each face's own corner, grain running along the face's long side. `face_rect` maps a face name to its own (u0, v0, u1, v1) window
     (stretched over the whole face) - used for book spines."""
@@ -757,6 +760,8 @@ def abox(bm, lo, hi, rect, scale=1.8, skip=(), grain_long=True, face_rect=None, 
             for loop, p in zip(f.loops, pts):
                 a = (p[ua] - amin) / max(da, 1e-6)
                 b = (p[va] - bmin) / max(db, 1e-6)
+                if name in face_rot:
+                    a, b = b, a
                 loop[uvl].uv = (fr[0] + a * (fr[2] - fr[0]), fr[1] + b * (fr[3] - fr[1]))
             continue
         swap = grain_long and db > da
@@ -824,10 +829,10 @@ class UnitFrame:
     def p(self, a, d, z):
         return Vector((-d, a, z))
 
-    def box(self, bm, a0, a1, d0, d1, z0, z1, rect, scale=1.8, skip=(), face_rect=None, grain_long=True):
+    def box(self, bm, a0, a1, d0, d1, z0, z1, rect, scale=1.8, skip=(), face_rect=None, grain_long=True, face_rot=()):
         lo = (-max(d0, d1), min(a0, a1), min(z0, z1))
         hi = (-min(d0, d1), max(a0, a1), max(z0, z1))
-        abox(bm, lo, hi, rect, scale=scale, skip=skip, face_rect=face_rect, grain_long=grain_long)
+        abox(bm, lo, hi, rect, scale=scale, skip=skip, face_rect=face_rect, grain_long=grain_long, face_rot=face_rot)
 
     def quad(self, bm, a0, a1, z0, z1, d, rect):
         """Front-facing (toward -x) rectangle with the cell `rect` stretched across it."""
@@ -842,3 +847,19 @@ class UnitFrame:
 def mat_unit(R, deg, z0):
     """Place a unit built in `UnitFrame` coordinates at game azimuth `deg`, base height z0, on a shaft of radius R."""
     return Matrix.Rotation(math.radians(-deg), 4, 'Z') @ Matrix.Translation((R, 0.0, z0))
+
+
+def qface(bm, pts, want, uvs=None, uv_name='UVMap'):
+    """One face from 3-D points, flipped if needed so that its normal points along `want`."""
+    uvl = bm.loops.layers.uv.get(uv_name) or bm.loops.layers.uv.new(uv_name)
+    try:
+        fc = bm.faces.new([bm.verts.new(p) for p in pts])
+    except ValueError:
+        return None
+    fc.normal_update()
+    if fc.normal.dot(Vector(want)) < 0:
+        fc.normal_flip()
+    if uvs:
+        for loop in fc.loops:
+            loop[uvl].uv = uvs(loop.vert.co)
+    return fc

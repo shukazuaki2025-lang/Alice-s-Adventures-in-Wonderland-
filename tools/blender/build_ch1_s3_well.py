@@ -93,7 +93,7 @@ def main():
             deg = (TIER_OFF[t] + 36.0 * i) % 360.0
             w = rng.range(1.05, 1.28)
             h = rng.range(1.40, 1.68)
-            units.append(dict(kind=kinds_cycle[t][i], deg=deg, z0=z0 + rng.range(-0.04, 0.04), w=w, h=h, wood=WOOD_PICK[int(rng.range(0, len(WOOD_PICK)))],
+            units.append(dict(kind=kinds_cycle[t][i], deg=deg, z0=z0 + rng.range(-0.04, 0.04), w=w, h=h, wood=WOOD_PICK[int(min(rng.range(0, len(WOOD_PICK)), len(WOOD_PICK) - 0.001))],
                               tier=t, idx=i))
             gaps.append(dict(kind=gap_cycle[t][i], deg=(deg + 18.0) % 360.0, z0=z0 + rng.range(0.30, 0.50), tier=t, idx=i))
 
@@ -252,7 +252,7 @@ def main():
         kind, deg, z0, w, h = spec['kind'], spec['deg'], spec['z0'], spec['w'], spec['h']
         depth = 0.46 if kind != 'china' else 0.38
         T = new_T()
-        f = UnitFrame = UP.UnitFrame()
+        f = UP.UnitFrame()
         a0, a1 = -w / 2, w / 2
         wood = WC[spec['wood']]
         oak, dark = WC['oak'], WC['dark']
@@ -282,14 +282,14 @@ def main():
                         break
                     bh = rng.range(0.22, 0.36)
                     bd = rng.range(0.20, 0.32)
-                    sp = spines[int(rng.range(0, len(spines)))]
+                    sp = spines[int(min(rng.range(0, len(spines)), len(spines) - 0.01))]
                     mid = (sp[0] + sp[1]) / 2
                     f.box(T['books'], aa, aa + bw, depth - 0.05 - bd, depth - 0.05, zs + 0.022, zs + 0.022 + bh, FULL, skip=('px', 'nz'),
                           face_rect={'nx': (sp[0], 0.03, sp[1], 0.97), 'ny': (mid - 0.002, 0.4, mid + 0.002, 0.6), 'py': (mid - 0.002, 0.4, mid + 0.002, 0.6),
                                      'pz': (paper_u, 0.1, 0.99, 0.9)})
                     aa += bw + (0.02 if rng.next() < 0.05 else 0.002)
                 if stack_end:
-                    small_stack(T, f, limit + 0.13, depth - 0.05, zs + 0.022, [spines[int(rng.range(0, len(spines)))] for _ in range(int(rng.range(2, 4)))], 0.24)
+                    small_stack(T, f, limit + 0.13, depth - 0.05, zs + 0.022, [spines[int(min(rng.range(0, len(spines)), len(spines) - 0.01))] for _ in range(int(rng.range(2, 4)))], 0.24)
                 elif rng.next() < 0.25:
                     candle(T, f, a1 - 0.12, depth * 0.55, zs + 0.022)
         elif kind == 'cupboard':
@@ -303,7 +303,7 @@ def main():
                 zs = zb + k * h / 3 + 0.02 if k else zb
                 aa = a0 + 0.14
                 while aa < a1 - 0.14:
-                    jam_jar(T, f, aa, depth * 0.5, zs + (0.0 if k == 0 else 0.0), JAM[int(rng.range(0, 8))], rng.range(-0.4, 0.4))
+                    jam_jar(T, f, aa, depth * 0.5, zs + (0.0 if k == 0 else 0.0), JAM[int(min(rng.range(0, 8), 7.99))], rng.range(-0.4, 0.4))
                     aa += 0.17
             ajar = spec['idx'] % 3 == 0
             for k in range(n):
@@ -344,13 +344,13 @@ def main():
                     zz = zs + 0.022
                     yaw = rng.range(-0.5, 0.5)
                     if r_ < 0.56:
-                        jam_jar(T, f, aa, dd, zz, JAM[int(rng.range(0, 8))], yaw)
+                        jam_jar(T, f, aa, dd, zz, JAM[int(min(rng.range(0, 8), 7.99))], yaw)
                         aa += 0.165
                     elif r_ < 0.70:
                         bottle(T, f, aa, dd, zz, 'medicine', yaw, rng.range(0.24, 0.34))
                         aa += 0.105
                     elif r_ < 0.84:
-                        pot(T, f, aa, dd, zz, ('willow', 'rose', 'green', 'terracotta')[int(rng.range(0, 4))], yaw, rng.range(0.85, 1.15))
+                        pot(T, f, aa, dd, zz, ('willow', 'rose', 'green', 'terracotta')[int(min(rng.range(0, 4), 3.99))], yaw, rng.range(0.85, 1.15))
                         aa += 0.17
                     else:
                         tin(T, f, aa, dd, zz, 'tin_tea', yaw)
@@ -367,7 +367,7 @@ def main():
                     aa = a0 + 0.12
                     pk = ('willow', 'rose')
                     while aa < a1 - 0.12:
-                        plate(T, f, aa, depth - 0.11, zz + 0.012, pk[int(rng.range(0, 2))], rng.range(10, 18))
+                        plate(T, f, aa, depth - 0.11, zz + 0.012, pk[int(min(rng.range(0, 2), 1.99))], rng.range(10, 18))
                         aa += 0.24
                 else:
                     aa = a0 + 0.12
@@ -375,10 +375,10 @@ def main():
                         r_ = rng.next()
                         dd = depth * 0.5
                         if r_ < 0.35:
-                            teapot(T, f, aa, dd, zz, ('willow', 'rose', 'green')[int(rng.range(0, 3))], rng.range(-0.6, 0.6))
+                            teapot(T, f, aa, dd, zz, ('willow', 'rose', 'green')[int(min(rng.range(0, 3), 2.99))], rng.range(-0.6, 0.6))
                             aa += 0.22
                         elif r_ < 0.65:
-                            pot(T, f, aa, dd, zz, ('willow', 'rose')[int(rng.range(0, 2))], 0.0, 0.8)
+                            pot(T, f, aa, dd, zz, ('willow', 'rose')[int(min(rng.range(0, 2), 1.99))], 0.0, 0.8)
                             aa += 0.15
                         else:
                             tin(T, f, aa, dd, zz, 'tin_tea', rng.range(-0.4, 0.4))
@@ -467,26 +467,17 @@ def main():
         f.box(T['stone'], r, r + th, 0.0, dp, 0.0, zc, st, scale=0.8)
         f.box(T['stone'], -r - th - 0.03, r + th + 0.03, 0.0, 0.17, -0.05, 0.0, st, scale=0.8)                  # sill
         N = 12
+        uvf = lambda p_: (0.25 + 0.1 * ((p_.y * 1.7) % 1.0), 0.25 + 0.1 * ((p_.z * 1.7) % 1.0))
         for i in range(N):
             t0, t1 = math.pi - math.pi * i / N, math.pi - math.pi * (i + 1) / N
             P = lambda rr, t: (rr * math.cos(t), zc + rr * math.sin(t))
-            quads = [
-                ([P(r, t0), P(r + th, t0), P(r + th, t1), P(r, t1)], dp, None),
-            ]
-            (a_i0, z_i0), (a_o0, z_o0), (a_o1, z_o1), (a_i1, z_i1) = quads[0][0]
-            uvl = T['stone'].loops.layers.uv.get('UVMap') or T['stone'].loops.layers.uv.new('UVMap')
-            # front face (normal -x) and the inner reveal (normal towards the niche centre)
-            for pts3, uvs in (([f.p(a_i0, dp, z_i0), f.p(a_o0, dp, z_o0), f.p(a_o1, dp, z_o1), f.p(a_i1, dp, z_i1)], None),
-                              ([f.p(a_i0, 0.0, z_i0), f.p(a_i0, dp, z_i0), f.p(a_i1, dp, z_i1), f.p(a_i1, 0.0, z_i1)], None)):
-                try:
-                    fc = T['stone'].faces.new([T['stone'].verts.new(p) for p in pts3])
-                except ValueError:
-                    continue
-                if fc.normal.x > 0 and pts3[0].x != 0:
-                    pass
-                for loop in fc.loops:
-                    loop[uvl].uv = (0.25 + 0.1 * (loop.vert.co.y % 1.0), 0.25 + 0.1 * (loop.vert.co.z % 1.0))
-        candle(T, f, 0.0, 0.10, 0.02)
+            (a_i0, z_i0), (a_o0, z_o0), (a_o1, z_o1), (a_i1, z_i1) = P(r, t0), P(r + th, t0), P(r + th, t1), P(r, t1)
+            UP.qface(T['stone'], [f.p(a_i0, dp, z_i0), f.p(a_o0, dp, z_o0), f.p(a_o1, dp, z_o1), f.p(a_i1, dp, z_i1)], (-1, 0, 0), uvf)
+            # inner reveal faces the niche centre
+            cen = f.p(0.0, 0.0, zc)
+            mid = (f.p(a_i0, 0.0, z_i0) + f.p(a_i1, dp, z_i1)) / 2
+            UP.qface(T['stone'], [f.p(a_i0, 0.0, z_i0), f.p(a_i0, dp, z_i0), f.p(a_i1, dp, z_i1), f.p(a_i1, 0.0, z_i1)], (cen - mid), uvf)
+        candle(T, f, 0.0, 0.10, 0.0)
         # a couple of little bottles beside the candle
         bottle(T, f, -0.12, 0.09, 0.0, 'medicine', 0.4, 0.16)
         pot(T, f, 0.13, 0.09, 0.0, 'willow', 0.3, 0.55)
