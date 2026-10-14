@@ -110,6 +110,7 @@ export class GameManager {
     this.sceneLoader.rabbitMesh.clear();
     this.sceneLoader.rabbitMesh.add(this.rabbitEntity.mesh);
 
+    this.lighting.setLampAnchors(this.sceneLoader.lampAnchors);
     this.characterController.init(new THREE.Vector3(2.0, 0, 0));
     this.characterController.setFacing(Math.PI);
     this.aliceEntity.setPosition(this.characterController.position);

@@ -66,13 +66,12 @@ def from_u8(a):
 
 # ------------------------------------------------------------------------------------------------ periodic fields
 def rfield(W, H, nu, nv, seed):
-    """Smooth periodic noise in [0,1], `nu` lattice cells across the width and `nv` down the height (bicubic upsample)."""
+    """Smooth periodic noise in [0,1]: `nu` lattice cells across the width and `nv` up the height, bicubic upsampled from a wrapped lattice."""
     rng = np.random.default_rng(seed)
     g = rng.random((nv, nu)).astype(np.float32)
-    t = np.tile(g, (3, 3))
-    im = Image.fromarray(t, 'F').resize((3 * W, 3 * H), Image.BICUBIC)
-    a = np.asarray(im, np.float32)[H:2 * H, W:2 * W]
-    return np.clip(a, 0.0, 1.0)
+    pad = np.pad(g, 2, mode='wrap')
+    im = Image.fromarray(pad, 'F').resize((W, H), Image.BICUBIC, box=(2, 2, 2 + nu, 2 + nv))
+    return np.clip(np.asarray(im, np.float32), 0.0, 1.0)
 
 
 def rfbm(W, H, nu, nv, octaves=4, seed=0, gain=0.55):
@@ -131,7 +130,8 @@ def voronoi_slab(U, V, cell, seed, period_u, jitter=0.85):
 
 # ------------------------------------------------------------------------------------------------ PIL brush work
 class Canvas:
-    """A float image plus helpers that draw soft strokes/dabs with PIL on an RGBA layer and composite them (wraps around in U and V)."""
+    """A float image (rows run UP: row 0 = z 0) plus helpers that draw soft strokes/dabs with PIL on an RGBA layer and composite
+    them with premultiplied alpha. Everything wraps around in U and V so periodic atlases stay seamless."""
 
     def __init__(self, arr, pu, pv):
         self.img = arr
@@ -140,26 +140,23 @@ class Canvas:
         self.layer = None
 
     def px(self, u, v):
-        """metres -> pixel (x, y); v is metres UP, row 0 is the top (z = pv)."""
-        return u / self.pu * self.W, (1.0 - v / self.pv) * self.H
+        """metres -> pixel (x, y); v is metres UP and rows run up as well."""
+        return u / self.pu * self.W, v / self.pv * self.H
 
     def begin(self):
         self.layer = Image.new('RGBA', (self.W, self.H), (0, 0, 0, 0))
         self.d = ImageDraw.Draw(self.layer, 'RGBA')
 
     def flush(self, blur=0.0, opacity=1.0):
-        lay = self.layer
-        if blur > 0:
-            lay = lay.filter(ImageFilter.GaussianBlur(blur))
-        a = np.asarray(lay, np.float32) / 255.0
-        al = a[..., 3:4] * opacity
-        # un-premultiply is unnecessary: PIL draws straight alpha into an empty layer, blurred RGB bleeds towards black at edges
-        if blur > 0:
-            rgb = a[..., :3] / np.maximum(a[..., 3:4], 1e-3)
-        else:
-            rgb = a[..., :3]
-        self.img = self.img * (1.0 - al) + np.clip(rgb, 0, 1) * al
+        a = np.asarray(self.layer, np.float32) / 255.0
         self.layer = None
+        al = a[..., 3]
+        pre = a[..., :3] * al[..., None]
+        if blur > 0:
+            chans = [np.asarray(Image.fromarray(to_u8(pre[..., c]), 'L').filter(ImageFilter.GaussianBlur(blur)), np.float32) / 255.0 for c in range(3)]
+            pre = np.stack(chans, -1)
+            al = np.asarray(Image.fromarray(to_u8(al), 'L').filter(ImageFilter.GaussianBlur(blur)), np.float32) / 255.0
+        self.img = self.img * (1.0 - al * opacity)[..., None] + pre * opacity
 
     # -- primitives (all wrap around)
     def _wraps(self, x, y, r):
@@ -174,16 +171,20 @@ class Canvas:
             ys.append(-self.H)
         return [(dx, dy) for dx in xs for dy in ys]
 
+    @staticmethod
+    def _c(color, alpha):
+        return (int(color[0] * 255), int(color[1] * 255), int(color[2] * 255), int(alpha))
+
     def dab(self, x, y, rx, ry, ang, color, alpha=255):
-        c = (int(color[0] * 255), int(color[1] * 255), int(color[2] * 255), int(alpha))
+        c = self._c(color, alpha)
         ca, sa = math.cos(ang), math.sin(ang)
-        pts0 = [(rx * math.cos(t) , ry * math.sin(t)) for t in np.linspace(0, TAU, 9)[:-1]]
+        pts0 = [(rx * math.cos(t), ry * math.sin(t)) for t in np.linspace(0, TAU, 9)[:-1]]
         for dx, dy in self._wraps(x, y, max(rx, ry)):
             pts = [(x + dx + px * ca - py * sa, y + dy + px * sa + py * ca) for px, py in pts0]
             self.d.polygon(pts, fill=c)
 
     def line(self, pts, width, color, alpha=255):
-        c = (int(color[0] * 255), int(color[1] * 255), int(color[2] * 255), int(alpha))
+        c = self._c(color, alpha)
         xs = [p[0] for p in pts]
         ys = [p[1] for p in pts]
         r = width + max(max(xs) - min(xs), max(ys) - min(ys))
@@ -191,10 +192,23 @@ class Canvas:
         for dx, dy in self._wraps(cx, cy, r):
             self.d.line([(p[0] + dx, p[1] + dy) for p in pts], fill=c, width=max(1, int(round(width))), joint='curve')
 
+    def poly(self, pts, color, alpha=255):
+        c = self._c(color, alpha)
+        xs = [p[0] for p in pts]
+        ys = [p[1] for p in pts]
+        r = max(max(xs) - min(xs), max(ys) - min(ys))
+        for dx, dy in self._wraps((min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2, r):
+            self.d.polygon([(p[0] + dx, p[1] + dy) for p in pts], fill=c)
+
     def rect(self, x0, y0, x1, y1, color, alpha=255):
-        c = (int(color[0] * 255), int(color[1] * 255), int(color[2] * 255), int(alpha))
+        c = self._c(color, alpha)
         for dx, dy in self._wraps((x0 + x1) / 2, (y0 + y1) / 2, max(x1 - x0, y1 - y0)):
             self.d.rectangle([x0 + dx, y0 + dy, x1 + dx, y1 + dy], fill=c)
+
+    def ellipse(self, x, y, rx, ry, color, alpha=255):
+        c = self._c(color, alpha)
+        for dx, dy in self._wraps(x, y, max(rx, ry)):
+            self.d.ellipse([x + dx - rx, y + dy - ry, x + dx + rx, y + dy + ry], fill=c)
 
 
 def blur_mask(mask, radius):
@@ -315,3 +329,383 @@ def rubble(U, V, spec, seed, period_u):
         rind = np.clip(1.0 - np.abs(f1 / (spec['cell'] * 0.5) - 0.85) * 5.0, 0, 1)
         out = mix(out, np.ones_like(out) * _rgb(spec['rind']), rind * (1 - jm) * 0.7)
     return out.astype(np.float32), jm.astype(np.float32)
+
+
+# ================================================================================================ S3 WELL WALL
+WELL_R = 4.0
+WELL_H = 6.0
+
+_BRICK_RED = dict(course=(0.064, 0.074), length=(0.205, 0.245), joint=0.011, bevel=0.55, tone=0.10, cloud=0.20, speckle=0.07, mortar='#CBBFA6',
+                  pal=pal('#B65F49', '#A44D3D', '#C87B58', '#8F4538', '#BA6A4E', '#9C5A49', '#C48A62', '#7F4A45'))
+_BRICK_STOCK = dict(course=(0.064, 0.074), length=(0.205, 0.245), joint=0.011, bevel=0.5, tone=0.09, cloud=0.24, speckle=0.07, mortar='#DCD3BE',
+                    pal=pal('#CDB57F', '#C2A872', '#D6C28E', '#AE9965', '#BBA26B', '#A39063', '#8F8062', '#D9C99A'))
+_CHALK = dict(course=(0.22, 0.32), length=(0.50, 0.85), joint=0.012, bevel=0.5, tone=0.045, cloud=0.14, speckle=0.05, mortar='#9E998A',
+              pal=pal('#E9E1CD', '#DED4BC', '#F0E9D8', '#D5CAB2', '#E4DAC4', '#CFD0C8', '#DCD6C4'))
+_SLATE = dict(course=(0.15, 0.22), length=(0.60, 1.10), joint=0.010, bevel=0.6, tone=0.07, cloud=0.16, speckle=0.06, mortar='#262B33',
+              pal=pal('#62717F', '#4F5D6D', '#79879A', '#5A6678', '#6B7088', '#7C8294', '#46535F', '#6C7C86'))
+_OCHRE = dict(cell=0.34, joint=0.022, mortar='#52391F', cloud=0.18, speckle=0.07,
+              pal=pal('#C99C55', '#BA8946', '#D8B06C', '#A9753D', '#C98F4F', '#BFA070', '#9F7A47', '#D2B27E'))
+_FLINT = dict(cell=0.17, joint=0.05, mortar='#E2D8C0', cloud=0.12, speckle=0.05, rind='#F2ECDD',
+              pal=pal('#2F3640', '#424B55', '#262A31', '#566069', '#3B4450', '#8A8F8F', '#4D4A52'))
+
+
+def _style_layer(name, U, V, seed, period_u):
+    if name == 'brick':
+        return masonry(U, V, _BRICK_RED, seed, period_u)
+    if name == 'stock':
+        return masonry(U, V, _BRICK_STOCK, seed, period_u)
+    if name == 'chalk':
+        return masonry(U, V, _CHALK, seed, period_u)
+    if name == 'slate':
+        return masonry(U, V, _SLATE, seed, period_u)
+    if name == 'ochre':
+        return rubble(U, V, _OCHRE, seed, period_u)
+    if name == 'flint':
+        return rubble(U, V, _FLINT, seed, period_u)
+    raise KeyError(name)
+
+
+# (z0, z1, style) from the floor of the segment up; the stone ledges sit at z = 0..0.14 and 3.0..3.14 and hide the zone seams
+WELL_BANDS = (
+    (0.0, 1.15, 'brick'), (1.15, 1.95, 'chalk'), (1.95, 3.05, 'ochre'),
+    (3.05, 3.95, 'slate'), (3.95, 4.70, 'flint'), (4.70, 6.0, 'stock'),
+)
+
+
+def _win(canvas_W, canvas_H, x0, y0, x1, y1):
+    cols = np.arange(int(x0), int(x1)) % canvas_W
+    rows = np.clip(np.arange(int(y0), int(y1)), 0, canvas_H - 1)
+    return rows, cols
+
+
+def _plaster_patch(U, V, w, h, seed):
+    """Lime-wash repair: cream plaster with trowel facets, hairline cracks, a stain bloom and a crumbling edge. Returns rgb, extra_alpha."""
+    hs, ws = len(V), len(U)
+    base = np.ones((hs, ws, 3), np.float32) * _rgb('#EBE2CD')
+    cl = rfbm(ws, hs, 7, 5, 3, seed)
+    base = base * (0.90 + 0.18 * cl)[..., None]
+    base = mix(base, np.ones_like(base) * _rgb('#D5C6A4'), sstep(0.55, 0.85, rfbm(ws, hs, 5, 4, 3, seed + 3)) * 0.7)   # tea-coloured stain
+    base = mix(base, np.ones_like(base) * _rgb('#B9C2B5'), sstep(0.68, 0.9, rfbm(ws, hs, 9, 6, 3, seed + 5)) * 0.45)    # cool damp bloom
+    f1, edge, cid = voronoi_slab(U, V, 0.28, seed + 7, 1e4)
+    base = base * (0.95 + 0.07 * cid)[..., None]
+    base = base * (1.0 - 0.18 * (1.0 - sstep(0.0, 0.012, edge)))[..., None]                                   # trowel-facet seams
+    return base
+
+
+def _tile_patch(U, V, u0, z0, nrow, seed, kind):
+    """Glazed Victorian wall tiles laid from (u0, z0): cream field, border courses, an alternating coloured course, glaze highlights."""
+    hs, ws = len(V), len(U)
+    ts = 0.15
+    iu = np.floor((U - u0) / ts).astype(int)
+    iv = np.floor((V - z0) / ts).astype(int)
+    fu = ((U - u0) / ts - iu)
+    fv = ((V - z0) / ts - iv)
+    cols = {'green': ('#2F6B4C', '#3F8C63', '#E9E4CE'), 'blue': ('#274B8E', '#3C6FB4', '#ECE7D3'), 'mustard': ('#C9962E', '#E2B552', '#EAE3CB')}[kind]
+    deep, mid, cream = (_rgb(c) for c in cols)
+    ivv, iuu = np.meshgrid(iv, iu, indexing='ij')
+    border = (ivv <= 0) | (ivv >= nrow - 1)
+    inner = (ivv == 1) | (ivv == nrow - 2)
+    checker = ((ivv + iuu) % 2 == 0)
+    col = np.where(border[..., None], deep, np.where(inner[..., None], np.where(checker[..., None], mid, cream), cream))
+    col = col * (0.92 + 0.14 * hash2(ivv, iuu, seed))[..., None]
+    fvv, fuu = np.meshgrid(fv, fu, indexing='ij')
+    glaze = 1.0 + 0.22 * np.exp(-((fvv - 0.82) ** 2 + (fuu - 0.22) ** 2) / 0.04) - 0.12 * np.exp(-((fvv - 0.12) ** 2 + (fuu - 0.85) ** 2) / 0.05)
+    grout = ((fuu < 0.045) | (fuu > 0.955) | (fvv < 0.045) | (fvv > 0.955)).astype(np.float32)
+    grout = blur_mask(grout, 0.8)
+    out = col * glaze[..., None]
+    out = mix(out, np.ones_like(out) * _rgb('#A9A28F'), grout * 0.9)
+    out *= (0.95 + 0.08 * rfbm(ws, hs, 11, 5, 3, seed + 2))[..., None]
+    return out
+
+
+def _board_patch(U, V, seed, color):
+    """Weathered vertical boards with grain, nail heads and two iron straps."""
+    hs, ws = len(V), len(U)
+    bw = 0.135
+    iu = np.floor((U - U[0]) / bw).astype(int)
+    fu = ((U - U[0]) / bw) - iu
+    tone = 0.80 + 0.40 * hash2(iu, iu * 0 + 3, seed)
+    base = np.ones((hs, ws, 3), np.float32) * _rgb(color) * tone[None, :, None]
+    grain = rfield(ws, hs, int((U[-1] - U[0]) * 90) + 2, max(2, int((V[-1] - V[0]) * 4)), seed + 1)
+    base *= (0.78 + 0.40 * grain)[..., None]
+    base *= (0.92 + 0.16 * rfbm(ws, hs, 6, 4, 3, seed + 2))[..., None]
+    gap = (fu < 0.05) | (fu > 0.95)
+    base *= np.where(gap, 0.35, 1.0)[None, :, None]
+    for fz in (0.20, 0.78):
+        strap = np.abs((V - V[0]) / (V[-1] - V[0]) - fz) < 0.045
+        base = np.where(strap[:, None, None], np.ones_like(base) * _rgb('#2C2A2E') * (0.8 + 0.4 * grain[..., None]), base)
+        rust = sstep(0.55, 0.8, rfbm(ws, hs, 14, 3, 3, seed + 9))[..., None] * strap[:, None, None]
+        base = mix(base, np.ones_like(base) * _rgb('#9A5A33'), rust[..., 0] * 0.6)
+    return base
+
+
+def _iron_patch(U, V, seed):
+    hs, ws = len(V), len(U)
+    base = np.ones((hs, ws, 3), np.float32) * _rgb('#46525E')
+    base *= (0.85 + 0.30 * rfbm(ws, hs, 6, 4, 3, seed))[..., None]
+    rust = sstep(0.50, 0.78, rfbm(ws, hs, 9, 5, 4, seed + 4))
+    base = mix(base, np.ones_like(base) * _rgb('#A85F34'), rust * 0.75)
+    base = mix(base, np.ones_like(base) * _rgb('#D69A4E'), sstep(0.72, 0.9, rfbm(ws, hs, 17, 6, 3, seed + 6)) * 0.5)
+    return base
+
+
+def _arch_mask(U, V, u0, z0, w, h):
+    """Mask of an arched opening: rectangle with a semicircular head, plus signed edge distance (metres, + inside)."""
+    cu = u0
+    r = w / 2
+    zc = z0 + h - r
+    dx = np.abs(U[None, :] - cu)
+    zz = V[:, None]
+    inside_rect = (dx < r) & (zz >= z0) & (zz <= zc)
+    d_circ = np.sqrt(dx ** 2 + (zz - zc) ** 2)
+    inside_circ = (zz > zc) & (d_circ < r)
+    inside = inside_rect | inside_circ
+    d_edge = np.minimum(np.minimum(r - dx, zz - z0), np.where(zz > zc, r - d_circ, 9.0))
+    return inside, d_edge
+
+
+def well_wall(items, W=6144, H=1536, seed=1865, log=print):
+    """The whole 360 x 6 m shaft wall as one periodic painting (rows run UP, row 0 = z 0). `items` bakes shelf shadows, niches and lantern
+    pools: {'lamps': [(deg, z)], 'units': [(deg, z0, w, h)], 'niches': [(deg, z0, w, h)], 'frames': [(deg, z0, w, h)]}."""
+    R, HM = WELL_R, WELL_H
+    C = TAU * R
+    U = (np.arange(W) + 0.5) / W * C
+    Vz = (np.arange(H) + 0.5) / H * HM
+    ppm_u, ppm_v = W / C, H / HM
+
+    def X(deg):
+        return (deg % 360.0) / 360.0 * W
+
+    def Y(z):
+        return z * ppm_v
+
+    img = np.zeros((H, W, 3), np.float32)
+    jmask = np.zeros((H, W), np.float32)
+
+    # ---- 1. strata of masonry
+    log('  wall: strata')
+    for k, (z0, z1, style) in enumerate(WELL_BANDS):
+        r0 = max(0, int((z0 - 0.32) * ppm_v))
+        r1 = min(H, int((z1 + 0.32) * ppm_v))
+        V = Vz[r0:r1]
+        layer, jm = _style_layer(style, U, V, seed + 101 * k, C)
+        if k == 0:
+            m = np.ones((r1 - r0, W), np.float32)
+        else:
+            warp = (rfield(W, 1, 7 + k, 1, seed + 17 * k)[0] - 0.5) * 0.26                       # slow undulation of the stratum boundary
+            jag = (rfield(W, r1 - r0, 150, 40, seed + 29 * k) - 0.5) * 0.05                       # ragged repair-line
+            edge = (V[:, None] - (z0 + warp[None, :])) + jag
+            m = sstep(-0.012, 0.012, edge)
+        img[r0:r1] = img[r0:r1] * (1 - m[..., None]) + layer * m[..., None]
+        jmask[r0:r1] = jmask[r0:r1] * (1 - m) + jm * m
+        del layer
+    # rows above the last band's slice (never happens) / safety fill
+    # ---- 2. repairs: plaster, glazed tiles, boarding, iron plate (each with its own raised edge shadow)
+    log('  wall: patches')
+    rng = np.random.default_rng(seed + 5)
+    patches = [('plaster', 12, 2.55), ('tiles_green', 62, 0.45), ('boards', 105, 1.3), ('plaster', 140, 4.05), ('iron', 178, 3.45),
+               ('tiles_blue', 207, 2.2), ('plaster', 236, 0.95), ('boards', 262, 4.45), ('tiles_mustard', 296, 1.5), ('iron', 330, 5.2),
+               ('plaster', 352, 3.5), ('tiles_green', 118, 5.05)]
+    for kind, deg, zc in patches:
+        pw = rng.uniform(1.25, 1.9)
+        ph = rng.uniform(0.85, 1.25)
+        if kind.startswith('tiles'):
+            ph = 0.15 * round(ph / 0.15)
+            pw = 0.15 * round(pw / 0.15)
+        x0, x1 = X(deg) - pw * ppm_u / 2, X(deg) + pw * ppm_u / 2
+        y0, y1 = Y(zc) - ph * ppm_v / 2, Y(zc) + ph * ppm_v / 2
+        rows, cols = _win(W, H, x0 - 30, y0 - 30, x1 + 30, y1 + 30)
+        Ul, Vl = U[cols], Vz[rows]
+        # make U monotone across the wrap so slab functions can use differences
+        Uc = np.where(Ul < Ul[0] - 1.0, Ul + C, Ul)
+        s = seed + int(deg * 7)
+        if kind == 'plaster':
+            lay = _plaster_patch(Uc, Vl, pw, ph, s)
+        elif kind.startswith('tiles'):
+            lay = _tile_patch(Uc, Vl, X(deg) / ppm_u - pw / 2, zc - ph / 2, int(round(ph / 0.15)), s, kind.split('_')[1])
+        elif kind == 'boards':
+            lay = _board_patch(Uc, Vl, s, '#5A4A3A' if deg % 2 else '#4E5A4A')
+        else:
+            lay = _iron_patch(Uc, Vl, s)
+        uc, zc_ = (X(deg) / ppm_u), zc
+        # irregular rounded-rectangle footprint
+        n1 = (rfield(len(cols), len(rows), max(3, int(pw * 6)), max(3, int(ph * 6)), s + 1) - 0.5) * 0.07
+        dxm = np.abs(((Uc - uc + C / 2) % C) - C / 2)[None, :]
+        dzm = np.abs(Vl - zc_)[:, None]
+        sd = np.maximum(dxm - pw / 2, dzm - ph / 2) + n1
+        if kind == 'plaster':
+            sd = sd + (rfbm(len(cols), len(rows), 14, 6, 3, s + 2) - 0.5) * 0.10                    # crumbling margin
+        a = 1.0 - sstep(-0.012, 0.012, sd)
+        # raised-edge cast shadow (below/right) and a lit lip (top)
+        sh = 1.0 - sstep(-0.01, 0.07, np.maximum(dxm - pw / 2 - 0.0, (zc_ - Vl[:, None]) - ph / 2) + n1)
+        sh = sh * (Vl[:, None] < zc_ + ph * 0.1) * (1 - a)
+        sub = img[np.ix_(rows, cols)]
+        sub = sub * (1.0 - 0.42 * sh[..., None])
+        lip = np.exp(-np.abs(sd + 0.004) / 0.006) * (Vl[:, None] > zc_)
+        lay = lay * (1.0 + 0.25 * lip[..., None])
+        sub = sub * (1 - a[..., None]) + lay * a[..., None]
+        img[np.ix_(rows, cols)] = sub
+        del lay, sub
+
+    # ---- 3. weather: damp streaks, moss, bloom, rust, soot
+    log('  wall: weather')
+    zone = ((Vz - 0.14) % 2.86) / 2.86
+    low = (1.0 - zone)[:, None]
+    streak = rfield(W, H, 190, 5, seed + 61)
+    s_damp = sstep(0.60, 0.80, streak) * (0.35 + 0.65 * rfbm(W, H, 18, 5, 3, seed + 62)) * (0.4 + 0.8 * low)
+    img *= (1.0 - 0.42 * s_damp[..., None] * np.array([0.7, 0.62, 0.42], np.float32))                                  # cool, dark damp
+    bloom = sstep(0.62, 0.86, rfbm(W, H, 30, 7, 4, seed + 63)) * (0.3 + 0.7 * low)
+    img = mix(img, np.ones_like(img) * _rgb('#CFE0D8'), bloom * 0.34)                                                  # pale efflorescence
+    mm = sstep(0.60, 0.80, rfbm(W, H, 34, 9, 4, seed + 64)) * (0.25 + 0.75 * low ** 1.5)
+    mm = np.maximum(mm, 0.65 * jmask * sstep(0.45, 0.8, rfbm(W, H, 40, 10, 3, seed + 65)) * low)
+    moss_col = pal('#5A7B3C', '#7D9D49', '#A5B95C', '#4C6A38')
+    mi = rfbm(W, H, 120, 30, 2, seed + 66)
+    mcol = moss_col[np.minimum((mi * 4).astype(int), 3)]
+    img = img * (1 - 0.82 * mm[..., None]) + mcol * (0.82 * mm[..., None]) * (0.88 + 0.30 * rfield(W, H, 520, 130, seed + 67))[..., None]
+    rust = sstep(0.70, 0.9, streak) * sstep(0.5, 0.8, rfbm(W, H, 20, 6, 3, seed + 68)) * (1 - low) * 0.6
+    img = mix(img, np.ones_like(img) * _rgb('#A8613A'), rust * 0.5)
+    del streak, bloom, mm
+
+    # ---- 4. brush work: cracks, roots, cobwebs, tally marks, ivy sprigs
+    log('  wall: brushwork')
+    cv = Canvas(img, C, HM)
+    rng = np.random.default_rng(seed + 77)
+    cv.begin()
+    for _ in range(210):                                  # hairline cracks (dark, jagged, a few lighter lips)
+        x, y = rng.uniform(0, W), rng.uniform(0.2, 5.8) * ppm_v
+        pts = [(x, y)]
+        ang = rng.uniform(-0.4, 0.4) + (math.pi / 2 if rng.random() < 0.6 else 0.0)
+        for _s in range(int(rng.integers(5, 14))):
+            ang += rng.normal(0, 0.45)
+            x += math.cos(ang) * rng.uniform(5, 16)
+            y += math.sin(ang) * rng.uniform(5, 16)
+            pts.append((x, y))
+        cv.line(pts, 1.6, _rgb('#2E2420'), 150)
+        cv.line([(px + 1.5, py + 1.5) for px, py in pts], 1.0, _rgb('#E4D8BC'), 70)
+    cv.flush(blur=0.6)
+    cv.begin()
+    for _ in range(48):                                   # pale root tendrils, branching
+        x, y = rng.uniform(0, W), rng.uniform(0.4, 5.9) * ppm_v
+        ang = rng.uniform(math.pi * 0.2, math.pi * 0.8) * (1 if rng.random() < 0.7 else -1)
+        wd = rng.uniform(2.0, 3.6)
+        for _b in range(int(rng.integers(1, 4))):
+            pts = [(x, y)]
+            xx, yy, aa = x, y, ang + rng.normal(0, 0.5)
+            for _s in range(int(rng.integers(10, 26))):
+                aa += rng.normal(0, 0.28)
+                xx += math.cos(aa) * 9
+                yy += math.sin(aa) * 9
+                pts.append((xx, yy))
+            cv.line(pts, wd, _rgb('#8D6F4B'), 200)
+            cv.line([(px + 1, py + 1) for px, py in pts], max(1.0, wd - 1.2), _rgb('#D8C79A'), 190)
+            wd *= 0.62
+    cv.flush(blur=0.7)
+    cv.begin()
+    for _ in range(26):                                   # ivy / pellitory sprigs on the cooler courses
+        x, y = rng.uniform(0, W), rng.uniform(0.3, 5.6) * ppm_v
+        ang = rng.uniform(0, TAU)
+        for _s in range(int(rng.integers(5, 12))):
+            ang += rng.normal(0, 0.5)
+            x += math.cos(ang) * 14
+            y += math.sin(ang) * 14
+            col = moss_col[int(rng.integers(4))] * (0.85 + 0.3 * rng.random())
+            cv.dab(x, y, rng.uniform(5, 9), rng.uniform(3, 5.5), ang + rng.normal(0, 0.8), col, 235)
+    cv.flush(blur=0.5)
+    img = cv.img
+    img = _bake_well_light(img, items, W, H, C, ppm_u, ppm_v, Vz, U, seed, log)
+    return img, dict(U=U, V=Vz, W=W, H=H, C=C, ppm_u=ppm_u, ppm_v=ppm_v)
+
+
+
+def _bake_well_light(img, items, W, H, C, ppm_u, ppm_v, Vz, U, seed, log):
+    """Shelf shadows, painted niches and lantern pools - the 'value structure' of the shaft, painted into the wall."""
+    log('  wall: baked light')
+    R = WELL_R
+    deg_px = W / 360.0
+
+    def X(deg):
+        return (deg % 360.0) * deg_px
+
+    def Y(z):
+        return z * ppm_v
+
+    def dw(w):                                      # metres of wall -> degrees of azimuth
+        return math.degrees(w / R)
+
+    # ---- ambient occlusion behind and under every unit / frame
+    rects, under, frames = [], [], []
+    for deg, z0, w, h in items.get('units', []):
+        a0, a1 = X(deg - dw(w) / 2) - 8, X(deg + dw(w) / 2) + 8
+        rects.append((a0, Y(z0 - 0.30), a1, Y(z0 + h + 0.10)))
+        under.append((a0 - 12, Y(z0 - 0.62), a1 + 12, Y(z0 + 0.02)))
+    for deg, z0, w, h in items.get('frames', []):
+        frames.append((X(deg - dw(w) / 2) - 5, Y(z0 - 0.03), X(deg + dw(w) / 2) + 5, Y(z0 + h + 0.03)))
+    ao = 0.0
+    if rects:
+        ao = ao + 0.42 * blur_mask(rect_mask(W, H, rects), 26)
+        ao = ao + 0.40 * blur_mask(rect_mask(W, H, under), 40)
+    if frames:
+        sh = [(a + 9, b - 11, c + 13, d - 11) for a, b, c, d in frames]
+        ao = ao + 0.40 * blur_mask(rect_mask(W, H, sh), 11)
+    ao = np.clip(ao, 0, 0.78)
+    img = img * (1.0 - ao)[..., None] * np.array([1.0, 0.97, 1.06], np.float32)     # shadows lean violet, never black
+
+    # ---- painted arched niches: dark recesses with a candle glow
+    for deg, z0, w, h in items.get('niches', []):
+        u0 = (deg % 360.0) / 360.0 * C
+        for off in (-C, 0.0, C):
+            cx0 = int((u0 + off - w) * ppm_u)
+            cx1 = int((u0 + off + w) * ppm_u)
+            if cx1 < 0 or cx0 > W:
+                continue
+            cols = np.arange(max(cx0, 0), min(cx1, W))
+            rows = np.arange(max(0, int((z0 - 0.15) * ppm_v)), min(H, int((z0 + h + 0.2) * ppm_v)))
+            Ul, Vl = U[cols], Vz[rows]
+            inside, de = _arch_mask(Ul - off, Vl, u0, z0, w, h)
+            tgrad = np.clip((Vl[:, None] - z0) / h, 0, 1)
+            dark = np.ones((len(rows), len(cols), 3), np.float32) * _rgb('#1B131B')
+            dark = mix(dark, np.ones_like(dark) * _rgb('#4A2C2E'), (1 - tgrad) ** 2.2 * 0.8)
+            r2 = ((Ul[None, :] - off - u0) ** 2 + ((Vl[:, None] - (z0 + 0.10)) * 1.15) ** 2)
+            cand = np.exp(-r2 / (2 * (0.20 * w / 0.5) ** 2))[..., None]
+            lit = dark + cand * np.array([1.05, 0.62, 0.22], np.float32) * 0.95
+            lit *= (0.90 + 0.2 * rfbm(len(cols), len(rows), 5, 5, 2, seed + 91))[..., None]
+            edge_dark = np.clip(1.0 - de / 0.09, 0, 1)[..., None]
+            lit = lit * (1 - 0.45 * edge_dark)
+            ring_a = np.clip(1.0 - np.abs(de + 0.045) / 0.045, 0, 1) * (~inside)           # pale stone reveal round the opening
+            a_in = sstep(-0.004, 0.004, de) * inside
+            sub = img[np.ix_(rows, cols)]
+            sub = sub * (1 - a_in[..., None]) + lit * a_in[..., None]
+            img[np.ix_(rows, cols)] = sub
+
+    # ---- lantern light pools (warm core, wide cool-to-warm fill)
+    lamps = items.get('lamps', [])
+    G = np.zeros((H, W), np.float32)
+    if lamps:
+        G += radial_glow((H, W), [(X(d), Y(z), 0.80 * ppm_u, 1.0) for d, z in lamps], 0.8)
+        G += radial_glow((H, W), [(X(d), Y(z), 2.0 * ppm_u, 0.46) for d, z in lamps], 0.8)
+    gg = np.clip(G, 0, 1)[..., None]
+    cool = np.array([0.70, 0.67, 0.88], np.float32)
+    warm = np.array([1.20, 1.02, 0.74], np.float32)
+    img = img * (cool * (1 - gg) + warm * gg)
+    img += (np.clip(G - 0.55, 0, 1.2) ** 1.5)[..., None] * np.array([0.20, 0.10, 0.02], np.float32)
+    return img
+
+
+def finish(img, blur=0.8):
+    """Last pass: a hair of softening (wet-edge feel) and dry-brush modulation; returns a z-up float image."""
+    H, W = img.shape[:2]
+    brush = rfield(W, H, 260, 18, 7)
+    img = img * (0.95 + 0.10 * brush)[..., None]
+    im = Image.fromarray(to_u8(img), 'RGB').filter(ImageFilter.GaussianBlur(blur))
+    return np.asarray(im, np.float32) / 255.0
+
+
+def atlas_slices(img, n=4, pad=16):
+    """Cut a periodic z-up image into n vertical slices with `pad` px of true neighbour content each side, flipped for to_image."""
+    H, W = img.shape[:2]
+    sw = W // n
+    out = []
+    for i in range(n):
+        cols = np.arange(i * sw - pad, (i + 1) * sw + pad) % W
+        out.append(np.ascontiguousarray(img[:, cols][::-1]))
+    return out

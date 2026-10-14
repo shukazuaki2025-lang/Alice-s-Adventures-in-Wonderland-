@@ -5,6 +5,7 @@ import { applyInkOutline } from '../shaders/InkOutline';
 import { createGlassTableMaterial } from '../shaders/GlassRefraction';
 import { PhysicsWorld } from '../physics/PhysicsWorld';
 import { Meadow } from '../world/Meadow';
+import { LightGlows, collectGlowSpecs } from '../world/LightGlows';
 
 export interface ParsedLogicMarkers {
   spawns: Map<string, THREE.Vector3>;
@@ -42,6 +43,10 @@ export class SceneLoader {
   };
 
   public propsMap: Map<string, THREE.Object3D> = new Map();
+  /** painted light pools (lamp halos, fire, doorway of light); animated by update() */
+  public glows: LightGlows[] = [];
+  /** lamp anchors authored in the Blender sets (LAMP_* empties), used to place the few real point lights */
+  public lampAnchors: { well: THREE.Vector3[]; passage: THREE.Vector3[]; hall: THREE.Vector3[] } = { well: [], passage: [], hall: [] };
   /** Painted riverbank dressing (grass tufts + wildflowers), animated by update(). */
   public meadow: Meadow | null = null;
   private waterMaps: THREE.Texture[] = [];
@@ -324,8 +329,8 @@ export class SceneLoader {
         [13.2, 1.5, 3.0],
         [3.0, 0.0, 9.0],
       ],
-      grassCount: 5200,
-      flowerCount: 1100,
+      grassCount: 8200,
+      flowerCount: 2600,
       grassHeight: 0.55,
     });
     this.bankGroup.add(this.meadow.group);
@@ -343,6 +348,25 @@ export class SceneLoader {
       m.offset.set((this.waterTime * 0.012) % 1, (this.waterTime * 0.004) % 1);
     }
     if (this.bankGroup.visible) this.meadow?.update(dt);
+    for (const g of this.glows) g.update(dt);
+  }
+
+  /** Turn the emissive surfaces of a freshly loaded set into painted glows (see world/LightGlows.ts). */
+  private addGlowsFor(root: THREE.Object3D, parent: THREE.Object3D, opts: Parameters<typeof collectGlowSpecs>[2] = {}): LightGlows | null {
+    const specs = collectGlowSpecs(root, parent, opts);
+    if (!specs.length) return null;
+    const glows = new LightGlows(specs);
+    parent.add(glows.mesh);
+    this.glows.push(glows);
+    return glows;
+  }
+
+  private static lampAnchorsOf(root: THREE.Object3D): THREE.Vector3[] {
+    const out: THREE.Vector3[] = [];
+    root.traverse((o) => {
+      if (o.name.startsWith('LAMP_')) out.push(o.position.clone());
+    });
+    return out;
   }
 
   private wellReturnCupboard: THREE.Group | null = null;
@@ -382,6 +406,7 @@ export class SceneLoader {
       const gltf = await new GLTFLoader().loadAsync('/assets/models/ch1_s3_well.glb');
       const root = gltf.scene;
       convertMaterialsToToon(root);
+      this.lampAnchors.well = SceneLoader.lampAnchorsOf(root);
       const segment = new THREE.Group();
       segment.name = 'S3_WellSegment';
       const returnCupboard = new THREE.Group();
@@ -397,6 +422,7 @@ export class SceneLoader {
       returnCupboard.traverse((obj) => {
         if ((obj as THREE.Mesh).isMesh) applyInkOutline(obj as THREE.Mesh, 0x2b2420, 0.003);
       });
+      this.addGlowsFor(segment, segment, { scale: 3.0, minRadius: 0.5, maxRadius: 2.2 });
       for (let k = 0; k < 4; k++) {
         const tile = k === 0 ? segment : segment.clone(true);
         tile.position.y = -12 + 6 * k;
@@ -476,6 +502,8 @@ export class SceneLoader {
         if (/S4_(Flag|Wood|Brass|Stone)/.test(mesh.name)) applyInkOutline(mesh, 0x2b2420, 0.0025);
         if (/S4_Flag/.test(mesh.name)) mesh.receiveShadow = true;
       });
+      this.lampAnchors.passage = SceneLoader.lampAnchorsOf(root);
+      this.addGlowsFor(root, root, { scale: 3.0, minRadius: 0.6, maxRadius: 3.4 });
       this.passageGroup.add(root);
     } catch (e) {
       console.warn('[SceneLoader] Passage GLB unavailable, building the placeholder corridor:', e);
@@ -560,6 +588,8 @@ export class SceneLoader {
       this.littleDoorLeaf = root.getObjectByName('Hall_LittleDoor') ?? null;
       this.hallCurtainNode = root.getObjectByName('Hall_Curtain') ?? null;
       this.hallCurtainNode?.removeFromParent();           // re-parented into INT_curtain so the game can slide it aside
+      this.lampAnchors.hall = SceneLoader.lampAnchorsOf(root);
+      this.addGlowsFor(root, root, { scale: 3.0, minRadius: 0.5, maxRadius: 3.0 });
       this.hallGroup.add(root);
       this.hallPainted = true;
     } catch (e) {

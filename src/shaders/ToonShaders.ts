@@ -38,19 +38,76 @@ function getSharedGradientMap(): THREE.DataTexture {
   return sharedGradientMap;
 }
 
-const PAINT_CACHE_KEY = 'victorian-watercolour-toon-v2';
+const PAINT_CACHE_KEY = 'victorian-watercolour-toon-v3';
+
+/**
+ * How strongly a surface gets the hand-painted tonal wash (see applyPaintFinish). 0 = leave the colour exactly as painted
+ * (faces, eyes, the canonical Alice / Rabbit palettes).
+ */
+export type WashKind = 'none' | 'light' | 'normal' | 'strong';
+const WASH_AMOUNT: Record<WashKind, number> = { none: 0, light: 0.45, normal: 0.8, strong: 1.25 };
+
+/** Surfaces that must keep their canonical painted colours (characters, faces, glass, eyes ...). */
+const NO_WASH = /Alice|Sister|Rabbit|Dinah|Eye|Face|Skin|Hair|Lid|Mouth|Lips|Brow|Glass|Label|Portrait|Landscape|Map|Key_|Cork|Marmalade|Cake|Bottle|Water|Fire|Glow/;
+const STRONG_WASH = /Ground|Terrain|Lawn|Earth|Hedge|Leaf|Moss|Foliage/;
+
+export function washKindForMaterial(name: string): WashKind {
+  if (!name) return 'normal';
+  if (NO_WASH.test(name)) return 'none';
+  if (STRONG_WASH.test(name)) return 'strong';
+  if (/Brick|Stone|Flag|Wallpaper|Plaster|Parquet|Runner|Rug|Bark|Rock|Wood|Door/.test(name)) return 'normal';
+  return 'light';
+}
 
 /**
  * Gouache / watercolour finishing on top of three's toon shading:
  *  - pigment pooling: the silhouette edge darkens and cools (wet edge of a wash)
  *  - a faint warm rim glow on the lit side
+ *  - a hand-laid tonal wash: three octaves of low-frequency value noise in OBJECT space (so it stays glued to the wall /
+ *    hill / floor, and scrolls with the well) shift each surface between warm-light and cool-dark by a few percent - the
+ *    patchwork of overlapping washes that a flat texture repeated across a big surface lacks
  * Everything else (brush facets, paper tooth) comes from the painted textures and the screen-space PaperGrain pass.
  */
-function applyPaintFinish(material: THREE.MeshToonMaterial): void {
+function applyPaintFinish(material: THREE.MeshToonMaterial, wash: WashKind = 'normal'): void {
+  const amount = WASH_AMOUNT[wash];
   material.onBeforeCompile = (shader) => {
-    shader.fragmentShader = shader.fragmentShader.replace(
-      '#include <opaque_fragment>',
-      /* glsl */ `
+    shader.uniforms.uWash = { value: amount };
+    shader.vertexShader = shader.vertexShader
+      .replace('void main() {', 'varying vec3 vPaintP;\nvoid main() {')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\n\tvPaintP = position;');
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        'void main() {',
+        /* glsl */ `
+      varying vec3 vPaintP;
+      uniform float uWash;
+      float pHash( vec3 p ) { p = fract( p * 0.3183099 + 0.1 ); p *= 17.0; return fract( p.x * p.y * p.z * ( p.x + p.y + p.z ) ); }
+      float pNoise( vec3 x ) {
+        vec3 i = floor( x ); vec3 f = fract( x ); f = f * f * ( 3.0 - 2.0 * f );
+        return mix( mix( mix( pHash( i ), pHash( i + vec3( 1, 0, 0 ) ), f.x ), mix( pHash( i + vec3( 0, 1, 0 ) ), pHash( i + vec3( 1, 1, 0 ) ), f.x ), f.y ),
+                    mix( mix( pHash( i + vec3( 0, 0, 1 ) ), pHash( i + vec3( 1, 0, 1 ) ), f.x ), mix( pHash( i + vec3( 0, 1, 1 ) ), pHash( i + vec3( 1, 1, 1 ) ), f.x ), f.y ), f.z );
+      }
+      void main() {`
+      )
+      .replace(
+        '#include <map_fragment>',
+        /* glsl */ `
+      #include <map_fragment>
+      if ( uWash > 0.0 ) {
+        float w1 = pNoise( vPaintP * 0.55 );
+        float w2 = pNoise( vPaintP * 1.9 + 7.3 );
+        float w3 = pNoise( vPaintP * 6.0 + 3.1 );
+        float tone = ( w1 - 0.5 ) * 0.9 + ( w2 - 0.5 ) * 0.6 + ( w3 - 0.5 ) * 0.35;
+        float hueN = pNoise( vPaintP * 0.38 + 11.0 ) - 0.5;
+        vec3 warmT = vec3( 1.07, 1.01, 0.88 );
+        vec3 coolT = vec3( 0.90, 0.99, 1.10 );
+        vec3 tint = mix( coolT, warmT, clamp( hueN * 2.4 + 0.5, 0.0, 1.0 ) );
+        diffuseColor.rgb *= ( 1.0 + tone * 0.34 * uWash ) * mix( vec3( 1.0 ), tint, clamp( uWash, 0.0, 1.0 ) * 0.9 );
+      }`
+      )
+      .replace(
+        '#include <opaque_fragment>',
+        /* glsl */ `
       {
         vec3 paintView = normalize( vViewPosition );
         float paintFres = pow( 1.0 - clamp( dot( normalize( normal ), paintView ), 0.0, 1.0 ), 2.4 );
@@ -60,7 +117,7 @@ function applyPaintFinish(material: THREE.MeshToonMaterial): void {
         outgoingLight += vec3( 1.0, 0.84, 0.58 ) * paintFres * 0.07;
       }
       #include <opaque_fragment>`
-    );
+      );
   };
   material.customProgramCacheKey = () => PAINT_CACHE_KEY;
 }
@@ -75,6 +132,7 @@ export function createToonMaterial(
     emissive?: THREE.ColorRepresentation;
     emissiveIntensity?: number;
     map?: THREE.Texture | null;
+    wash?: WashKind;
   } = {}
 ): THREE.MeshToonMaterial {
   const hasMap = Boolean(options.map);
@@ -89,7 +147,7 @@ export function createToonMaterial(
     emissiveMap: hasMap ? options.map! : null,
     emissiveIntensity: options.emissiveIntensity ?? (hasMap ? 0.16 : 0.18),
   });
-  applyPaintFinish(mat);
+  applyPaintFinish(mat, options.wash ?? 'normal');
   return mat;
 }
 
@@ -139,7 +197,7 @@ function toToonMatSlot(mat: THREE.Material): THREE.Material {
     return unlit;
   }
   const hex = std.color ? std.color.getHex() : 0xe0d4c3;
-  const toon = createToonMaterial(hex, { map, side: std.side });
+  const toon = createToonMaterial(hex, { map, side: std.side, wash: washKindForMaterial(std.name) });
   if (map) {
     map.anisotropy = 4;
     map.needsUpdate = true;
@@ -153,6 +211,8 @@ function toToonMatSlot(mat: THREE.Material): THREE.Material {
   if (std.emissive && std.emissive.r + std.emissive.g + std.emissive.b > 0.05) {
     toon.emissive.copy(std.emissive);
     toon.emissiveIntensity = 1.0;
+    // tells LightGlows (src/world/LightGlows.ts) where this scene's lamps, fires and doorways of light are
+    toon.userData.glow = { color: (std.color ?? std.emissive).getHex() };
   }
   if (mat.transparent || (std.opacity !== undefined && std.opacity < 1.0)) {
     toon.transparent = true;
