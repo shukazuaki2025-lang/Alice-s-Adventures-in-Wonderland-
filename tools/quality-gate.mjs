@@ -137,7 +137,7 @@ function newestSourceMtime() {
     if (!fs.existsSync(d)) return;
     for (const e of fs.readdirSync(d, { withFileTypes: true })) {
       const p = path.join(d, e.name);
-      if (e.isDirectory()) walk(p, filter);
+      if (e.isDirectory()) { if (e.name !== 'dev') walk(p, filter); }   // public/assets/models/dev holds scratch previews
       else if (filter(p)) newest = Math.max(newest, fs.statSync(p).mtimeMs);
     }
   };
