@@ -80,9 +80,46 @@ export class SceneLoader {
     this.buildPassageEnvironment();
     this.buildHallEnvironment();
     this.buildProceduralProps();
+    if (physicsWorld) this.registerLevelColliders(physicsWorld);
 
     this.setActiveStateScene('S1_BANK');
     return this.sceneGroup;
+  }
+
+  /** Solid props, scoped per level so the oak never blocks the hall (and vice-versa). */
+  private registerLevelColliders(physics: PhysicsWorld): void {
+    // Riverbank (S1/S2): oak trunk, the reading sister, the hedge that hides the burrow.
+    physics.addStaticBox('COL_oak_trunk', new THREE.Vector3(-1.5, 1.8, -2.0), new THREE.Vector3(0.75, 1.8, 0.75), 'bank');
+    physics.addStaticBox('COL_sister', new THREE.Vector3(-0.2, 0.5, -1.2), new THREE.Vector3(0.3, 0.5, 0.3), 'bank');
+    physics.addStaticBox('COL_hedge', new THREE.Vector3(14.6, 0.9, -2.0), new THREE.Vector3(1.2, 0.9, 2.25), 'bank');
+    // Great Hall: the three-legged glass table.
+    physics.addStaticBox('COL_glass_table', new THREE.Vector3(0.85, 0.36, -0.6), new THREE.Vector3(0.3, 0.36, 0.3), 'hall');
+  }
+
+  /** Walkable XZ rectangle for a game state (null = unconstrained, e.g. the free-fall well). */
+  public static getWalkBounds(state: string): { minX: number; maxX: number; minZ: number; maxZ: number } | null {
+    switch (state) {
+      case 'S0_TITLE':
+      case 'S1_BANK':
+      case 'S2_CHASE':
+        return { minX: -34, maxX: 34, minZ: -6.0, maxZ: 24 };
+      case 'S4_PASSAGE':
+        return { minX: -4.8, maxX: 20.8, minZ: -1.5, maxZ: 1.5 };
+      case 'S5_HALL':
+      case 'S6_SMALL':
+      case 'S7_CAKE':
+      case 'END':
+        return { minX: -11.8, maxX: 11.8, minZ: -3.35, maxZ: 3.35 };
+      default:
+        return null;
+    }
+  }
+
+  public static getColliderGroup(state: string): string | null {
+    if (state === 'S0_TITLE' || state === 'S1_BANK' || state === 'S2_CHASE') return 'bank';
+    if (state === 'S3_FALL') return 'well';
+    if (state === 'S4_PASSAGE') return 'passage';
+    return 'hall';
   }
 
   public setActiveStateScene(state: string): void {
@@ -131,8 +168,9 @@ export class SceneLoader {
         this.markers.paths.set(name, pos);
       } else if (name.startsWith('COL_')) {
         this.markers.colliders.set(name, { pos, bounds: new THREE.Vector3(5, 0.2, 5) });
-        if (physicsWorld) {
-          physicsWorld.addStaticBox(name, pos, new THREE.Vector3(5, 0.2, 5));
+        // Floor slabs are implicit (feet rest on y = 0); only real obstacles become walls, scoped to their level.
+        if (physicsWorld && !name.includes('floor')) {
+          physicsWorld.addStaticBox(name, pos, new THREE.Vector3(5, 0.2, 5), name.includes('river') ? 'bank' : 'global');
         }
       } else if (name.startsWith('SLOT_')) {
         this.markers.slots.set(name, pos);
@@ -406,6 +444,7 @@ export class SceneLoader {
       createToonMaterial(0x6b5848, { side: THREE.DoubleSide })
     );
     floor.rotation.x = -Math.PI / 2;
+    floor.position.x = 8; // spans x = -5..21 like the walls
     this.passageGroup.add(floor);
 
     const wallL = new THREE.Mesh(

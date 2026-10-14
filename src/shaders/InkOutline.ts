@@ -6,7 +6,7 @@ import * as THREE from 'three';
  */
 export function createInkOutlineMaterial(
   color: THREE.ColorRepresentation = 0x2b2420,
-  thickness: number = 0.006
+  thickness: number = 0.0026
 ): THREE.MeshBasicMaterial {
   const mat = new THREE.MeshBasicMaterial({
     color: new THREE.Color(color),
@@ -34,7 +34,7 @@ export function createInkOutlineMaterial(
 export function applyInkOutline(
   root: THREE.Object3D,
   color: THREE.ColorRepresentation = 0x2b2420,
-  thickness: number = 0.006
+  thickness: number = 0.0026
 ): void {
   const outlineMat = createInkOutlineMaterial(color, thickness);
   const meshesToProcess: THREE.Mesh[] = [];
@@ -47,6 +47,9 @@ export function applyInkOutline(
       const mat = mesh.material;
       let isTransparent = false;
       let isGlass = false;
+      // Fine facial parts (eyes, lids, lips, brows, mouth) are drawn by their painted textures; a hull would swamp them.
+      const matNames = Array.isArray(mat) ? mat.map((m) => m.name) : [mat?.name ?? ''];
+      if (matNames.some((n) => /^M_Alice_(Eye|Lid|Lips|Mouth|Brow)/.test(n))) return;
 
       if (Array.isArray(mat)) {
         isTransparent = mat.some((m) => m.transparent && m.opacity < 0.95);

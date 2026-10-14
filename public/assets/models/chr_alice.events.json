@@ -1,27 +1,54 @@
 {
   "events": {
     "Alice_Walk": [
-      { "time": 0.2, "name": "Footstep" },
-      { "time": 0.7, "name": "Footstep" }
+      {
+        "time": 0.0,
+        "name": "Footstep"
+      },
+      {
+        "time": 0.4,
+        "name": "Footstep"
+      }
     ],
     "Alice_Run": [
-      { "time": 0.15, "name": "Footstep" },
-      { "time": 0.45, "name": "Footstep" }
+      {
+        "time": 0.0,
+        "name": "Footstep"
+      },
+      {
+        "time": 0.28,
+        "name": "Footstep"
+      }
     ],
     "Alice_CurtseyAir": [
-      { "time": 0.5, "name": "curtsey" }
+      {
+        "time": 0.9,
+        "name": "curtsey"
+      }
     ],
     "Alice_Drink": [
-      { "time": 0.8, "name": "drink" }
+      {
+        "time": 0.85,
+        "name": "drink"
+      }
     ],
     "Alice_ShrinkReact": [
-      { "time": 0.1, "name": "shrink" }
+      {
+        "time": 0.1,
+        "name": "shrink"
+      }
     ],
     "Alice_Slip": [
-      { "time": 0.2, "name": "slip" }
+      {
+        "time": 0.22,
+        "name": "slip"
+      }
     ],
     "Alice_Eat": [
-      { "time": 0.5, "name": "eat" }
+      {
+        "time": 0.7,
+        "name": "eat"
+      }
     ]
   }
 }

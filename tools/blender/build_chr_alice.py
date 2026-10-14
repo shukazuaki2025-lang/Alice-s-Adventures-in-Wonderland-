@@ -1,287 +1,394 @@
-import bpy
-import bmesh
+"""
+Build Alice (rigged, skinned, textured, animated) and export public/assets/models/chr_alice.glb.
+
+    python3 tools/blender/build_chr_alice.py                # needs `pip install bpy`
+    blender -b -P tools/blender/build_chr_alice.py          # or a desktop Blender (>= 4.2)
+
+Deterministic: same inputs -> same GLB. Dev knobs (environment variables):
+    ALICE_SKIP_ANIM=1    export the static, skinned model only (fast iteration on shape)
+    ALICE_OUT=<path>     write somewhere else (e.g. public/assets/models/dev/alice.glb)
+"""
 import math
-from mathutils import Vector, Euler, Matrix
 import os
-import random
+import shutil
+import sys
 
-OUTPUT_GLB = os.path.abspath("public/assets/models/chr_alice.glb")
-OUTPUT_GLB_SRC = os.path.abspath("assets_src/models/chr_alice.glb")
-RENDER_DIR = os.path.abspath("docs/art/alice")
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+sys.path.insert(0, os.path.join(ROOT, 'tools', 'blender'))
 
-def clear_scene():
-    bpy.ops.object.select_all(action='SELECT')
-    bpy.ops.object.delete()
-    for col in bpy.data.collections:
-        if col.name != "Collection":
-            bpy.data.collections.remove(col)
+import bpy  # noqa: E402  (must come first: it registers `bmesh` / `mathutils`)
+import bmesh  # noqa: E402
+from mathutils import Vector  # noqa: E402
 
-def create_material(name, color, roughness=0.5):
-    mat = bpy.data.materials.new(name=name)
-    mat.use_nodes = True
-    try:
-        bsdf = next(n for n in mat.node_tree.nodes if n.type == 'BSDF_PRINCIPLED')
-    except StopIteration:
-        bsdf = None
-        
-    if bsdf:
-        if bpy.app.version >= (4, 0, 0):
-            bsdf.inputs["Base Color"].default_value = color
-            bsdf.inputs["Roughness"].default_value = roughness
-        else:
-            bsdf.inputs["Base Color"].default_value = color
-            bsdf.inputs["Roughness"].default_value = roughness
-    return mat
+from alice import body, dress, hair, head, skin, spec, textures  # noqa: E402
+from lib import meshkit as mk  # noqa: E402
+from lib import rigkit  # noqa: E402
 
-def hex_to_rgba(hex_color):
-    hex_color = hex_color.lstrip('#')
-    return tuple(int(hex_color[i:i+2], 16)/255.0 for i in (0, 2, 4)) + (1.0,)
+OUT = os.environ.get('ALICE_OUT') or os.path.join(ROOT, 'public', 'assets', 'models', 'chr_alice.glb')
+OUT_SRC = os.path.join(ROOT, 'assets_src', 'models', 'chr_alice.glb')
+TEX_DIR = os.path.join(ROOT, 'assets_src', 'textures', 'alice')
 
-def add_mesh_part(name, mat, primitive='sphere', location=(0,0,0), scale=(1,1,1), segments=64, ring_count=32, depth=1):
-    if primitive == 'sphere':
-        bpy.ops.mesh.primitive_uv_sphere_add(segments=segments, ring_count=ring_count, radius=1, location=location)
-    elif primitive == 'cylinder':
-        bpy.ops.mesh.primitive_cylinder_add(vertices=segments, radius=1, depth=depth, location=location)
-    elif primitive == 'cube':
-        bpy.ops.mesh.primitive_cube_add(size=1, location=location)
-        
-    obj = bpy.context.active_object
-    obj.name = name
-    obj.scale = scale
-    obj.data.materials.append(mat)
-    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+
+# ---------------------------------------------------------------------------------------------------------------
+def obj_from_bm(bm, name, mats):
+    o = mk.bm_to_object(bm, name)
+    for m in mats:
+        o.data.materials.append(m)
+    return o
+
+
+def add_shape_keys(obj, keys):
+    """keys: {name: fn(index, co) -> Vector delta}"""
+    me = obj.data
+    basis = obj.shape_key_add(name='Basis', from_mix=False)
+    base_co = [v.co.copy() for v in me.vertices]
+    for name, fn in keys.items():
+        sk = obj.shape_key_add(name=name, from_mix=False)
+        sk.value = 0.0            # glTF exports the slider value as the default morph weight: keep every key OFF
+        sk.slider_min = 0.0
+        sk.slider_max = 1.0
+        for i, co in enumerate(base_co):
+            d = fn(i, co)
+            if d is not None:
+                sk.data[i].co = co + d
+    obj.data.shape_keys.name = 'Alice_Expressions'
+    return basis
+
+
+def rot_about_x(co, pivot, deg):
+    a = math.radians(deg)
+    p = co - pivot
+    y = p.y * math.cos(a) - p.z * math.sin(a)
+    z = p.y * math.sin(a) + p.z * math.cos(a)
+    return pivot + Vector((p.x, y, z))
+
+
+def build_head(mats):
+    m = [mats['Alice_Face'], mats['Alice_Lid'], mats['Alice_Mouth'], mats['Alice_Lips'], mats['Alice_Brow']]
+    bm, info = head.build_head_bm(m)
+    # extract scalp faces for the hair cap before the bmesh is consumed
+    cap_bm = hair.build_scalp()
+    obj = obj_from_bm(bm, 'Alice_Head', m)
+    me = obj.data
+
+    hw = 0.0215
+    mz = info['mouth_z']
+    lip_all = set(info['upper_lip']) | set(info['lower_lip']) | set(info['mouth_top']) | set(info['mouth_bot'])
+    lower_set = set(info['lower_lip']) | set(info['mouth_bot'])
+    up_lid = {s: set(v) for s, v in info['upper_lid'].items()}
+    lo_lid = {s: set(v) for s, v in info['lower_lid'].items()}
+    brow_all = set(info['brow'][1]) | set(info['brow'][-1])
+
+    def eye_c(s):
+        return Vector((spec.EYE_X * s, spec.EYE_Y, spec.EYE_C_Z))
+
+    def lid_delta(i, co, up_deg, lo_deg):
+        for s in (1.0, -1.0):
+            if i in up_lid[s]:
+                return rot_about_x(co, eye_c(s), up_deg) - co
+            if i in lo_lid[s]:
+                return rot_about_x(co, eye_c(s), lo_deg) - co
+        return None
+
+    def mouth_shape(co, corner_dz, open_dz, widen, upper_dz=0.0, is_lower=False):
+        x = co.x
+        xf = clamp_abs(x / hw)
+        dz = corner_dz * xf * xf + (open_dz if is_lower else upper_dz)
+        return Vector((x * (widen - 1.0), -0.0004 * (1 if corner_dz > 0 else 0), dz))
+
+    def clamp_abs(v):
+        return min(1.0, abs(v))
+
+    def cheek_g(co):
+        # smooth falloff around the apples of the cheeks (front of the face only)
+        dx = abs(co.x) - 0.056
+        dz = co.z - (mz + 0.026)
+        front = 1.0 if co.y < spec.HEAD_C.y - 0.05 else 0.0
+        return math.exp(-(dx * dx + dz * dz) / (2 * 0.020 ** 2)) * front
+
+    def brow_t(co):
+        return mk.clamp((abs(co.x) - (spec.EYE_X - 0.0255)) / 0.054)
+
+    def chin_j(co):
+        if co.y > spec.HEAD_C.y - 0.03:
+            return 0.0
+        return mk.smoothstep(mz - 0.001, mz - 0.020, co.z) * (1.0 - mk.smoothstep(0.040, 0.075, abs(co.x)))
+
+    def key_smile(i, co):
+        if i in lip_all:
+            return mouth_shape(co, 0.0052, -0.0015, 1.07, 0.0004, i in lower_set)
+        if i in info['skin'] and cheek_g(co) > 0.002:
+            g = cheek_g(co)
+            return Vector((0, -0.0022 * g, 0.0030 * g))
+        d = lid_delta(i, co, 0.0, -5.0)
+        if d is not None:
+            return d
+        if i in brow_all:
+            return Vector((0, 0, -0.0008))
+        return None
+
+    def key_surprised(i, co):
+        if i in lip_all:
+            if i in lower_set:
+                return Vector((-co.x * 0.18, -0.0010, -0.0120))
+            return Vector((-co.x * 0.18, 0, 0.0016))
+        d = lid_delta(i, co, -13.0, 4.0)
+        if d is not None:
+            return d
+        if i in brow_all:
+            return Vector((0, 0, 0.0075 - 0.0020 * brow_t(co)))
+        if i in info['skin']:
+            j = chin_j(co)
+            if j > 0.001:
+                return Vector((0, 0.0012 * j, -0.0034 * j))
+        return None
+
+    def key_crying(i, co):
+        if i in lip_all:
+            d = mouth_shape(co, -0.0058, -0.0042, 0.97, 0.0, i in lower_set)
+            return d
+        d = lid_delta(i, co, 20.0, -9.0)
+        if d is not None:
+            return d
+        if i in brow_all:
+            t = brow_t(co)
+            return Vector((0.0006 * (1 - t) * (1 if co.x > 0 else -1) * -1, 0, 0.0062 * (1 - t) - 0.0030 * t))
+        if i in info['skin'] and cheek_g(co) > 0.002:
+            g = cheek_g(co)
+            return Vector((0, -0.0012 * g, 0.0018 * g))
+        return None
+
+    def key_mouth_open(i, co):
+        if i in lip_all:
+            if i in lower_set:
+                return Vector((-co.x * 0.06, -0.0008, -0.0100))
+            return Vector((-co.x * 0.06, 0, 0.0010))
+        if i in info['skin']:
+            j = chin_j(co)
+            if j > 0.001:
+                return Vector((0, 0.0010 * j, -0.0030 * j))
+        return None
+
+    keys = {
+        'Neutral': lambda i, co: None,
+        'Blink': lambda i, co: lid_delta(i, co, 47.0, -6.0),
+        'Smile': key_smile,
+        'Surprised': key_surprised,
+        'Crying': key_crying,
+        'MouthOpen': key_mouth_open,
+    }
+    add_shape_keys(obj, keys)
+    obj['mouth_z'] = mz
+    return obj, cap_bm, info
+
+
+def build_eyes(mats):
+    objs = []
+    bm_all = bmesh.new()
+    for s in (1.0, -1.0):
+        eb = head.eye_geometry(s)
+        tmp = bpy.data.meshes.new('tmp')
+        eb.to_mesh(tmp)
+        eb.free()
+        bm_all.from_mesh(tmp)
+        bpy.data.meshes.remove(tmp)
+    return obj_from_bm(bm_all, 'Alice_Eyes', [mats['Alice_Eye']])
+
+
+def build_hair(cap_bm, mats):
+    rng = mk.Rng(1865)
+    # clumps are built into a single bmesh; descriptors carry the path for weighting
+    bm = bmesh.new()
+    descr = []
+    descr += hair.build_back_hair(bm, rng)
+    descr += hair.build_side_locks(bm, rng)
+    descr += hair.build_fringe(bm, rng)
+    clumps = obj_from_bm(bm, 'Alice_Hair', [mats['Alice_Hair']])
+    cap = obj_from_bm(cap_bm, 'Alice_HairCap', [mats['Alice_HairCap']])
+    return clumps, cap, descr
+
+
+def build_ribbon(mats):
+    bm = bmesh.new()
+    pts = hair.build_headband(bm)
+    anchor = pts[int(len(pts) * 0.70)]
+    hair.build_bow(bm, anchor, mk.Rng(7))
+    return obj_from_bm(bm, 'Alice_Ribbon', [mats['Alice_Ribbon']])
+
+
+def build_body(mats):
+    bm = bmesh.new()
+    body.build_neck(bm)
+    for s in (1.0, -1.0):
+        body.build_arm(bm, s)
+    return obj_from_bm(bm, 'Alice_Body', [mats['Alice_Skin']])
+
+
+def build_legs(mats):
+    bm = bmesh.new()
+    for s in (1.0, -1.0):
+        body.build_stocking(bm, s)
+    return obj_from_bm(bm, 'Alice_Stockings', [mats['Alice_Stockings']])
+
+
+def build_shoes(mats):
+    bm = bmesh.new()
+    for s in (1.0, -1.0):
+        body.build_shoe(bm, s)
+        body.build_strap(bm, s)
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=0.0004)
+    return obj_from_bm(bm, 'Alice_Shoes', [mats['Alice_Shoes']])
+
+
+def build_dress(mats):
+    bm = bmesh.new()
+    dress.build_dress(bm)
+    obj = obj_from_bm(bm, 'Alice_Dress', [mats['Alice_Dress']])
+    mk.add_solidify(obj, 0.006, -1.0)
+    mk.apply_modifiers(obj)
+    mk.uv_cylindrical(obj, axis_xy=(0.0, dress.CY), v_range=(0.30, 0.87), u_repeat=1.0)
+    # sleeves are separate so their UVs stay tube-like
+    bm2 = bmesh.new()
+    for s in (1.0, -1.0):
+        dress.build_sleeve(bm2, s)
+    sl = obj_from_bm(bm2, 'Alice_Sleeves', [mats['Alice_Dress']])
+    return obj, sl
+
+
+def build_collar(mats):
+    bm = bmesh.new()
+    dress.build_collar(bm)
+    obj = obj_from_bm(bm, 'Alice_Collar', [mats['Alice_Collar']])
+    mk.add_solidify(obj, 0.0035, 0.0)
+    mk.apply_modifiers(obj)
     return obj
 
-def deform_mesh(obj, func):
-    bpy.context.view_layer.objects.active = obj
-    bpy.ops.object.mode_set(mode='EDIT')
-    bm = bmesh.from_edit_mesh(obj.data)
-    for v in bm.verts:
-        v.co = func(Vector(v.co))
-    bmesh.update_edit_mesh(obj.data)
-    bpy.ops.object.mode_set(mode='OBJECT')
 
-def create_alice_meshes():
-    mats = {
-        "M_Alice_Skin": create_material("M_Alice_Skin", hex_to_rgba("FAD6BF")),
-        "M_Alice_Eyes": create_material("M_Alice_Eyes", hex_to_rgba("7A5C3C")),
-        "M_Alice_Hair": create_material("M_Alice_Hair", hex_to_rgba("E6C98F")),
-        "M_Alice_Ribbon": create_material("M_Alice_Ribbon", hex_to_rgba("2E3F6E")),
-        "M_Alice_Dress": create_material("M_Alice_Dress", hex_to_rgba("E9C46A")),
-        "M_Alice_Collar": create_material("M_Alice_Collar", hex_to_rgba("F7F3EA")),
-        "M_Alice_Apron": create_material("M_Alice_Apron", hex_to_rgba("F7F3EA")),
-        "M_Alice_Stockings": create_material("M_Alice_Stockings", hex_to_rgba("F5F2EB")),
-        "M_Alice_Shoes": create_material("M_Alice_Shoes", hex_to_rgba("1E1B18")),
+def build_apron(mats):
+    bm = bmesh.new()
+    dress.build_apron(bm)
+    dress.build_apron_frill(bm)
+    dress.build_pockets(bm)
+    dress.build_waistband(bm)
+    obj = obj_from_bm(bm, 'Alice_Apron', [mats['Alice_Apron']])
+    mk.add_solidify(obj, 0.0035, -1.0)
+    mk.apply_modifiers(obj)
+    bm2 = bmesh.new()
+    dress.build_straps(bm2)
+    rng = mk.Rng(11)
+    dress.build_sash_bow(bm2, rng)
+    obj2 = obj_from_bm(bm2, 'Alice_ApronStraps', [mats['Alice_Apron']])
+    return obj, obj2
+
+
+# ---------------------------------------------------------------------------------------------------------------
+def weight_all(rig, objs):
+    SEG = skin.SEG
+    wmap = {
+        'Alice_Body': lambda co: skin.w_arms(co) if co.z < 0.855 and abs(co.x) > 0.02 else skin.w_neck(co),
+        'Alice_Stockings': skin.w_leg,
+        'Alice_Shoes': skin.w_shoe,
+        'Alice_Dress': skin.w_dress_body,
+        'Alice_Sleeves': skin.w_sleeve,
+        'Alice_Collar': skin.w_collar,
+        'Alice_Apron': skin.w_dress_body,
+        'Alice_Eyes': skin.w_eye,
+        'Alice_HairCap': skin.w_head_only,
+        'Alice_Ribbon': lambda co: skin.w_head_only(co) if abs(co.x) < 0.2 else skin.w_bow(co),
     }
-    
-    parts = []
+    for name, fn in wmap.items():
+        rigkit.apply_weights(objs[name], fn)
+        rigkit.bind(objs[name], rig)
+    return
 
-    # Head (Need shape keys)
-    head = add_mesh_part("Alice_Head", mats["M_Alice_Skin"], 'sphere', (0, 0, 1.05), (0.13, 0.14, 0.15), segments=128, ring_count=64)
-    # create shape keys
-    head.shape_key_add(name="Basis")
-    for sk_name in ["Neutral", "Surprised", "Crying", "Smile"]:
-        sk = head.shape_key_add(name=sk_name)
-        for v in sk.data:
-            v.co.y += random.uniform(-0.01, 0.01) # real displacement
-    parts.append(head)
 
-    # Eyes
-    parts.append(add_mesh_part("Alice_Eyes", mats["M_Alice_Eyes"], 'sphere', (0, -0.12, 1.05), (0.05, 0.02, 0.03), segments=64, ring_count=32))
-    
-    # Hair
-    parts.append(add_mesh_part("Alice_Hair", mats["M_Alice_Hair"], 'sphere', (0, 0.02, 1.06), (0.15, 0.16, 0.16), segments=128, ring_count=64))
-    
-    # Ribbon
-    parts.append(add_mesh_part("Alice_Ribbon", mats["M_Alice_Ribbon"], 'cube', (0, 0, 1.22), (0.15, 0.15, 0.05), segments=32))
-    
-    # Dress
-    dress = add_mesh_part("Alice_Dress", mats["M_Alice_Dress"], 'cylinder', (0, 0, 0.6), (0.2, 0.2, 0.3), segments=128, depth=1)
-    def dress_shape(co):
-        co.x *= (1.0 - co.z*1.5)
-        co.y *= (1.0 - co.z*1.5)
-        return co
-    deform_mesh(dress, dress_shape)
-    parts.append(dress)
-    
-    # Collar
-    parts.append(add_mesh_part("Alice_Collar", mats["M_Alice_Collar"], 'cylinder', (0, 0, 0.88), (0.1, 0.1, 0.05), segments=64, depth=1))
-    
-    # Apron
-    parts.append(add_mesh_part("Alice_Apron", mats["M_Alice_Apron"], 'cube', (0, -0.15, 0.6), (0.18, 0.05, 0.25), segments=32))
-    
-    # Hands
-    parts.append(add_mesh_part("Alice_Hands", mats["M_Alice_Skin"], 'sphere', (0.3, 0, 0.5), (0.05, 0.05, 0.05), segments=64, ring_count=32))
-    parts.append(add_mesh_part("Alice_Hands_L", mats["M_Alice_Skin"], 'sphere', (-0.3, 0, 0.5), (0.05, 0.05, 0.05), segments=64, ring_count=32))
-    
-    # Stockings
-    parts.append(add_mesh_part("Alice_Stockings", mats["M_Alice_Stockings"], 'cylinder', (0.1, 0, 0.2), (0.05, 0.05, 0.2), segments=64, depth=1))
-    parts.append(add_mesh_part("Alice_Stockings_L", mats["M_Alice_Stockings"], 'cylinder', (-0.1, 0, 0.2), (0.05, 0.05, 0.2), segments=64, depth=1))
-    
-    # Shoes
-    parts.append(add_mesh_part("Alice_Shoes", mats["M_Alice_Shoes"], 'cube', (0.1, -0.02, 0.05), (0.06, 0.1, 0.05), segments=32))
-    parts.append(add_mesh_part("Alice_Shoes_L", mats["M_Alice_Shoes"], 'cube', (-0.1, -0.02, 0.05), (0.06, 0.1, 0.05), segments=32))
-
-    # Add extra mesh triangles by subdividing everything
-    for p in parts:
-        bpy.context.view_layer.objects.active = p
-        bpy.ops.object.modifier_add(type='SUBSURF')
-        p.modifiers["Subdivision"].levels = 1
-        bpy.ops.object.modifier_apply(modifier="Subdivision")
-        # smooth shading
-        for poly in p.data.polygons:
-            poly.use_smooth = True
-
-    return parts
-
-def create_rig(mesh_objs):
-    bpy.ops.object.armature_add(location=(0, 0, 0))
-    rig = bpy.context.active_object
-    rig.name = "Alice_Rig"
-    
-    bpy.ops.object.mode_set(mode='EDIT')
-    eb = rig.data.edit_bones
-    
-    bone_names = [
-        "pelvis", "spine", "chest", "neck", "head", "jaw", 
-        "eye_L", "eye_R", 
-        "shoulder_L", "upper_arm_L", "forearm_L", "hand_L",
-        "thumb_L", "index_L", "middle_L", "ring_L", "pinky_L",
-        "shoulder_R", "upper_arm_R", "forearm_R", "hand_R",
-        "thumb_R", "index_R", "middle_R", "ring_R", "pinky_R",
-        "thigh_L", "shin_L", "foot_L", "toe_L",
-        "thigh_R", "shin_R", "foot_R", "toe_R",
-        "hair_front", "hair_side", "hair_back",
-        "skirt_front", "skirt_back", "skirt_L", "skirt_R",
-        "sash_L", "sash_R",
-        "SOCKET_HandR", "SOCKET_HandL"
-    ]
-    
-    last = None
-    for name in bone_names:
-        b = eb.new(name)
-        b.head = (0, 0, 0.5)
-        b.tail = (0, 0, 0.6)
-        if last:
-            b.parent = last
-        last = b
-        
-    bpy.ops.object.mode_set(mode='OBJECT')
-    
-    for obj in mesh_objs:
-        obj.select_set(True)
-    rig.select_set(True)
-    bpy.context.view_layer.objects.active = rig
-    bpy.ops.object.parent_set(type='ARMATURE_AUTO')
-    
-    return rig
-
-def create_animations(rig):
-    actions = [
-        "Alice_Idle", "Alice_Walk", "Alice_Run", "Alice_TryDoor", 
-        "Alice_CrawlIn", "Alice_Land", "Alice_CurtseyAir", 
-        "Alice_KneelPeek_In", "Alice_KneelPeek_Out", "Alice_Drink", 
-        "Alice_ShrinkReact", "Alice_Slip", "Alice_SitCry", "Alice_Eat", 
-        "Alice_LookDown"
-    ]
-    
-    rig.animation_data_create()
-    for act_name in actions:
-        action = bpy.data.actions.new(name=act_name)
-        action.use_fake_user = True
-        
-        fc = action.fcurves.new(data_path='pose.bones["spine"].rotation_quaternion', index=0)
-        fc.keyframe_points.insert(0, 1.0)
-        fc.keyframe_points.insert(30, 1.0)
-        
-        track = rig.animation_data.nla_tracks.new()
-        track.name = act_name
-        strip = track.strips.new(act_name, int(action.frame_range[0]), action)
-
-def render_turnarounds():
-    os.makedirs(RENDER_DIR, exist_ok=True)
-    
-    # Setup camera
-    bpy.ops.object.camera_add(location=(0, -3.5, 0.6), rotation=(math.radians(90), 0, 0))
-    cam = bpy.context.active_object
-    bpy.context.scene.camera = cam
-    
-    bpy.context.scene.render.engine = 'BLENDER_WORKBENCH'
-    bpy.context.scene.display.shading.light = 'STUDIO'
-    bpy.context.scene.display.shading.color_type = 'MATERIAL'
-    bpy.context.scene.render.resolution_x = 1600
-    bpy.context.scene.render.resolution_y = 1600
-    bpy.context.scene.render.film_transparent = True
-    
-    angles = {
-        "front": 0,
-        "side": 90,
-        "back": 180,
-        "three_quarter": 45
-    }
-    
-    bpy.ops.object.empty_add(location=(0,0,0))
-    empty = bpy.context.active_object
-    for obj in bpy.data.objects:
-        if obj.name.startswith("Alice"):
-            obj.parent = empty
-            
-    for name, angle in angles.items():
-        empty.rotation_euler = (0, 0, math.radians(angle))
-        bpy.context.view_layer.update()
-        bpy.context.scene.render.filepath = os.path.join(RENDER_DIR, f"{name}.png")
-        bpy.ops.render.render(write_still=True)
-        
-    # Silhouette (Material override not strictly possible easily in workbench without changing mats, so we change mats)
-    orig_colors = {}
-    for mat in bpy.data.materials:
-        orig_colors[mat.name] = mat.diffuse_color[:]
-        mat.diffuse_color = (0,0,0,1)
-    
-    empty.rotation_euler = (0, 0, 0)
-    bpy.context.view_layer.update()
-    bpy.context.scene.render.filepath = os.path.join(RENDER_DIR, "silhouette.png")
-    bpy.ops.render.render(write_still=True)
-
-    # Restore colors
-    for mat in bpy.data.materials:
-        mat.diffuse_color = orig_colors[mat.name]
-
-    # Face Closeup
-    cam.location = (0, -0.6, 1.05)
-    bpy.context.view_layer.update()
-    bpy.context.scene.render.filepath = os.path.join(RENDER_DIR, "face_closeup.png")
-    bpy.ops.render.render(write_still=True)
-
+# ---------------------------------------------------------------------------------------------------------------
 def main():
-    clear_scene()
-    mesh_objs = create_alice_meshes()
-    rig = create_rig(mesh_objs)
-    create_animations(rig)
-    
-    # Set height 1.2
-    # The scale is already roughly handled, but we can set custom property
-    bpy.context.scene.objects["Alice_Rig"]["height"] = 1.2
+    mk.reset_scene()
+    mats = textures.make_all(TEX_DIR if os.environ.get('ALICE_SAVE_TEX') else None)
 
-    render_turnarounds()
-    
-    # Export GLB
-    os.makedirs(os.path.dirname(OUTPUT_GLB), exist_ok=True)
-    os.makedirs(os.path.dirname(OUTPUT_GLB_SRC), exist_ok=True)
-    
+    head_obj, cap_bm, info = build_head(mats)
+    eyes = build_eyes(mats)
+    clumps, cap, descr = build_hair(cap_bm, mats)
+    ribbon = build_ribbon(mats)
+    bodyo = build_body(mats)
+    legs = build_legs(mats)
+    shoes = build_shoes(mats)
+    dress_o, sleeves = build_dress(mats)
+    collar = build_collar(mats)
+    apron, straps = build_apron(mats)
+
+    rig = rigkit.build_armature('Alice_Rig', spec.BONES)
+    objs = {
+        'Alice_Head': head_obj, 'Alice_Eyes': eyes, 'Alice_Hair': clumps, 'Alice_HairCap': cap, 'Alice_Ribbon': ribbon,
+        'Alice_Body': bodyo, 'Alice_Stockings': legs, 'Alice_Shoes': shoes, 'Alice_Dress': dress_o, 'Alice_Sleeves': sleeves,
+        'Alice_Collar': collar, 'Alice_Apron': apron, 'Alice_ApronStraps': straps,
+    }
+    # --- weights
+    mz = info['mouth_z']
+
+    def w_head_full(co):
+        z = co.z
+        j = 0.0
+        if co.y < spec.HEAD_C.y - 0.03:
+            j = mk.smoothstep(mz - 0.0005, mz - 0.020, z) * (1.0 - mk.smoothstep(0.040, 0.075, abs(co.x)))
+        # neck blend at the very bottom of the skull
+        return {'Head': max(0.0, 1.0 - j), 'Jaw': j}
+
+    rigkit.apply_weights(head_obj, w_head_full)
+    rigkit.bind(head_obj, rig)
+    # hair clumps: each clump has its own path; weight by nearest clump path
+    def w_clumps(co):
+        best, bd = None, 1e9
+        for d in descr:
+            for p in d['pts'][::3]:
+                dd = (co - p).length_squared
+                if dd < bd:
+                    bd, best = dd, d
+        return skin.w_hair_clump(best['pts'], best['kind'], best.get('side', 1.0))(co)
+
+    rigkit.apply_weights(clumps, w_clumps)
+    rigkit.bind(clumps, rig)
+    weight_all(rig, objs)
+    rigkit.apply_weights(straps, lambda co: skin.w_sash_tail(co) if co.z < 0.78 and co.y > 0.04 and abs(co.x) < 0.2 and co.z < 0.69 else skin.w_dress_body(co))
+    rigkit.bind(straps, rig)
+
+    rig['height'] = spec.ARM_ANGLES and 1.2
+    rig['character'] = 'Alice'
+    rig['source'] = 'tools/blender/build_chr_alice.py'
+
+    if not os.environ.get('ALICE_SKIP_ANIM'):
+        from alice import anim
+        anim.build_all(rig)
+
+    export(rig)
+
+
+def export(rig):
+    os.makedirs(os.path.dirname(OUT), exist_ok=True)
+    bpy.ops.object.select_all(action='SELECT')
     bpy.ops.export_scene.gltf(
-        filepath=OUTPUT_GLB,
+        filepath=OUT,
         export_format='GLB',
         use_selection=False,
         export_extras=True,
         export_morph=True,
         export_skins=True,
         export_animations=True,
-        export_animation_mode='NLA_TRACKS'
+        export_animation_mode='NLA_TRACKS',
+        export_apply=False,
+        export_image_format='JPEG',
+        export_jpeg_quality=88,
+        export_yup=True,
     )
-    
-    import shutil
-    shutil.copyfile(OUTPUT_GLB, OUTPUT_GLB_SRC)
+    size = os.path.getsize(OUT)
+    print(f'[build_chr_alice] wrote {OUT} ({size / 1024:.0f} KB)')
+    if os.path.abspath(OUT) == os.path.join(ROOT, 'public', 'assets', 'models', 'chr_alice.glb'):
+        os.makedirs(os.path.dirname(OUT_SRC), exist_ok=True)
+        shutil.copyfile(OUT, OUT_SRC)
+        legacy = os.path.join(ROOT, 'assets_src', 'chr_alice.glb')
+        shutil.copyfile(OUT, legacy)
 
-if __name__ == "__main__":
+
+if __name__ == '__main__':
     main()

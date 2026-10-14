@@ -49,8 +49,8 @@ export class GameManager {
     this.setupLighting();
 
     this.renderer = new RenderEngine(canvas);
-    this.cameraRig = new CameraRig();
     this.physicsWorld = new PhysicsWorld();
+    this.cameraRig = new CameraRig(this.physicsWorld);
     this.characterController = new CharacterController(this.physicsWorld);
     this.inputManager = new InputManager();
     this.sceneLoader = new SceneLoader();
@@ -75,6 +75,7 @@ export class GameManager {
       this.scene
     );
 
+    this.gameLoop.setMovementLock(() => this.cutscenePlayer.isPlaying);
     this.gameLoop.addUpdateCallback((dt) => this.onUpdate(dt));
     this.setupEventListeners();
     this.setupResizeHandler();
@@ -125,6 +126,7 @@ export class GameManager {
     this.sceneLoader.rabbitMesh.add(this.rabbitEntity.mesh);
 
     this.characterController.init(new THREE.Vector3(2.0, 0, 0));
+    this.characterController.setFacing(Math.PI);
     this.aliceEntity.setPosition(this.characterController.position);
     this.cameraRig.update(this.characterController.position, 0.16);
     this.applySceneVisualsForState(this.stateMachine.currentState);
@@ -136,6 +138,10 @@ export class GameManager {
   private applySceneVisualsForState(state: string): void {
     this.sceneLoader.setActiveStateScene(state);
     this.stateElapsedTime = 0; // Reset timer on state transition
+    this.characterController.currentState = state;
+    this.cameraRig.currentState = state;
+    this.physicsWorld.setActiveGroup(SceneLoader.getColliderGroup(state));
+    this.physicsWorld.setWalkBounds(SceneLoader.getWalkBounds(state));
 
     if (state === 'S0_TITLE' || state === 'S1_BANK' || state === 'S2_CHASE') {
       this.scene.background = new THREE.Color(0xe6eff0);
@@ -194,7 +200,7 @@ export class GameManager {
   private setupEventListeners(): void {
     globalEventBus.on('startJourney', () => {
       this.characterController.setPosition(new THREE.Vector3(2.0, 0, -1.0));
-      this.characterController.rotation.copy(new THREE.Euler(0, Math.PI, 0));
+      this.characterController.setFacing(Math.PI);
       this.characterController.setScale(1.0);
       this.stateMachine.goto('S1_BANK');
       globalEventBus.emit('S1_OBJECTIVE');
@@ -349,7 +355,7 @@ export class GameManager {
     
     this.aliceEntity.setPosition(this.characterController.position);
     this.aliceEntity.mesh.rotation.y = this.characterController.rotation.y;
-    this.aliceEntity.update(deltaTime, new THREE.Vector3());
+    this.aliceEntity.update(deltaTime, this.characterController.velocity, this.characterController.turnRate);
     this.sisterEntity.update(deltaTime);
     this.rabbitEntity.update(deltaTime);
     this.puzzleManager.update(deltaTime);

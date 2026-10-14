@@ -16,6 +16,15 @@ declare global {
       getInventory: () => unknown[];
       getPlayerTransform: () => { position: { x: number, y: number, z: number }, rotation: { x: number, y: number, z: number }, scale: number };
       getInteractables: () => unknown[];
+      getCameraState: () => {
+        yaw: number; pitch: number; yawGoal: number; pitchGoal: number; zoom: number; distance: number; fov: number;
+        cinematic: boolean; position: { x: number; y: number; z: number }; forward: { x: number; y: number; z: number };
+      };
+      getPlayerMotion: () => {
+        velocity: { x: number; y: number; z: number }; speed: number; running: boolean; facing: number;
+      };
+      getAliceAnimation: () => unknown;
+      getAliceBoneWorld: (name: string) => { x: number; y: number; z: number } | null;
       getSceneMetrics: () => unknown;
       setTimeScale: (n: number) => void;
       fastForward: (seconds: number) => void;

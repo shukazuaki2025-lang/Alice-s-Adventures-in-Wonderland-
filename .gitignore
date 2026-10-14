@@ -11,3 +11,6 @@ playwright-report/
 # OS / Editor files
 .DS_Store
 *.log
+public/assets/models/dev/
+__pycache__/
+*.pyc

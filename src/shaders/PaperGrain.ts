@@ -58,23 +58,29 @@ export function createPaperGrainOverlayMaterial(): THREE.ShaderMaterial {
       uniform vec3 colorGrade;
       varying vec2 vUv;
       void main() {
+        // tDiffuse holds the scene in LINEAR HDR; grade, tone-map and sRGB-encode it here so highlights roll off
+        // instead of clipping, then lay the paper tooth over the display-referred image.
         vec4 sceneColor = texture2D(tDiffuse, vUv);
+        gl_FragColor = vec4(sceneColor.rgb * colorGrade, 1.0);
+        #include <tonemapping_fragment>
+        #include <colorspace_fragment>
+
         vec4 paper = texture2D(tPaper, vUv * 3.0);
-        
+
         // Vignette calculation
         vec2 center = vUv - 0.5;
         float dist = length(center);
         float vignette = smoothstep(vignetteRadius - 0.2, vignetteRadius + 0.1, dist);
-        
-        vec3 baseColor = sceneColor.rgb * colorGrade;
-        vec3 blended = mix(baseColor, baseColor * paper.rgb, opacity);
+
+        vec3 blended = mix(gl_FragColor.rgb, gl_FragColor.rgb * paper.rgb, opacity);
         vec3 finalColor = mix(blended, vec3(0.0), vignette);
-        
+
         gl_FragColor = vec4(finalColor, 1.0);
       }
     `,
     transparent: false,
     depthTest: false,
     depthWrite: false,
+    toneMapped: true,
   });
 }

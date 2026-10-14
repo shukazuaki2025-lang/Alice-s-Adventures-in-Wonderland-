@@ -27,6 +27,36 @@ export function registerTestHarness(gameManager: GameManager): void {
         scale: gameManager.characterController.scale
       };
     },
+    getCameraState: () => {
+      const rig = gameManager.cameraRig;
+      const fwd = rig.getForward();
+      return {
+        yaw: rig.yaw,
+        pitch: rig.pitch,
+        yawGoal: rig.yawGoal,
+        pitchGoal: rig.pitchGoal,
+        zoom: rig.zoom,
+        distance: rig.distance,
+        fov: rig.camera.fov,
+        cinematic: rig.isCinematicActive,
+        position: { x: rig.camera.position.x, y: rig.camera.position.y, z: rig.camera.position.z },
+        forward: { x: fwd.x, y: fwd.y, z: fwd.z },
+      };
+    },
+    getPlayerMotion: () => {
+      const c = gameManager.characterController;
+      return {
+        velocity: { x: c.velocity.x, y: c.velocity.y, z: c.velocity.z },
+        speed: c.speed,
+        running: c.isRunning,
+        facing: c.rotation.y,
+      };
+    },
+    getAliceAnimation: () => gameManager.aliceEntity.getDebug(),
+    getAliceBoneWorld: (name: string) => {
+      const v = gameManager.aliceEntity.getBoneWorldPosition(name);
+      return v ? { x: v.x, y: v.y, z: v.z } : null;
+    },
     getInteractables: () => {
       const interactables: string[] = [];
       gameManager.sceneLoader.propsMap.forEach((_mesh, name) => {
@@ -51,7 +81,7 @@ export function registerTestHarness(gameManager: GameManager): void {
       const steps = Math.max(1, Math.floor(seconds / dt));
       const zeroMove = gameManager.characterController.position.clone().set(0, 0, 0);
       for (let i = 0; i < steps; i++) {
-        gameManager.characterController.update(dt, zeroMove, gameManager.cameraRig.yaw);
+        gameManager.characterController.update(dt, zeroMove, gameManager.cameraRig.yaw, false);
         gameManager['onUpdate'](dt);
         gameManager.cameraRig.update(gameManager.characterController.position, dt);
       }

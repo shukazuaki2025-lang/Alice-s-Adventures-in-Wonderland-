@@ -35,10 +35,11 @@ export class RenderEngine {
     this.renderer.setPixelRatio(pixelRatio);
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.05;
+    this.renderer.toneMapping = THREE.NeutralToneMapping;
+    this.renderer.toneMappingExposure = 1.0;
     this.renderer.autoClear = false;
 
+    // Scene is drawn in linear HDR (half-float) with 4x MSAA; the paper/grade pass tone-maps and sRGB-encodes it.
     this.renderTarget = new THREE.WebGLRenderTarget(
       window.innerWidth * pixelRatio,
       window.innerHeight * pixelRatio,
@@ -46,7 +47,8 @@ export class RenderEngine {
         minFilter: THREE.LinearFilter,
         magFilter: THREE.LinearFilter,
         format: THREE.RGBAFormat,
-        colorSpace: THREE.SRGBColorSpace,
+        type: THREE.HalfFloatType,
+        samples: 4,
       }
     );
 
