@@ -10,12 +10,13 @@
     "typecheck": "tsc --noEmit",
     "lint": "tsc --noEmit && eslint .",
     "test": "node --import tsx/esm --test tests/unit/*.test.mjs tools/inspect-glb.mjs tools/check-carroll-fidelity.mjs tools/check-alice-rig.mjs",
-    "test:e2e": "playwright test",
+    "test:e2e": "playwright test --project=chromium",
     "assets": "node tools/optimize-assets.mjs",
     "gate": "node tools/quality-gate.mjs",
     "gate:quick": "node tools/quality-gate.mjs --quick",
     "gate:check": "node tools/quality-gate.mjs --no-run",
-    "check:assets": "node tools/check-assets.mjs"
+    "check:assets": "node tools/check-assets.mjs",
+    "test:gate-capture": "playwright test --project=gate"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "^0.14.0",

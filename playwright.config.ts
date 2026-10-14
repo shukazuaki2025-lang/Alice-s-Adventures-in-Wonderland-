@@ -26,11 +26,32 @@ export default defineConfig({
   },
   projects: [
     {
+      // behavioural + integration specs (what CI runs): half-resolution, no MSAA (see GameHarnessHelper.openGame)
       name: 'chromium',
+      testIgnore: /visual_parity\.spec\.ts/,
       use: {
         ...devices['Desktop Chrome'],
         launchOptions: {
           // Lets sandboxes without a Playwright-managed browser point at a system Chromium (PW_CHROMIUM_PATH).
+          executablePath: process.env.PW_CHROMIUM_PATH || undefined,
+          args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--use-gl=angle',
+            '--use-angle=swiftshader',
+            '--enable-unsafe-webgpu',
+            '--ignore-gpu-blocklist',
+          ],
+        },
+      },
+    },
+    {
+      // full-quality picture capture for `npm run gate` (tools/quality-gate.mjs): slow on a software GPU, so not part of CI
+      name: 'gate',
+      testMatch: /visual_parity\.spec\.ts/,
+      use: {
+        ...devices['Desktop Chrome'],
+        launchOptions: {
           executablePath: process.env.PW_CHROMIUM_PATH || undefined,
           args: [
             '--no-sandbox',

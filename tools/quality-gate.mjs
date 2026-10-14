@@ -63,7 +63,7 @@ if (!NO_RUN) {
   step('unit', 'npm', ['test']);
   step('build', 'npm', ['run', 'build']);
   step('controls-e2e', 'npx', ['playwright', 'test', 'tests/e2e/controls.spec.ts', '--reporter=line']);
-  step('scene-capture', 'npx', ['playwright', 'test', 'tests/e2e/visual_parity.spec.ts', '--reporter=line']);
+  step('scene-capture', 'npx', ['playwright', 'test', '--project=gate', '--reporter=line']);
   if (!QUICK) step('full-e2e', 'npx', ['playwright', 'test', 'tier', 'screenshots', '--reporter=line']);
 }
 
