@@ -288,8 +288,8 @@ const FINAL_FRAG = /* glsl */ `
       }
       float dF = Lc - Lf * 0.125;
       float dB = Lc - Lb * 0.125;
-      dF = dF / ( 1.0 + 5.0 * abs( dF ) );
-      dB = dB / ( 1.0 + 4.0 * abs( dB ) );
+      dF = dF / ( 1.0 + 10.0 * abs( dF ) );
+      dB = dB / ( 1.0 + 6.0 * abs( dB ) );
       detail = dF * uClarity + dB * uClarityBroad;
     }
 

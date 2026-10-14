@@ -3,6 +3,13 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { convertMaterialsToToon } from '../shaders/ToonShaders';
 import { applyInkOutline } from '../shaders/InkOutline';
+import { GradeParams, NEUTRAL_GRADE, PostProcessor } from '../shaders/PaperGrain';
+
+/**
+ * The viewer shows models through the same toon + ink + post pipeline as the game. Its backdrop is a flat colour, so only the
+ * parts of the grade that never touch an empty background are on: the S-curve and the edge-limited clarity.
+ */
+const VIEWER_GRADE: GradeParams = { ...NEUTRAL_GRADE, contrast: 0.3, clarity: 0.4, clarityBroad: 0.2, paper: 0 };
 
 const num = (p: URLSearchParams, k: string, d: number): number => {
   const v = p.get(k);
@@ -15,6 +22,8 @@ export class ModelViewer {
   public ready: Promise<void>;
   private resolveReady!: () => void;
   private renderer: THREE.WebGLRenderer;
+  private post: PostProcessor | null = null;
+  private rt: THREE.WebGLRenderTarget | null = null;
   private scene = new THREE.Scene();
   private camera: THREE.PerspectiveCamera;
   private root = new THREE.Group();
@@ -41,6 +50,27 @@ export class ModelViewer {
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.05;
     this.renderer.shadowMap.enabled = true;
+    if (params.get('post') !== '0') {
+      const pr = Math.min(window.devicePixelRatio || 1, 2);
+      this.rt = new THREE.WebGLRenderTarget(window.innerWidth * pr, window.innerHeight * pr, {
+        minFilter: THREE.LinearFilter,
+        magFilter: THREE.LinearFilter,
+        format: THREE.RGBAFormat,
+        type: THREE.HalfFloatType,
+        samples: 4,
+      });
+      this.renderer.autoClear = false;
+      this.post = new PostProcessor(this.renderer, this.rt);
+      this.post.material.uniforms.opacity.value = 0.15;
+      this.post.setGrade({
+        ...VIEWER_GRADE,
+        contrast: num(params, 'vc', VIEWER_GRADE.contrast),
+        clarity: num(params, 'vk', VIEWER_GRADE.clarity),
+        clarityBroad: num(params, 'vb', VIEWER_GRADE.clarityBroad),
+        exposure: num(params, 'vx', VIEWER_GRADE.exposure),
+        saturation: num(params, 'vs', VIEWER_GRADE.saturation),
+      });
+    }
 
     this.scene.background = new THREE.Color(params.get('bg') ?? '#d9d3c3');
     const hemi = new THREE.HemisphereLight(0xfff8e7, 0x7c6a58, 1.35);
@@ -75,6 +105,11 @@ export class ModelViewer {
     this.bindInput();
     window.addEventListener('resize', () => {
       this.renderer.setSize(window.innerWidth, window.innerHeight);
+      if (this.rt && this.post) {
+        const pr = Math.min(window.devicePixelRatio || 1, 2);
+        this.rt.setSize(window.innerWidth * pr, window.innerHeight * pr);
+        this.post.setSize(window.innerWidth * pr, window.innerHeight * pr);
+      }
       this.camera.aspect = window.innerWidth / window.innerHeight;
       this.camera.updateProjectionMatrix();
     });
@@ -235,7 +270,14 @@ export class ModelViewer {
       this.target.z + Math.cos(this.yaw) * cp * d
     );
     this.camera.lookAt(this.target);
-    this.renderer.render(this.scene, this.camera);
+    if (this.post && this.rt) {
+      this.renderer.setRenderTarget(this.rt);
+      this.renderer.clear();
+      this.renderer.render(this.scene, this.camera);
+      this.post.render();
+    } else {
+      this.renderer.render(this.scene, this.camera);
+    }
 
     if (this.hud && this.params.get('ui') !== '0') {
       const size = this.bounds.getSize(new THREE.Vector3());
