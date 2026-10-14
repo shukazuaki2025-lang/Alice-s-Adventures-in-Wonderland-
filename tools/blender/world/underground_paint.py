@@ -709,3 +709,136 @@ def atlas_slices(img, n=4, pad=16):
         cols = np.arange(i * sw - pad, (i + 1) * sw + pad) % W
         out.append(np.ascontiguousarray(img[:, cols][::-1]))
     return out
+
+
+# ================================================================================================ modelling helpers (atlas-mapped)
+import bmesh  # noqa: E402
+from mathutils import Matrix, Vector  # noqa: E402
+
+from lib import solids as sol  # noqa: E402
+
+
+def _faces_table(lo, hi):
+    x0, y0, z0 = lo
+    x1, y1, z1 = hi
+    P = lambda x, y, z: Vector((x, y, z))
+    return {
+        'nx': ((P(x0, y1, z0), P(x0, y0, z0), P(x0, y0, z1), P(x0, y1, z1)), 1, 2),
+        'px': ((P(x1, y0, z0), P(x1, y1, z0), P(x1, y1, z1), P(x1, y0, z1)), 1, 2),
+        'ny': ((P(x0, y0, z0), P(x1, y0, z0), P(x1, y0, z1), P(x0, y0, z1)), 0, 2),
+        'py': ((P(x1, y1, z0), P(x0, y1, z0), P(x0, y1, z1), P(x1, y1, z1)), 0, 2),
+        'nz': ((P(x0, y1, z0), P(x1, y1, z0), P(x1, y0, z0), P(x0, y0, z0)), 0, 1),
+        'pz': ((P(x0, y0, z1), P(x1, y0, z1), P(x1, y1, z1), P(x0, y1, z1)), 0, 1),
+    }
+
+
+def _clamp_uv(u, v, rect, eps=0.0015):
+    return (min(max(u, rect[0] + eps), rect[2] - eps), min(max(v, rect[1] + eps), rect[3] - eps))
+
+
+def abox(bm, lo, hi, rect, scale=1.8, skip=(), grain_long=True, face_rect=None, uv_name='UVMap'):
+    """Axis-aligned box whose faces sample the atlas cell `rect` = (u0, v0, u1, v1): one isotropic scale (`scale` metres per cell), anchored
+    at each face's own corner, grain running along the face's long side. `face_rect` maps a face name to its own (u0, v0, u1, v1) window
+    (stretched over the whole face) - used for book spines."""
+    uvl = bm.loops.layers.uv.get(uv_name) or bm.loops.layers.uv.new(uv_name)
+    for name, (pts, ua, va) in _faces_table(lo, hi).items():
+        if name in skip:
+            continue
+        try:
+            f = bm.faces.new([bm.verts.new(p) for p in pts])
+        except ValueError:
+            continue
+        amin = min(p[ua] for p in pts)
+        bmin = min(p[va] for p in pts)
+        da = max(p[ua] for p in pts) - amin
+        db = max(p[va] for p in pts) - bmin
+        if face_rect and name in face_rect:
+            fr = face_rect[name]
+            for loop, p in zip(f.loops, pts):
+                a = (p[ua] - amin) / max(da, 1e-6)
+                b = (p[va] - bmin) / max(db, 1e-6)
+                loop[uvl].uv = (fr[0] + a * (fr[2] - fr[0]), fr[1] + b * (fr[3] - fr[1]))
+            continue
+        swap = grain_long and db > da
+        for loop, p in zip(f.loops, pts):
+            a, b = p[ua] - amin, p[va] - bmin
+            if swap:
+                a, b = b, a
+            u = rect[0] + (a / scale) * (rect[2] - rect[0])
+            v = rect[1] + (b / scale) * (rect[3] - rect[1])
+            loop[uvl].uv = _clamp_uv(u, v, rect)
+    return bm
+
+
+def remap_uv(bm, rect, uv_name='UVMap'):
+    """Scale every UV of `bm` (assumed in 0..1) into the atlas cell `rect`."""
+    uvl = bm.loops.layers.uv.get(uv_name)
+    if uvl is None:
+        return bm
+    for f in bm.faces:
+        for loop in f.loops:
+            u, v = loop[uvl].uv
+            loop[uvl].uv = _clamp_uv(rect[0] + u * (rect[2] - rect[0]), rect[1] + v * (rect[3] - rect[1]), rect)
+    return bm
+
+
+def place(dst, tmp, matrix=None, rect=None):
+    """Copy `tmp` into `dst` (optionally remapping its UVs into an atlas cell and transforming), then free it."""
+    if rect is not None:
+        remap_uv(tmp, rect)
+    sol.append_bm(dst, tmp, matrix)
+    tmp.free()
+    return dst
+
+
+def alathe(dst, profile, rect, matrix=None, seg=18, cap_bottom=True, cap_top=True, scale=(1.0, 1.0), height_v=True):
+    """Lathe about +Z whose UV is u around (front = -X at u 0.5) and v = true height along the profile, mapped into atlas cell `rect`."""
+    tmp = bmesh.new()
+    sol.lathe(tmp, profile, (0, 0, 0), seg=seg, cap_bottom=cap_bottom, cap_top=cap_top, scale=scale)
+    uvl = tmp.loops.layers.uv.active
+    z_lo = min(h for _r, h in profile)
+    z_hi = max(h for _r, h in profile)
+    span = max(z_hi - z_lo, 1e-6)
+    for f in tmp.faces:
+        capped = abs(f.normal.z) > 0.9
+        for loop in f.loops:
+            u, _v = loop[uvl].uv
+            if capped:
+                loop[uvl].uv = (0.5, 0.5)
+            elif height_v:
+                loop[uvl].uv = (u, (loop.vert.co.z - z_lo) / span)
+    place(dst, tmp, matrix, rect)
+
+
+def uv_const(bm, uv, uv_name='UVMap'):
+    uvl = bm.loops.layers.uv.get(uv_name) or bm.loops.layers.uv.new(uv_name)
+    for f in bm.faces:
+        for loop in f.loops:
+            loop[uvl].uv = uv
+
+
+class UnitFrame:
+    """Local frame of a wall-hung unit: the wall surface is x = 0 and the unit stands out towards -x (the shaft axis); `a` runs along the
+    wall, `d` is depth out of the wall and `z` is height above the unit's base. The front face of a box is therefore its 'nx' face."""
+
+    def p(self, a, d, z):
+        return Vector((-d, a, z))
+
+    def box(self, bm, a0, a1, d0, d1, z0, z1, rect, scale=1.8, skip=(), face_rect=None, grain_long=True):
+        lo = (-max(d0, d1), min(a0, a1), min(z0, z1))
+        hi = (-min(d0, d1), max(a0, a1), max(z0, z1))
+        abox(bm, lo, hi, rect, scale=scale, skip=skip, face_rect=face_rect, grain_long=grain_long)
+
+    def quad(self, bm, a0, a1, z0, z1, d, rect):
+        """Front-facing (toward -x) rectangle with the cell `rect` stretched across it."""
+        uvl = bm.loops.layers.uv.get('UVMap') or bm.loops.layers.uv.new('UVMap')
+        pts = (self.p(a1, d, z0), self.p(a0, d, z0), self.p(a0, d, z1), self.p(a1, d, z1))
+        f = bm.faces.new([bm.verts.new(p) for p in pts])
+        uvs = ((rect[0], rect[1]), (rect[2], rect[1]), (rect[2], rect[3]), (rect[0], rect[3]))
+        for loop, uv in zip(f.loops, uvs):
+            loop[uvl].uv = _clamp_uv(uv[0], uv[1], rect, 0.002)
+
+
+def mat_unit(R, deg, z0):
+    """Place a unit built in `UnitFrame` coordinates at game azimuth `deg`, base height z0, on a shaft of radius R."""
+    return Matrix.Rotation(math.radians(-deg), 4, 'Z') @ Matrix.Translation((R, 0.0, z0))

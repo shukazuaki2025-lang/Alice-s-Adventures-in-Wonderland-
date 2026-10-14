@@ -249,7 +249,7 @@ export class SceneLoader {
       // heavier ink on big soft masses, finer on small props (object-space thickness, metres)
       const ink: Array<[RegExp, number]> = [
         [/Oak_Trunk|Burrow_Arch/, 0.012],
-        [/Oak_Canopy|Hedge/, 0.04],
+        [/Oak_Canopy|Hedge/, 0.022],
         [/Rocks/, 0.016],
         [/Toadstool/, 0.006],
         [/Daisy|INT_daisy/, 0.0035],
@@ -422,7 +422,7 @@ export class SceneLoader {
       returnCupboard.traverse((obj) => {
         if ((obj as THREE.Mesh).isMesh) applyInkOutline(obj as THREE.Mesh, 0x2b2420, 0.003);
       });
-      this.addGlowsFor(segment, segment, { scale: 3.0, minRadius: 0.5, maxRadius: 2.2 });
+      this.addGlowsFor(segment, segment, { scale: 2.0, minRadius: 0.4, maxRadius: 1.4 });
       for (let k = 0; k < 4; k++) {
         const tile = k === 0 ? segment : segment.clone(true);
         tile.position.y = -12 + 6 * k;
@@ -503,7 +503,7 @@ export class SceneLoader {
         if (/S4_Flag/.test(mesh.name)) mesh.receiveShadow = true;
       });
       this.lampAnchors.passage = SceneLoader.lampAnchorsOf(root);
-      this.addGlowsFor(root, root, { scale: 3.0, minRadius: 0.6, maxRadius: 3.4 });
+      this.addGlowsFor(root, root, { scale: 2.2, minRadius: 0.5, maxRadius: 2.6 });
       this.passageGroup.add(root);
     } catch (e) {
       console.warn('[SceneLoader] Passage GLB unavailable, building the placeholder corridor:', e);
@@ -589,7 +589,7 @@ export class SceneLoader {
       this.hallCurtainNode = root.getObjectByName('Hall_Curtain') ?? null;
       this.hallCurtainNode?.removeFromParent();           // re-parented into INT_curtain so the game can slide it aside
       this.lampAnchors.hall = SceneLoader.lampAnchorsOf(root);
-      this.addGlowsFor(root, root, { scale: 3.0, minRadius: 0.5, maxRadius: 3.0 });
+      this.addGlowsFor(root, root, { scale: 2.4, minRadius: 0.45, maxRadius: 2.0 });
       this.hallGroup.add(root);
       this.hallPainted = true;
     } catch (e) {

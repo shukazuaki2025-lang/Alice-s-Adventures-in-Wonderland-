@@ -29,7 +29,10 @@ const VERT = /* glsl */ `
     vCol = aColor;
     vSeed = fract( dot( aGlow.xyz, vec3( 0.137, 0.291, 0.173 ) ) * 7.0 );
     vec4 c = modelViewMatrix * vec4( aGlow.xyz, 1.0 );
-    c.xyz += normalize( -c.xyz ) * aGlow.w * 0.35;
+    // a halo you are standing inside is just air: fade it out as the camera gets within about its own radius
+    float dist = length( c.xyz );
+    vCol.a *= smoothstep( aGlow.w * 0.7, aGlow.w * 2.4, dist );
+    c.xyz += normalize( -c.xyz ) * min( aGlow.w * 0.15, 0.35 );
     c.xy += position.xy * aGlow.w;
     gl_Position = projectionMatrix * c;
   }
@@ -53,7 +56,7 @@ const FRAG = /* glsl */ `
     float wash = x * x * ( 3.0 - 2.0 * x );
     vec3 hot = mix( vCol.rgb, vec3( 1.0, 0.95, 0.78 ), 0.6 );
     vec3 outer = vCol.rgb * vec3( 1.0, 0.62, 0.55 ) + vec3( 0.02, 0.0, 0.05 );
-    vec3 col = hot * core * 1.15 + vCol.rgb * body * 0.42 + outer * wash * 0.14;
+    vec3 col = hot * core * 1.1 + vCol.rgb * body * 0.30 + outer * wash * 0.10;
     float flick = 1.0 + 0.05 * sin( uTime * 6.3 + vSeed * 31.0 ) + 0.03 * sin( uTime * 11.1 + vSeed * 7.0 );
     gl_FragColor = vec4( col * vCol.a * uGain * flick, 1.0 );
   }
@@ -119,7 +122,7 @@ export function collectGlowSpecs(
   opts: { cell?: number; scale?: number; minRadius?: number; maxRadius?: number; intensity?: number } = {}
 ): GlowSpec[] {
   const cell = opts.cell ?? 0.35;
-  const scale = opts.scale ?? 3.2;
+  const scale = opts.scale ?? 2.4;
   const minR = opts.minRadius ?? 0.45;
   const maxR = opts.maxRadius ?? 3.2;
   const gain = opts.intensity ?? 1.0;
@@ -180,7 +183,7 @@ export function collectGlowSpecs(
       const centre = box.getCenter(new THREE.Vector3());
       out.push({ position: centre, radius, color, intensity: gain });
       // a second, much wider and fainter wash gives the pool of light on the surrounding air / walls
-      out.push({ position: centre.clone(), radius: radius * 2.4, color, intensity: gain * 0.34 });
+      out.push({ position: centre.clone(), radius: radius * 1.9, color, intensity: gain * 0.28 });
     }
   });
   return out;

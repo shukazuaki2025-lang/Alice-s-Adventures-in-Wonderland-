@@ -10,11 +10,11 @@ export interface SkyPalette {
 }
 
 export const SKY_DAY: SkyPalette = {
-  top: 0x6fa8d6,
-  mid: 0xb8d8e8,
-  horizon: 0xf7ecd0,
-  glow: 0xffe3a0,
-  clouds: 0.55,
+  top: 0x5d8fd0,
+  mid: 0xa9d2e6,
+  horizon: 0xfbe6c4,
+  glow: 0xffd890,
+  clouds: 0.6,
 };
 
 /**
@@ -64,24 +64,62 @@ export class PaintedSky {
           for ( int i = 0; i < 5; i++ ) { s += a * vnoise( p ); p = p * 2.03 + 17.0; a *= 0.5; }
           return s;
         }
+        float fbm3( vec2 p ) {
+          float a = 0.5, s = 0.0;
+          for ( int i = 0; i < 3; i++ ) { s += a * vnoise( p ); p = p * 2.03 + 17.0; a *= 0.5; }
+          return s;
+        }
+        // one deck of watercolour cumulus: returns ( coverage, lit-side factor )
+        vec2 cloudDeck( vec2 uv, vec2 sunUv, float cover, float soft ) {
+          vec2 warp = vec2( fbm( uv * 1.7 + 3.1 ), fbm( uv * 1.7 + 9.7 ) );
+          float c = fbm( uv + warp * 0.9 );
+          float c2 = fbm( uv + sunUv * 0.07 + warp * 0.9 );
+          float cov = smoothstep( 0.60 - cover * 0.12, 0.60 - cover * 0.12 + soft, c );
+          float lit = clamp( 0.5 + ( c2 - c ) * 7.0, 0.0, 1.0 );
+          return vec2( cov, lit );
+        }
         void main() {
           vec3 d = normalize( vDir );
           float h = clamp( d.y, 0.0, 1.0 );
-          vec3 col = mix( uHorizon, uMid, smoothstep( 0.0, 0.28, h ) );
-          col = mix( col, uTop, smoothstep( 0.22, 0.85, h ) );
+          // seamless azimuth coordinate (a plain atan() would leave a vertical seam behind the camera)
+          float az = ( d.x * 5.0 + d.z * 3.1 ) / 2.6;
+          // wet-in-wet bands: the wash is laid in horizontal sweeps that bleed into each other
+          float band = fbm3( vec2( az * 2.6, h * 20.0 ) + 3.0 ) - 0.5;
+          float hb = clamp( h + band * 0.08, 0.0, 1.0 );
+          vec3 col = mix( uHorizon, uMid, smoothstep( 0.0, 0.30, hb ) );
+          col = mix( col, uTop, smoothstep( 0.20, 0.88, hb ) );
+          // patches of warmer and cooler pigment across the sky
+          float drift = fbm3( vec2( az * 1.3, h * 4.0 ) + 9.0 ) - 0.5;
+          col *= vec3( 1.0 + drift * 0.16, 1.0 + drift * 0.05, 1.0 - drift * 0.16 );
           // sun glow
-          float s = max( dot( d, normalize( uSunDir ) ), 0.0 );
+          vec3 sd = normalize( uSunDir );
+          float s = max( dot( d, sd ), 0.0 );
           col += uGlow * ( pow( s, 24.0 ) * 0.35 + pow( s, 180.0 ) * 0.9 );
-          // watercolour clouds on a projected plane
-          vec2 uv = d.xz / ( d.y + 0.28 ) * 0.9 + vec2( uTime * 0.004, uTime * 0.0015 );
-          vec2 warp = vec2( fbm( uv * 1.7 + 3.1 ), fbm( uv * 1.7 + 9.7 ) );
-          float c = fbm( uv + warp * 0.9 );
-          float cloud = smoothstep( 0.60 - uClouds * 0.12, 0.78 - uClouds * 0.06, c ) * smoothstep( 0.02, 0.22, d.y );
-          // paper-dab edge: second, tighter threshold gives the cloud a lighter body and a warm shaded underside
-          float body = smoothstep( 0.70, 0.86, c );
-          vec3 cloudCol = mix( vec3( 1.0, 0.93, 0.82 ), vec3( 1.0, 0.99, 0.96 ), body );
-          cloudCol = mix( cloudCol, uHorizon * 1.05, 0.25 * ( 1.0 - body ) );
-          col = mix( col, cloudCol, cloud * 0.92 );
+
+          // two decks of clouds lit from the sun side, shaded in lilac and warm rose underneath
+          vec2 sunUv = normalize( sd.xz + 1e-4 ) ;
+          vec2 uv1 = d.xz / ( d.y + 0.28 ) * 0.9 + vec2( uTime * 0.004, uTime * 0.0015 );
+          vec2 cl1 = cloudDeck( uv1, sunUv, uClouds, 0.18 );
+          vec2 uv2 = d.xz / ( d.y + 0.45 ) * 2.1 + vec2( 4.0 - uTime * 0.006, 1.7 );
+          vec2 cl2 = cloudDeck( uv2, sunUv, uClouds * 0.8, 0.16 );
+          float elev = smoothstep( 0.02, 0.22, d.y );
+          vec3 litCol = vec3( 1.0, 0.965, 0.88 );
+          vec3 shadeCol = vec3( 0.70, 0.71, 0.86 );
+          vec3 rose = vec3( 0.97, 0.80, 0.78 );
+          vec3 c1 = mix( mix( shadeCol, rose, 0.35 ), litCol, cl1.y );
+          vec3 c2c = mix( shadeCol * 1.05, litCol, cl2.y * 0.9 + 0.1 );
+          c1 = mix( c1, uHorizon * 1.04, 0.2 * ( 1.0 - cl1.y ) );
+          col = mix( col, c2c, cl2.x * 0.55 * elev );
+          col = mix( col, c1, cl1.x * 0.94 * elev );
+
+          // distant blue-lilac ridges just above the horizon
+          float r2 = 0.012 + 0.05 * fbm3( vec2( az * 1.9 + 2.0, 1.0 ) );
+          float r1 = 0.004 + 0.034 * fbm3( vec2( az * 3.1 + 7.0, 5.0 ) );
+          vec3 hill2 = mix( uHorizon, vec3( 0.58, 0.63, 0.84 ), 0.6 );
+          vec3 hill1 = mix( uHorizon, vec3( 0.46, 0.62, 0.70 ), 0.62 );
+          col = mix( col, hill2, ( 1.0 - smoothstep( r2 - 0.004, r2 + 0.004, d.y ) ) * 0.8 );
+          col = mix( col, hill1, ( 1.0 - smoothstep( r1 - 0.004, r1 + 0.004, d.y ) ) * 0.85 );
+
           gl_FragColor = vec4( col, 1.0 );
           #include <tonemapping_fragment>
           #include <colorspace_fragment>

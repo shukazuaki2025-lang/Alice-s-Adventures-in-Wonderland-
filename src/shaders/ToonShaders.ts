@@ -38,7 +38,28 @@ function getSharedGradientMap(): THREE.DataTexture {
   return sharedGradientMap;
 }
 
-const PAINT_CACHE_KEY = 'victorian-watercolour-toon-v3';
+const PAINT_CACHE_KEY = 'victorian-watercolour-toon-v4';
+
+/**
+ * Scene-wide paint lighting shared by every toon material (one set of uniform objects, so SceneLighting can change them
+ * live without touching materials):
+ *  - a height-based light structure: surfaces high in the room / shaft take `heightHigh`, low ones `heightLow`, blended over
+ *    `heightRange` (world Y metres). Lamps hang near ceilings and light leaks down a well from far above, so this is the cheap,
+ *    painterly stand-in for the big soft value gradient a painter would lay over the whole picture
+ *  - a global gain on the hand-laid tonal wash
+ */
+export const paintLight = {
+  heightLow: { value: new THREE.Vector3(1, 1, 1) },
+  heightHigh: { value: new THREE.Vector3(1, 1, 1) },
+  heightRange: { value: new THREE.Vector2(0, 3) },
+  washGain: { value: 1 },
+};
+
+export function setHeightLight(low: [number, number, number], high: [number, number, number], y0: number, y1: number): void {
+  paintLight.heightLow.value.set(...low);
+  paintLight.heightHigh.value.set(...high);
+  paintLight.heightRange.value.set(y0, y1);
+}
 
 /**
  * How strongly a surface gets the hand-painted tonal wash (see applyPaintFinish). 0 = leave the colour exactly as painted
@@ -72,15 +93,25 @@ function applyPaintFinish(material: THREE.MeshToonMaterial, wash: WashKind = 'no
   const amount = WASH_AMOUNT[wash];
   material.onBeforeCompile = (shader) => {
     shader.uniforms.uWash = { value: amount };
+    shader.uniforms.uWashGain = paintLight.washGain;
+    shader.uniforms.uHeightLow = paintLight.heightLow;
+    shader.uniforms.uHeightHigh = paintLight.heightHigh;
+    shader.uniforms.uHeightRange = paintLight.heightRange;
     shader.vertexShader = shader.vertexShader
-      .replace('void main() {', 'varying vec3 vPaintP;\nvoid main() {')
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\n\tvPaintP = position;');
+      .replace('void main() {', 'varying vec3 vPaintP;\nvarying float vPaintY;\nvoid main() {')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\n\tvPaintP = position;')
+      .replace('#include <project_vertex>', '#include <project_vertex>\n\tvPaintY = ( modelMatrix * vec4( transformed, 1.0 ) ).y;');
     shader.fragmentShader = shader.fragmentShader
       .replace(
         'void main() {',
         /* glsl */ `
       varying vec3 vPaintP;
+      varying float vPaintY;
       uniform float uWash;
+      uniform float uWashGain;
+      uniform vec3 uHeightLow;
+      uniform vec3 uHeightHigh;
+      uniform vec2 uHeightRange;
       float pHash( vec3 p ) { p = fract( p * 0.3183099 + 0.1 ); p *= 17.0; return fract( p.x * p.y * p.z * ( p.x + p.y + p.z ) ); }
       float pNoise( vec3 x ) {
         vec3 i = floor( x ); vec3 f = fract( x ); f = f * f * ( 3.0 - 2.0 * f );
@@ -94,15 +125,20 @@ function applyPaintFinish(material: THREE.MeshToonMaterial, wash: WashKind = 'no
         /* glsl */ `
       #include <map_fragment>
       if ( uWash > 0.0 ) {
+        float wa = uWash * uWashGain;
         float w1 = pNoise( vPaintP * 0.55 );
         float w2 = pNoise( vPaintP * 1.9 + 7.3 );
         float w3 = pNoise( vPaintP * 6.0 + 3.1 );
-        float tone = ( w1 - 0.5 ) * 0.9 + ( w2 - 0.5 ) * 0.6 + ( w3 - 0.5 ) * 0.35;
+        float w4 = pNoise( vPaintP * 17.0 + 19.0 );
+        float tone = ( w1 - 0.5 ) * 0.9 + ( w2 - 0.5 ) * 0.6 + ( w3 - 0.5 ) * 0.35 + ( w4 - 0.5 ) * 0.2;
         float hueN = pNoise( vPaintP * 0.38 + 11.0 ) - 0.5;
-        vec3 warmT = vec3( 1.07, 1.01, 0.88 );
-        vec3 coolT = vec3( 0.90, 0.99, 1.10 );
+        float chromaN = pNoise( vPaintP * 0.9 + 23.0 ) - 0.5;
+        vec3 warmT = vec3( 1.08, 1.01, 0.86 );
+        vec3 coolT = vec3( 0.89, 0.99, 1.12 );
         vec3 tint = mix( coolT, warmT, clamp( hueN * 2.4 + 0.5, 0.0, 1.0 ) );
-        diffuseColor.rgb *= ( 1.0 + tone * 0.34 * uWash ) * mix( vec3( 1.0 ), tint, clamp( uWash, 0.0, 1.0 ) * 0.9 );
+        vec3 wc = diffuseColor.rgb * ( 1.0 + tone * 0.34 * wa ) * mix( vec3( 1.0 ), tint, clamp( wa, 0.0, 1.0 ) * 0.9 );
+        float wl = dot( wc, vec3( 0.2126, 0.7152, 0.0722 ) );
+        diffuseColor.rgb = mix( vec3( wl ), wc, 1.0 + chromaN * 0.55 * min( wa, 1.2 ) );
       }`
       )
       .replace(
@@ -115,6 +151,8 @@ function applyPaintFinish(material: THREE.MeshToonMaterial, wash: WashKind = 'no
         outgoingLight = mix( outgoingLight, outgoingLight * vec3( 0.70, 0.64, 0.76 ), paintFres * 0.60 );
         // warm rim from the sun side
         outgoingLight += vec3( 1.0, 0.84, 0.58 ) * paintFres * 0.07;
+        // soft height structure: lit from above, deeper and cooler below
+        outgoingLight *= mix( uHeightLow, uHeightHigh, smoothstep( uHeightRange.x, uHeightRange.y, vPaintY ) );
       }
       #include <opaque_fragment>`
       );

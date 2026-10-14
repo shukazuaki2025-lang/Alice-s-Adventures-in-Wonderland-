@@ -68,7 +68,7 @@ function makeAtlas(): THREE.CanvasTexture {
   };
   blades(0, 100, 50, 38, 10, 0.0);   // fresh yellow-green
   blades(1, 128, 38, 30, 10, 2.0);   // deep blue-green
-  blades(2, 58, 46, 46, 9, 4.0);     // dry olive / straw
+  blades(2, 70, 44, 42, 9, 4.0);     // dry olive / straw
 
   // cell 3: tall seed-head grass (golden stems with oat-like heads)
   {
@@ -344,9 +344,9 @@ export class Meadow {
       const dry = nA(x / 9, z / 9);
       const deep = nB(x / 7, z / 7);
       const r = rng();
-      if (dry > 0.62) return r < 0.5 ? 2 : r < 0.72 ? 3 : 0;
+      if (dry > 0.7) return r < 0.5 ? 2 : r < 0.64 ? 3 : 0;
       if (deep > 0.6) return r < 0.7 ? 1 : 0;
-      return r < 0.55 ? 0 : r < 0.9 ? 1 : r < 0.96 ? 2 : 3;
+      return r < 0.56 ? 0 : r < 0.92 ? 1 : r < 0.97 ? 2 : 3;
     };
     // species choice for the flowers
     const flowerCell = (x: number, z: number): number => {

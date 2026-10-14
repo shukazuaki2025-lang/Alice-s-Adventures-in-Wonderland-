@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { GameStateID as GameState } from '../core/types';
 import { GradeParams, NEUTRAL_GRADE, lerpGrade } from '../shaders/PaperGrain';
+import { setHeightLight } from '../shaders/ToonShaders';
 
 /**
  * Colour grade of each world, applied by the final post pass (src/shaders/PaperGrain.ts).
@@ -209,6 +210,7 @@ export class SceneLightingManager {
         // warm afternoon sun, cool sky bounce from above, olive-gold bounce from the grass, lilac-cream haze in the distance
         this.scene.background = new THREE.Color(0xdfeef5);
         this.scene.fog = new THREE.FogExp2(0xdcd8e6, 0.015);
+        setHeightLight([1, 1, 1], [1, 1, 1], 0, 3);
         this.ambientLight.color.setHex(0xfff2cc);
         this.ambientLight.intensity = 0.62;
         this.hemiLight.color.setHex(0xc4dcff);
@@ -225,6 +227,8 @@ export class SceneLightingManager {
         // lantern pools (warm, real point lights + painted glows) against cool violet shaft-light from far above
         this.scene.background = new THREE.Color(0x281e29);
         this.scene.fog = new THREE.FogExp2(0x3a2c4a, 0.09);
+        // light leaks down the shaft from far above (cool, brighter) while the depths hold only lantern warmth (deep, plum)
+        setHeightLight([0.62, 0.56, 0.68], [1.08, 1.08, 1.26], -3.5, 4.5);
         this.ambientLight.color.setHex(0x7a6a98);
         this.ambientLight.intensity = 0.4;
         this.hemiLight.color.setHex(0x8a9ad0);
@@ -247,6 +251,7 @@ export class SceneLightingManager {
       case 'S4_PASSAGE': {
         this.scene.background = new THREE.Color(0x2b222c);
         this.scene.fog = new THREE.FogExp2(0x4a3a52, 0.07);
+        setHeightLight([0.8, 0.76, 0.9], [1.1, 1.05, 0.97], 0, 2.4);
         this.ambientLight.color.setHex(0x7a68a0);
         this.ambientLight.intensity = 0.4;
         this.hemiLight.color.setHex(0xd6b88c);
@@ -273,6 +278,7 @@ export class SceneLightingManager {
         // amber gas-lamp pools on the ceiling and walls, cool lilac air in between, a violet haze down the hall
         this.scene.background = new THREE.Color(0x3a2d3b);
         this.scene.fog = new THREE.FogExp2(0x6f5d86, 0.04);
+        setHeightLight([0.8, 0.76, 0.9], [1.14, 1.06, 0.96], 0, 2.6);
         this.ambientLight.color.setHex(0xa498c4);
         this.ambientLight.intensity = 0.35;
         this.hemiLight.color.setHex(0xffe0b0);
