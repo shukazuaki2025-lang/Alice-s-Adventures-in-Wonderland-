@@ -61,10 +61,10 @@ export class UIManager {
           <p class="ui-title-quote">${getUIText('title_quote')}</p>
           <div class="ui-title-actions">
             <button id="btn-start-journey" class="victorian-btn">
-              <span>📖</span> <span data-ui="title_start">${getUIText('title_start')}</span>
+              <span>✦</span> <span data-ui="title_start">${getUIText('title_start')}</span>
             </button>
             <button id="btn-continue-journey" class="victorian-btn hidden">
-              <span>🔖</span> <span data-ui="title_continue">${getUIText('title_continue')}</span>
+              <span>§</span> <span data-ui="title_continue">${getUIText('title_continue')}</span>
             </button>
           </div>
           <div class="ui-lang-selector">
@@ -87,7 +87,7 @@ export class UIManager {
       <!-- 3. Subtitle / Dialogue Box -->
       <div id="ui-subtitle-box" class="ui-subtitle-box hidden">
         <div class="parchment-card ui-subtitle-content">
-          <div id="ui-speaker-avatar" class="ui-speaker-avatar">👧</div>
+          <div id="ui-speaker-avatar" class="ui-speaker-avatar">A</div>
           <div class="ui-subtitle-text-container">
             <div id="ui-speaker-name" class="ui-speaker-name">Alice</div>
             <div id="ui-subtitle-text" class="ui-subtitle-text"></div>
@@ -109,7 +109,7 @@ export class UIManager {
         <div class="ui-inspect-container parchment-card">
           <h3 id="inspect-item-title" style="color: var(--wine-red); font-size: 1.4rem;">Item Name</h3>
           <div class="ui-inspect-canvas-wrapper" id="inspect-canvas-wrapper">
-            <span id="inspect-item-icon" style="user-select:none;">🍾</span>
+            <span id="inspect-item-icon" style="user-select:none;">✦</span>
           </div>
           <p class="ui-inspect-hint" data-ui="inspect_rotate_hint">${getUIText('inspect_rotate_hint')}</p>
           <div class="ui-inspect-checklist">
@@ -131,7 +131,7 @@ export class UIManager {
       <!-- 7. Size Indicator -->
       <div id="ui-size-indicator" class="ui-size-indicator">
         <div class="ui-size-ribbon">
-          <span>📏 Height:</span>
+          <span>✦ Height:</span>
           <strong id="ui-size-text">4 ft 0 in (1.20 m)</strong>
         </div>
       </div>
@@ -139,7 +139,7 @@ export class UIManager {
       <!-- 8. Curiosity Note Popup -->
       <div id="ui-curiosity-popup" class="ui-curiosity-modal hidden">
         <div class="ui-curiosity-content parchment-card">
-          <span class="drop-cap">📜</span>
+          <span class="drop-cap">§</span>
           <h3 id="curiosity-title" class="ui-curiosity-title">Curiosity Note</h3>
           <p id="curiosity-body" style="line-height: 1.5; margin: 0.5rem 0;"></p>
           <div id="curiosity-fact" class="ui-curiosity-fact"></div>
@@ -196,7 +196,7 @@ export class UIManager {
       <!-- 12. Chapter Complete / Transition Card -->
       <div id="ui-chapter-complete" class="ui-chapter-complete-modal hidden">
         <div class="ui-complete-card parchment-card">
-          <span class="drop-cap">🎩</span>
+          <span class="drop-cap">✦</span>
           <h2 style="color: var(--wine-red); font-size: 2rem;">Chapter I Complete</h2>
           <p style="font-style: italic;">"Curiouser and curiouser!"</p>
           <div style="text-align: left; background: var(--paper-dark); padding: 1rem; border-radius: 4px; width: 100%;">
@@ -231,6 +231,11 @@ export class UIManager {
       this.titleScreenEl.classList.add('hidden');
       globalEventBus.emit('startJourney');
       this.showChapterHeader();
+    });
+
+    // Clickable Interaction Prompt Badge (same as pressing E)
+    this.interactPromptEl?.addEventListener('click', () => {
+      globalEventBus.emit('interactionTriggered', 'E');
     });
 
     // Language selector buttons
@@ -384,13 +389,13 @@ export class UIManager {
     const speaker = data.speaker || 'alice';
     if (speaker === 'rabbit') {
       speakerNameEl.textContent = 'White Rabbit';
-      speakerAvatarEl.textContent = '🐇';
+      speakerAvatarEl.textContent = 'R';
     } else if (speaker === 'narrator') {
       speakerNameEl.textContent = 'Narrator';
-      speakerAvatarEl.textContent = '📖';
+      speakerAvatarEl.textContent = '§';
     } else {
       speakerNameEl.textContent = 'Alice';
-      speakerAvatarEl.textContent = '👧';
+      speakerAvatarEl.textContent = 'A';
     }
 
     if (data.type === 'think') {

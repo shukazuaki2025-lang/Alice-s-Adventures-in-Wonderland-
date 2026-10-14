@@ -96,7 +96,7 @@
 .ui-title-screen {
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle, #3A2F2B 0%, #171210 100%);
+  background: radial-gradient(circle, rgba(58, 47, 43, 0.28) 0%, rgba(23, 18, 16, 0.62) 100%);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -339,22 +339,27 @@
 /* 6. Interaction Prompt HUD */
 .ui-interact-prompt {
   position: absolute;
-  top: 60%;
+  bottom: 135px;
   left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 350;
-  pointer-events: none;
-  transition: opacity 0.2s ease;
+  transform: translateX(-50%);
+  z-index: 450;
+  pointer-events: auto;
+  cursor: pointer;
+  transition: opacity 0.2s ease, transform 0.15s ease;
+}
+
+.ui-interact-prompt:hover {
+  transform: translateX(-50%) translateY(-2px);
 }
 
 .ui-prompt-badge {
   background-color: var(--paper-card);
   border: 2px solid var(--ink-dark);
-  padding: 0.5rem 1.2rem;
+  padding: 0.55rem 1.3rem;
   border-radius: 20px;
   box-shadow: 0 4px 10px rgba(0,0,0,0.4);
   font-weight: bold;
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   color: var(--wine-red);
 }
 
