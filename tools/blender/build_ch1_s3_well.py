@@ -83,9 +83,9 @@ def main():
     kinds_cycle = (['books', 'cupboard', 'jars', 'china', 'books', 'cupboard', 'jars', 'books', 'china', 'cupboard'],
                    ['jars', 'books', 'cupboard', 'china', 'books', 'jars', 'cupboard', 'books', 'china', 'jars'],
                    ['cupboard', 'books', 'china', 'jars', 'cupboard', 'books', 'jars', 'china', 'books', 'cupboard'])
-    gap_cycle = (['lantern', 'picture', 'map', 'niche', 'lantern', 'picture', 'niche', 'map', 'lantern', 'picture'],
-                 ['picture', 'lantern', 'niche', 'map', 'lantern', 'picture', 'map', 'niche', 'lantern', 'picture'],
-                 ['map', 'niche', 'lantern', 'picture', 'map', 'lantern', 'picture', 'niche', 'lantern', 'map'])
+    gap_cycle = (['lantern', 'picture', 'tapestry', 'niche', 'lantern', 'picture', 'niche', 'map', 'lantern', 'tapestry'],
+                 ['picture', 'lantern', 'niche', 'map', 'lantern', 'tapestry', 'map', 'niche', 'lantern', 'picture'],
+                 ['tapestry', 'niche', 'lantern', 'picture', 'map', 'lantern', 'tapestry', 'niche', 'lantern', 'map'])
     WOOD_PICK = ['walnut', 'oak', 'sage', 'teal', 'cream', 'oxblood', 'mustard', 'walnut', 'sage', 'teal', 'oxblood', 'oak']
     units, gaps = [], []
     for t, z0 in enumerate(TIERS):
@@ -99,7 +99,7 @@ def main():
 
     # ------------------------------------------------------------------------------------------ painted atlases
     paint_items = dict(lamps=[], units=[(u['deg'], u['z0'], u['w'], u['h']) for u in units], niches=[], frames=[])
-    lantern_sites, niche_sites, picture_sites, map_sites = [], [], [], []
+    lantern_sites, niche_sites, picture_sites, map_sites, tap_sites = [], [], [], [], []
     for g in gaps:
         if g['kind'] == 'lantern':
             lantern_sites.append((g['deg'], g['z0'] + 0.62))
@@ -107,11 +107,13 @@ def main():
             niche_sites.append((g['deg'], g['z0'] - 0.02))
         elif g['kind'] == 'picture':
             picture_sites.append((g['deg'], g['z0']))
+        elif g['kind'] == 'tapestry':
+            tap_sites.append((g['deg'], g['z0'] - 0.18))
         else:
             map_sites.append((g['deg'], g['z0']))
     paint_items['lamps'] = [(d, z) for d, z in lantern_sites] + [(d, z + 0.36) for d, z in niche_sites]
     paint_items['niches'] = [(d, z, 0.50, 0.74) for d, z in niche_sites]
-    paint_items['frames'] = [(d, z, 0.62, 0.78) for d, z in picture_sites] + [(d, z, 0.95, 0.72) for d, z in map_sites]
+    paint_items['frames'] = [(d, z, 0.62, 0.78) for d, z in picture_sites] + [(d, z, 0.95, 0.72) for d, z in map_sites] + [(d, z, 0.95, 1.45) for d, z in tap_sites]
 
     wall_img = cached('well_wall', lambda: UP.finish(UP.well_wall(paint_items, W=WALL_W, H=WALL_H)[0]))
     slices = UP.atlas_slices(wall_img, 4, PAD)
@@ -132,7 +134,8 @@ def main():
     M['art'] = tex('Art', cached('art', PR.art_atlas), 0.6)
     M['brass'] = tex('Brass', cached('metal', PR.metal_atlas), 0.4)
     M['stone'] = tex('Stone', cached('stone', PR.stone_ledge), 0.9)
-    M['glow'] = flat('LanternGlow', '#FFE7A8', 0.2, emissive='#FFC966')
+    M['glow'] = paint.make_material('M_S3_LanternGlow', paint.to_image('T_S3_LanternGlow', cached('lamp', PR.lamp_glass)), (1.0, 1.0, 1.0, 1.0), 0.2, emissive=(1.0, 1.0, 1.0))
+    M['tap'] = tex('Tapestry', cached('tapestry', PR.tapestry_atlas), 0.95)
     B = {k: bmesh.new() for k in M}
 
     WC = {n: PR.cell_rect(i, 4, 2) for n, i in PR.WOOD_CELLS.items()}
@@ -431,6 +434,20 @@ def main():
         hang_cords(T, f, w_ + 0.06, h_ + 0.04, h_ + 0.30)
         commit(T, g['deg'], g['z0'])
 
+    def tapestry_hang(g, variant):
+        T = new_T()
+        f = UP.UnitFrame()
+        w_, h_ = 0.95, 1.45
+        z0_ = -0.18
+        f.box(T['wood'], -w_ / 2 - 0.05, w_ / 2 + 0.05, -0.13, 0.05, h_ + z0_ + 0.0, h_ + z0_ + 0.05, WC['walnut'])
+        for sa in (-1, 1):
+            UP.alathe(T['brass'], [(0.003, 0), (0.016, 0.0), (0.016, 0.02), (0.008, 0.045), (0.003, 0.07)], METAL['brass'],
+                      Matrix.Translation(f.p(sa * (w_ / 2 + 0.06), 0.025, h_ + z0_ + 0.025)) @ Matrix.Rotation(math.radians(90), 4, 'X'), seg=8)
+        u0, u1 = (0.0, 0.5) if variant == 0 else (0.5, 1.0)
+        f.quad(T['tap'], -w_ / 2, w_ / 2, z0_, z0_ + h_, 0.026, (u0 + 0.004, 0.004, u1 - 0.004, 0.996))
+        f.box(T['wood'], -w_ / 2, w_ / 2, -0.13, 0.02, z0_, z0_ + h_, WC['dark'])
+        commit(T, g['deg'], g['z0'])
+
     def lantern(g, idx):
         T = new_T()
         f = UP.UnitFrame()
@@ -488,7 +505,7 @@ def main():
     pic_keys = ['lady', 'gent', 'meadow', 'seascape', 'orchard', 'still', 'moon', 'cat', 'boy', 'botanical', 'sampler']
     map_keys = ['county', 'sea', 'star', 'treasure', 'world']
     lamp_i = 0
-    ip = im = 0
+    ip = im = itp = 0
     for g in gaps:
         if g['kind'] == 'picture':
             picture(g, pic_keys[ip % len(pic_keys)])
@@ -496,6 +513,9 @@ def main():
         elif g['kind'] == 'map':
             map_hang(g, map_keys[im % len(map_keys)])
             im += 1
+        elif g['kind'] == 'tapestry':
+            tapestry_hang(g, itp % 2)
+            itp += 1
         elif g['kind'] == 'lantern':
             lamp_i += 1
             gg = dict(g)

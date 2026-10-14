@@ -296,7 +296,12 @@ def masonry(U, V, spec, seed, period_u):
         right = np.exp(-((1 - fx) * bl)[None, :] / 0.014)
         bev = spec['bevel']
         shade = 1.0 + bev * (0.34 * top + 0.12 * left - 0.36 * bot - 0.18 * right)
-        blk = base[None, :, :] * shade[..., None]
+        # every stone carries its own little wash: warm at the top-left where the lamp-light lands, cooler and bluer low-right
+        gx_ = (fx - 0.5)[None, :]
+        gy_ = (fy - 0.5)[:, None]
+        wash_ = (-0.55 * gx_ + 0.9 * gy_)
+        gain = np.stack([1.0 + 0.14 * wash_, 1.0 + 0.03 * wash_, 1.0 - 0.16 * wash_], -1)
+        blk = base[None, :, :] * shade[..., None] * gain
         out[rows] = blk * (1 - jm[..., None]) + mortar * jm[..., None] * (0.86 + 0.2 * rng.random())
         jmask[rows] = jm
     # per-pixel painterly surface: soft clouds + granulation + dry-brush streaks (all structured, none per-pixel random)
@@ -313,13 +318,15 @@ def rubble(U, V, spec, seed, period_u):
     f1, edge, cid = voronoi_slab(U, V, spec['cell'], seed, period_u, spec.get('jitter', 0.85))
     colors = spec['pal']
     k = np.minimum((cid * len(colors)).astype(int), len(colors) - 1)
-    base = colors[k] * (0.86 + 0.28 * hash2(cid * 977, cid * 331, seed))[..., None]
+    base = colors[k] * (0.86 + 0.28 * hash2(cid * 9769, cid * 3331, seed))[..., None]
     jw = spec['joint']
     jm = 1.0 - sstep(jw * 0.5, jw * 1.5, edge)
     # domed stones: lighter centre, darker rim; light from above
     dome = np.clip(1.0 - f1 / (spec['cell'] * 0.9), 0, 1)
     vgrad = (V - V[0]) / max(1e-3, V[-1] - V[0])
     base = base * (0.78 + 0.34 * dome[..., None]) * (1.0 + 0.10 * (vgrad[:, None, None] - 0.5))
+    wsh = (vgrad[:, None] - 0.5) * 0.5 + (hash2(cid * 9973, cid * 7919, seed) - 0.5) * 0.8
+    base = base * np.stack([1.0 + 0.12 * wsh, 1.0 + 0.02 * wsh, 1.0 - 0.14 * wsh], -1)
     out = mix(base, np.ones_like(base) * _rgb(spec['mortar']), jm * 0.92)
     hs, W = len(V), len(U)
     cloud = rfbm(W, hs, int(period_u * 6), max(2, int((V[-1] - V[0]) * 6)), 3, seed + 3)
@@ -687,9 +694,14 @@ def _bake_well_light(img, items, W, H, C, ppm_u, ppm_v, Vz, U, seed, log):
     if lamps:
         G += radial_glow((H, W), [(X(d), Y(z), 0.80 * ppm_u, 1.0) for d, z in lamps], 0.8)
         G += radial_glow((H, W), [(X(d), Y(z), 2.0 * ppm_u, 0.46) for d, z in lamps], 0.8)
+    # soot plume above each lantern: a dark, slightly warm smudge that gives every light a shadow to be bright against
+    if lamps:
+        soot = np.zeros((H, W), np.float32)
+        soot += radial_glow((H, W), [(X(d), Y(z + 0.42), 0.34 * ppm_u, 1.0) for d, z in lamps], 1.6)
+        img = img * (1.0 - 0.45 * np.clip(soot, 0, 1))[..., None] * np.array([1.0, 0.95, 0.9], np.float32)
     gg = np.clip(G, 0, 1)[..., None]
-    cool = np.array([0.97, 0.93, 1.00], np.float32)
-    warm = np.array([1.30, 1.08, 0.80], np.float32)
+    cool = np.array([1.14, 1.08, 1.18], np.float32)
+    warm = np.array([1.75, 1.40, 0.98], np.float32)
     img = img * (cool * (1 - gg) + warm * gg)
     img += (np.clip(G - 0.55, 0, 1.2) ** 1.5)[..., None] * np.array([0.20, 0.10, 0.02], np.float32)
     return img

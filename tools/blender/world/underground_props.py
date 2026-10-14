@@ -223,6 +223,8 @@ def _jam_cell(cw, ch, fill_hex, label, seed, label_paper='#EBDDB6', border='#7A2
     shade = 0.70 + 0.55 * np.sin(np.clip(xx, 0, 1) * math.pi) ** 0.6
     img *= shade[..., None]
     hl = np.exp(-((xx - 0.30) / 0.018) ** 2) * (0.35 + 0.65 * (np.abs(yy - 0.5) < 0.42))
+    gcol = np.stack([1.0 + 0.10 * (0.5 - yy), np.ones_like(yy), 1.0 - 0.12 * (0.5 - yy)], -1)
+    img = img * gcol
     img = np.clip(img + hl[..., None] * 0.35, 0, 1)
     hl2 = np.exp(-((xx - 0.70) / 0.010) ** 2) * (np.abs(yy - 0.5) < 0.38)
     img = np.clip(img + hl2[..., None] * 0.18, 0, 1)
@@ -727,3 +729,62 @@ def art_atlas(cell=512):
             c = np.asarray(Image.fromarray(to_u8(c), 'RGB').resize((cell, cell), Image.LANCZOS), np.float32) / 255.0
         _paste_cell(atlas, np.clip(c, 0, 1), k % 4, k // 4, cell, cell)
     return atlas
+
+
+# ------------------------------------------------------------------------------------------------ lantern glass + tapestries
+def lamp_glass(w=256, h=256, seed=77):
+    """Emissive lantern glass painted as a flame seen through frosted panes: hot cream core at mid-height cooling to amber and a smoky
+    top, a darker wick-and-flame silhouette at u = 0.25 / 0.75 and thin amber muntin lines at the quarter points. Wraps around a lathe."""
+    yy, xx = _grid(h, w)
+    v = 1.0 - yy                                           # row 0 = top of the glass
+    core = np.exp(-((v - 0.46) / 0.30) ** 2)
+    img = np.ones((h, w, 3), np.float32) * _rgb('#E27D34')
+    img = mix(img, np.ones_like(img) * _rgb('#FFC764'), np.clip(core * 1.3, 0, 1))
+    img = mix(img, np.ones_like(img) * _rgb('#FFF3C2'), np.clip(core ** 2.2 * 1.2, 0, 1))
+    img = mix(img, np.ones_like(img) * _rgb('#B8602C'), sstep(0.78, 1.0, v) * 0.55)               # soot at the crown
+    for fx in (0.25, 0.75):
+        fl = np.exp(-(((xx - fx) / 0.045) ** 2 + ((v - 0.40) / 0.16) ** 2))
+        img = mix(img, np.ones_like(img) * _rgb('#FFFBE6'), np.clip(fl * 1.4, 0, 1))
+        wick = np.exp(-(((xx - fx) / 0.008) ** 2 + ((v - 0.18) / 0.09) ** 2))
+        img = mix(img, np.ones_like(img) * _rgb('#8A4A2A'), np.clip(wick, 0, 1) * 0.8)
+    for q in (0.0, 0.25, 0.5, 0.75):
+        img = img * (1.0 - 0.14 * np.exp(-((xx - q - 0.125) / 0.006) ** 2))[..., None]
+    img *= (0.93 + 0.12 * rfbm(w, h, 6, 6, 3, seed))[..., None]
+    return np.clip(img, 0, 1)
+
+
+def tapestry(w=512, h=768, field='#7B2431', border='#1F3560', accent='#D1A650', motif='#E8D9B0', seed=900):
+    """Woven wall hanging: coloured field with a lozenge lattice, a banded border, a central medallion and a knotted fringe; visible weft threads."""
+    yy, xx = _grid(h, w)
+    img = paint.wash(field, h, w, seed=seed, tint_var=0.07, blotch=0.10, facets=0, grain=0.03)
+    one = np.ones_like(img)
+    e = np.minimum(np.minimum(xx, 1 - xx), np.minimum(yy, 1 - yy) * (h / w))
+    def band(lo, hi):
+        return ((e >= lo) & (e < hi)).astype(np.float32)
+    img = mix(img, one * _rgb(border), band(0.02, 0.095))
+    img = mix(img, one * _rgb(motif), band(0.105, 0.120))
+    img = mix(img, one * _rgb(border), band(0.130, 0.170))
+    img = mix(img, one * _rgb(accent), band(0.176, 0.188))
+    t = np.where(np.minimum(xx, 1 - xx) * w < np.minimum(yy, 1 - yy) * h, yy * h, xx * w)
+    img = mix(img, one * _rgb(accent), np.clip((0.5 + 0.5 * np.sin(t / 14.0)) - 0.55, 0, 1) * 1.6 * band(0.030, 0.085))
+    cx, cy = xx - 0.5, (yy - 0.5) * (h / w)
+    lat = np.abs((cx * 7) % 1.0 - 0.5) + np.abs((cy * 7) % 1.0 - 0.5)
+    inner = (e > 0.20)
+    img = mix(img, one * _rgb(accent), ((lat > 0.46) | (lat < 0.07)).astype(np.float32) * inner * 0.55)
+    dmed = np.abs(cx) / 0.9 + np.abs(cy) / 1.1
+    for s_, col, wd in ((0.30, motif, 0.030), (0.21, border, 0.050), (0.12, accent, 0.040), (0.05, field, 0.04)):
+        img = mix(img, one * _rgb(col), (np.abs(dmed - s_) < wd).astype(np.float32) * inner)
+    weft = 0.90 + 0.10 * np.sin(yy * h * 1.9)
+    warp = 0.94 + 0.06 * np.sin(xx * w * 1.9 + 1.0)
+    img = img * (weft * warp)[..., None] * (0.92 + 0.14 * rfbm(w, h, 8, 12, 3, seed + 5))[..., None]
+    fr = np.clip((yy - 0.94) / 0.06, 0, 1)
+    strands = (0.5 + 0.5 * np.sin(xx * w * 0.9)) > 0.45
+    img = mix(img, one * _rgb(accent) * (0.85 + 0.2 * np.sin(xx * w * 0.3))[..., None], fr * strands * 0.9)
+    return np.clip(img, 0, 1)
+
+
+def tapestry_atlas(seed=900):
+    """Two hangings side by side (1024 x 768): wine / navy / gold and teal / ochre / rose."""
+    a = tapestry(512, 768, '#7B2431', '#1F3560', '#D1A650', '#E8D9B0', seed)
+    b = tapestry(512, 768, '#2F6A6E', '#6B2740', '#E0B050', '#F0E2B8', seed + 20)
+    return np.concatenate([a, b], 1)

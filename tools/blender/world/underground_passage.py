@@ -117,10 +117,10 @@ def _draw_stones(cv, rng, n, x_rng, v_rng, scale, palette):
         ang = rng.uniform(-0.5, 0.5)
         col = palette[int(rng.integers(len(palette)))]
         ry = r * rng.uniform(0.6, 0.95)
-        cv.dab(x + r * 0.10, v - ry * 0.12, r * 1.10, ry * 1.12, ang, col * 0.30, 190)               # socket shadow
+        cv.dab(x + r * 0.10, v - ry * 0.12, r * 1.08, ry * 1.10, ang, col * 0.45, 95)                # socket shadow
         cv.dab(x, v, r, ry, ang, col, 255)
-        cv.dab(x - r * 0.18, v + ry * 0.22, r * 0.68, ry * 0.58, ang, np.clip(col * 1.25 + 0.05, 0, 1), 230)
-        cv.dab(x + r * 0.32, v - ry * 0.28, r * 0.55, ry * 0.5, ang, col * 0.78, 200)
+        cv.dab(x - r * 0.18, v + ry * 0.22, r * 0.68, ry * 0.58, ang, np.clip(col * 1.25 + 0.05, 0, 1), 170)
+        cv.dab(x + r * 0.32, v - ry * 0.28, r * 0.55, ry * 0.5, ang, col * 0.78, 150)
         if rng.random() < 0.5:
             cv.line([(x - r * 0.4, v + ry * 0.2), (x, v), (x + r * 0.3, v - ry * 0.4)], 1.2, col * 0.35, 220)
     cv.flush(blur=0.5)
@@ -192,7 +192,16 @@ def bay_texture(variant, ppm=320, seed=4000, lamps=((1.0, 1.5),)):
         cv.dab(x, y, rng.uniform(1.6, 3.6), rng.uniform(1.4, 2.8), rng.uniform(0, 3), c * (0.80 + 0.25 * rng.random()), 150)
     cv.flush(blur=0.4)
     stone_pal = pal('#8F8B82', '#A39A86', '#6F7480', '#B09A78', '#7D7060', '#9A8D8A')
-    _draw_stones(cv, rng, 26, (0, W), (v0 + 20, v1 - 20), 0.12 * ppm, stone_pal)
+    _draw_stones(cv, rng, 44, (0, W), (v0 + 20, v1 - 20), 0.082 * ppm, stone_pal)
+    cv.begin()
+    for _ in range(520):                                           # pick-marks: short curved tool strokes, a dark edge and a lit edge
+        x, y = rng.uniform(0, W), rng.uniform(v0 + 4, v1 - 4)
+        ang = rng.uniform(-0.6, 0.6) + (math.pi / 2 if rng.random() < 0.35 else 0.0)
+        ln = rng.uniform(10, 30)
+        pts = [(x + math.cos(ang + 0.5 * t) * ln * t, y + math.sin(ang + 0.5 * t) * ln * t) for t in np.linspace(0, 1, 5)]
+        cv.line(pts, 1.5, _rgb('#2A1D16'), 85)
+        cv.line([(px + 1.4, py + 1.4) for px, py in pts], 1.1, _rgb('#E6D3A6'), 70)
+    cv.flush(blur=0.5)
     _roots(cv, rng, 16, (0, W), (v0 + 10, v1 - 10), 3.2)
     cv.img = cv.img
     img = cv.img

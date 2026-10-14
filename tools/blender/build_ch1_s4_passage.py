@@ -104,7 +104,7 @@ def main():
     M['water'] = tex('Puddle', cached('puddle', PS.puddle_texture), 0.15)
     M['cavwall'] = tex('CavernWall', cached('cavwall', lambda: PS.cavern_wall(1024, 512)), 0.98)
     M['cavground'] = tex('CavernGround', cached('cavground', lambda: PS.cavern_ground(1024)), 0.98)
-    M['glow'] = flat('LanternGlow', '#FFE7A8', 0.2, emissive='#FFC966')
+    M['glow'] = paint.make_material('M_S4_LanternGlow', paint.to_image('T_S4_LanternGlow', cached('lamp', PR.lamp_glass)), (1.0, 1.0, 1.0, 1.0), 0.2, emissive=(1.0, 1.0, 1.0))
     M['door'] = flat('DoorGlow', '#FFE9B0', 0.6, emissive='#FFD27A')
     B = {k: bmesh.new() for k in M}
 
@@ -352,6 +352,41 @@ def main():
                 shelf(side, x_c, 0.62)
             else:
                 pegs(side, x_c, 0.62)
+
+    # ---------------------------------------------------------------------------------------- things hung from the crown: copper pans, jars, a kettle
+    def vault_z(y):
+        t = min(0.999, abs(y) / HALF_W)
+        return SPRING + RISE * math.sqrt(1.0 - t * t)
+
+    hang_kinds = ['pan', 'jar', 'kettle', 'pan', 'jar', 'kettle', 'pan', 'jar']
+    for n_, (hx, hy) in enumerate(((-3.6, 0.7), (-1.6, -0.9), (0.6, 0.4), (3.5, -0.6), (4.9, 0.9), (6.2, -0.3), (8.4, 0.7), (10.0, -0.9), (11.6, 0.2), (13.9, 0.8),
+                                   (15.3, -0.6), (18.5, 0.5), (19.6, -0.8), (-4.4, -0.3))):
+        kind = hang_kinds[n_ % len(hang_kinds)]
+        zt = vault_z(hy) - 0.04
+        drop = 0.42 + 0.18 * ((n_ * 7) % 3)
+        zi = zt - drop
+        cord = mk.tube([V(hx, hy, zt), V(hx + 0.004, hy, zt - drop * 0.5), V(hx, hy, zi)], rx=0.004, ry=0.004, n=4, up_hint=(1, 0, 0), cap_start=False, cap_end=False)
+        UP.uv_const(cord, (METAL['iron'][0] + 0.1, METAL['iron'][1] + 0.1))
+        sol.append_bm(B['brass'], cord)
+        cord.free()
+        m = Matrix.Translation((hx, hy, zi - 0.16)) @ Matrix.Rotation(rng.range(0, 6.28), 4, 'Z')
+        if kind == 'pan':
+            UP.alathe(B['brass'], [(0.001, 0.0), (0.075, 0.0), (0.098, 0.03), (0.102, 0.10), (0.098, 0.125), (0.088, 0.13)], METAL['copper'], m, seg=12, cap_top=False)
+            UP.alathe(B['brass'], [(0.086, 0.126), (0.100, 0.130), (0.100, 0.138), (0.086, 0.136)], METAL['brass'], m, seg=12, cap_bottom=False, cap_top=False)
+            hd = mk.tube([V(0.10, 0, 0.10), V(0.22, 0, 0.12), V(0.28, 0, 0.17)], rx=0.011, ry=0.011, n=5, up_hint=(0, 1, 0), cap_start=True, cap_end=True)
+            UP.place(B['brass'], hd, m, METAL['iron'])
+            UP.alathe(B['brass'], [(0.001, 0.13), (0.004, 0.13), (0.004, 0.21 + 0.02), (0.001, 0.24)], METAL['brass'], m, seg=5)
+        elif kind == 'jar':
+            UP.alathe(B['pres'], [(0.058, 0), (0.062, 0.02), (0.062, 0.14), (0.042, 0.168), (0.040, 0.176)], PRC[JAM[n_ % 8]], m, seg=10, cap_top=False, cap_bottom=False)
+            UP.alathe(B['pres'], [(0.044, 0.170), (0.054, 0.190), (0.050, 0.215), (0.001, 0.222)], PRC['wax'], m, seg=8, cap_bottom=False)
+        else:                                                                                           # copper kettle
+            UP.alathe(B['brass'], [(0.001, 0.0), (0.08, 0.0), (0.105, 0.05), (0.10, 0.11), (0.06, 0.16), (0.04, 0.18), (0.001, 0.2)], METAL['copper'], m, seg=12)
+            sp = bmesh.new()
+            sol.lathe(sp, [(0.016, 0.0), (0.022, 0.04), (0.012, 0.10), (0.008, 0.13)], (0, 0, 0), seg=6, cap_top=False, cap_bottom=False)
+            UP.uv_const(sp, (0.5, 0.5))
+            UP.place(B['brass'], sp, m @ Matrix.Translation((0.09, 0.0, 0.05)) @ Matrix.Rotation(math.radians(62), 4, 'Y'), METAL['copper'])
+            hd = mk.tube([V(-0.04, 0, 0.19), V(0.0, 0, 0.26), V(0.04, 0, 0.19)], rx=0.007, ry=0.007, n=5, up_hint=(0, 1, 0), cap_start=True, cap_end=True)
+            UP.place(B['brass'], hd, m, METAL['iron'])
 
     # ---------------------------------------------------------------------------------------- roots hanging from the crown
     for _ in range(70):

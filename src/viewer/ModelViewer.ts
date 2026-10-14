@@ -9,7 +9,7 @@ import { GradeParams, NEUTRAL_GRADE, PostProcessor } from '../shaders/PaperGrain
  * The viewer shows models through the same toon + ink + post pipeline as the game. Its backdrop is a flat colour, so only the
  * parts of the grade that never touch an empty background are on: the S-curve and the edge-limited clarity.
  */
-const VIEWER_GRADE: GradeParams = { ...NEUTRAL_GRADE, contrast: 0.3, clarity: 0.4, clarityBroad: 0.2, paper: 0 };
+const VIEWER_GRADE: GradeParams = { ...NEUTRAL_GRADE, contrast: 0.12, clarity: 0.35, clarityBroad: 0.25, paper: 0 };
 
 const num = (p: URLSearchParams, k: string, d: number): number => {
   const v = p.get(k);
