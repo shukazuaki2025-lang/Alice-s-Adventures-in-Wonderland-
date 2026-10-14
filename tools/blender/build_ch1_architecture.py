@@ -1,51 +1,69 @@
 #!/usr/bin/env python3
 """
 tools/blender/build_ch1_architecture.py
-Headless Blender Python Script to procedurally build Chapter 1 ("Down the Rabbit-Hole") 3D Greybox Environment.
-
-Metric System: 1 Blender Unit = 1.0 Meter.
-Coordinates: X = East, Y = North, Z = Up.
-glTF Export: +Y Up, Right-Handed (+X East, +Y Up, +Z South).
-Custom Properties (`userData`): Preserved via export_custom_props=True.
-
-Generates:
-- Riverbank Meadow (S0-S1)
-- Rabbit Hole Entrance & Burrow (S2)
-- Long Fall Well Shaft Segment & 8 Slots (S3)
-- Passage Corridor & Corner (S4)
-- Great Hall of Doors & Interior Shell (S4-S7)
-- Glass Three-Legged Table, Low Curtain, Little Door & Passage
-- Garden Vista Diorama
-- Interactive Props (Golden Key, DRINK ME Bottle, EAT ME Cake, Glass Box, Marmalade Jar, Pocket Watch, Fan & Gloves)
-- Full Logic Marker Hierarchy (SPAWN_, TRG_, INT_, CAM_, PATH_, COL_, SLOT_, LAMP_, VISTA_ANCHOR)
+Procedural 3D Environment & Prop Builder for Chapter 1 ("Down the Rabbit-Hole").
+Builds high-detail subdivided Victorian props and scene GLBs with logic markers.
 """
 
-import sys
 import os
 import math
+import bpy
+import bmesh
+from mathutils import Vector
 
-try:
-    import bpy
-    import mathutils
-    IN_BLENDER = True
-except ImportError:
-    IN_BLENDER = False
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+REPO_DIR = os.path.abspath(os.path.join(SCRIPT_DIR, "..", ".."))
+OUT_DIRS = [
+    os.path.join(REPO_DIR, "public", "assets", "models"),
+    os.path.join(REPO_DIR, "assets_src", "models"),
+]
+for d in OUT_DIRS:
+    os.makedirs(d, exist_ok=True)
 
 
-def reset_scene():
-    """Clear all default objects and prepare clean scene."""
-    if not IN_BLENDER:
-        return
-    bpy.ops.wm.read_factory_settings(use_empty=True)
-    scene = bpy.context.scene
-    scene.unit_settings.system = 'METRIC'
-    scene.unit_settings.scale_length = 1.0
+def clear_scene_safe():
+    if bpy.ops.object.mode_set.poll():
+        bpy.ops.object.mode_set(mode='OBJECT')
+    for obj in list(bpy.data.objects):
+        bpy.data.objects.remove(obj, do_unlink=True)
+    for act in list(bpy.data.actions):
+        bpy.data.actions.remove(act, do_unlink=True)
+    for arm in list(bpy.data.armatures):
+        bpy.data.armatures.remove(arm, do_unlink=True)
+    for mesh in list(bpy.data.meshes):
+        bpy.data.meshes.remove(mesh, do_unlink=True)
+    for mat in list(bpy.data.materials):
+        bpy.data.materials.remove(mat, do_unlink=True)
+
+
+def srgb_to_linear(c):
+    return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+
+
+def hex_to_rgba(hex_str, alpha=1.0):
+    h = hex_str.lstrip('#')
+    r, g, b = (int(h[i:i+2], 16) / 255.0 for i in (0, 2, 4))
+    return (srgb_to_linear(r), srgb_to_linear(g), srgb_to_linear(b), alpha)
+
+
+def make_mat(name, hex_color, roughness=0.7, metallic=0.0, alpha=1.0):
+    mat = bpy.data.materials.get(name) or bpy.data.materials.new(name=name)
+    mat.use_nodes = True
+    rgba = hex_to_rgba(hex_color, alpha)
+    mat.diffuse_color = rgba
+    if alpha < 1.0 and hasattr(mat, 'blend_method'):
+        mat.blend_method = 'BLEND'
+    bsdf = next((n for n in mat.node_tree.nodes if n.type == 'BSDF_PRINCIPLED'), None)
+    if bsdf:
+        bsdf.inputs[0].default_value = rgba
+        bsdf.inputs[1].default_value = metallic
+        bsdf.inputs[2].default_value = roughness
+        if len(bsdf.inputs) > 4:
+            bsdf.inputs[4].default_value = alpha
+    return mat
 
 
 def create_empty_marker(name, parent, location=(0, 0, 0), rotation=(0, 0, 0), custom_props=None):
-    """Create an empty object used as a logic marker with custom properties."""
-    if not IN_BLENDER:
-        return None
     empty = bpy.data.objects.new(name, None)
     empty.empty_display_type = 'PLAIN_AXES'
     empty.empty_display_size = 0.5
@@ -54,489 +72,329 @@ def create_empty_marker(name, parent, location=(0, 0, 0), rotation=(0, 0, 0), cu
     if parent:
         empty.parent = parent
     bpy.context.collection.objects.link(empty)
-
     if custom_props:
         for k, v in custom_props.items():
             empty[k] = v
     return empty
 
 
-def build_materials():
-    """Create standard Principled BSDF materials with custom names for the engine."""
-    if not IN_BLENDER:
-        return {}
-    mats = {}
-
-    def new_mat(name, color, roughness=0.5, metallic=0.0, alpha=1.0):
-        m = bpy.data.materials.new(name=name)
-        m.use_nodes = True
-        nodes = m.node_tree.nodes
-        bsdf = nodes.get("Principled BSDF")
-        if bsdf:
-            bsdf.inputs['Base Color'].default_value = color
-            bsdf.inputs['Roughness'].default_value = roughness
-            bsdf.inputs['Metallic'].default_value = metallic
-            if alpha < 1.0 and 'Alpha' in bsdf.inputs:
-                bsdf.inputs['Alpha'].default_value = alpha
-                m.blend_method = 'BLEND'
-        mats[name] = m
-        return m
-
-    new_mat('M_Grass', (0.22, 0.45, 0.18, 1.0), roughness=0.8)
-    new_mat('M_Dirt', (0.35, 0.25, 0.18, 1.0), roughness=0.9)
-    new_mat('M_Stone', (0.40, 0.40, 0.42, 1.0), roughness=0.7)
-    new_mat('M_Wood', (0.32, 0.20, 0.12, 1.0), roughness=0.6)
-    new_mat('M_Glass_Table', (0.75, 0.90, 0.95, 0.25), roughness=0.1, alpha=0.25)
-    new_mat('M_Glass_Bottle', (0.80, 0.95, 0.90, 0.30), roughness=0.1, alpha=0.3)
-    new_mat('M_Glass_Box', (0.85, 0.95, 0.95, 0.35), roughness=0.1, alpha=0.35)
-    new_mat('M_Gold_Key', (0.83, 0.66, 0.23, 1.0), roughness=0.25, metallic=0.9)
-    new_mat('M_Cake', (0.85, 0.70, 0.45, 1.0), roughness=0.8)
-    new_mat('M_Curtain', (0.15, 0.45, 0.22, 1.0), roughness=0.7)
-    new_mat('M_Emissive_Lamp', (0.96, 0.76, 0.42, 1.0), roughness=0.2)
-    return mats
+def select_hierarchy(obj):
+    obj.select_set(True)
+    for child in obj.children:
+        select_hierarchy(child)
 
 
-def build_ch1_architecture():
-    """Procedurally create all Chapter 1 architecture and objects in Blender."""
-    if not IN_BLENDER:
-        print("[build_ch1_architecture] Not running inside Blender, skipping bpy generation.")
-        return
+def export_object_as_glb(obj, name):
+    bpy.ops.object.select_all(action='DESELECT')
+    select_hierarchy(obj)
+    for d in OUT_DIRS:
+        filepath = os.path.join(d, f"{name}.glb")
+        bpy.ops.export_scene.gltf(
+            filepath=filepath,
+            export_format='GLB',
+            use_selection=True,
+            export_apply=True,
+            export_yup=True,
+            export_extras=True,
+            export_lights=False,
+            export_cameras=False,
+            export_animations=True
+        )
 
-    reset_scene()
-    mats = build_materials()
 
-    # Create Root Collection and Root Empty
-    root_coll = bpy.context.collection
-    root_obj = bpy.data.objects.new("CH1_GREYBOX_ROOT", None)
-    root_coll.objects.link(root_obj)
+def finalize_child_mesh(name, parent, bm, mat, loc=(0, 0, 0), subdiv=1, props=None):
+    mesh = bpy.data.meshes.new(name)
+    bm.to_mesh(mesh)
+    bm.free()
+    obj = bpy.data.objects.new(name, mesh)
+    obj.location = loc
+    if parent:
+        obj.parent = parent
+    bpy.context.collection.objects.link(obj)
+    obj.data.materials.append(mat)
+    if subdiv > 0:
+        mod = obj.modifiers.new("Subsurf", 'SUBSURF')
+        mod.levels = subdiv
+        mod.render_levels = subdiv
+        bpy.context.view_layer.objects.active = obj
+        bpy.ops.object.modifier_apply(modifier=mod.name)
+    for poly in obj.data.polygons:
+        poly.use_smooth = True
+    if props:
+        for k, v in props.items():
+            obj[k] = v
+    return obj
 
-    # -------------------------------------------------------------------------
-    # 1. Riverbank Meadow (S0 - S1)
-    # -------------------------------------------------------------------------
+
+def build_and_export_all():
+    clear_scene_safe()
+    m_grass = make_mat("M_Grass", "#6E9E56", roughness=0.85)
+    m_stone = make_mat("M_Stone", "#706862", roughness=0.78)
+    m_wood  = make_mat("M_Wood", "#5C3C24", roughness=0.68)
+    m_wall  = make_mat("M_Hall_Wall", "#D8C3A5", roughness=0.75)
+    m_glass_table = make_mat("M_Glass_Refractive", "#BFE8F5", roughness=0.08, alpha=0.28)
+    m_glass_bottle = make_mat("M_Glass_Bottle", "#7AC7D4", roughness=0.10, alpha=0.38)
+    m_glass_box = make_mat("M_Glass_Box", "#D6F0F5", roughness=0.10, alpha=0.35)
+    m_gold  = make_mat("M_Gold_Key", "#D4AF37", roughness=0.25, metallic=0.90)
+    m_cake  = make_mat("M_Cake", "#C99650", roughness=0.80)
+    m_icing = make_mat("M_Icing", "#F7F3EA", roughness=0.65)
+    m_currant = make_mat("M_Currant", "#2B2420", roughness=0.50)
+    m_curtain = make_mat("M_Curtain", "#8A1C2B", roughness=0.75)
+    m_lamp  = make_mat("M_Emissive_Lamp", "#FFE08A", roughness=0.20)
+    m_amber = make_mat("M_Marmalade", "#E09540", roughness=0.35)
+
+    # 1. Props
+    grp_key = bpy.data.objects.new("prop_key_gold_Grp", None)
+    bpy.context.collection.objects.link(grp_key)
+    bm = bmesh.new()
+    bmesh.ops.create_cone(bm, cap_ends=True, cap_tris=False, segments=20, radius1=0.0045, radius2=0.0045, depth=0.075)
+    for z_off in (-0.025, 0.018, 0.024):
+        g_r = bmesh.ops.create_uvsphere(bm, u_segments=16, v_segments=10, radius=0.0075)
+        for v in g_r['verts']:
+            v.co.z = v.co.z * 0.45 + z_off
+    for ang in (0, 2.094, 4.188):
+        g_l = bmesh.ops.create_uvsphere(bm, u_segments=16, v_segments=12, radius=0.012)
+        for v in g_l['verts']:
+            v.co.y *= 0.35
+            v.co += Vector((0.011 * math.cos(ang), 0.0, 0.040 + 0.011 * math.sin(ang)))
+    for z_t in (-0.032, -0.024):
+        g_b = bmesh.ops.create_cube(bm, size=1.0)
+        for v in g_b['verts']:
+            v.co.x = v.co.x * 0.008 + 0.007
+            v.co.y *= 0.003
+            v.co.z = v.co.z * 0.005 + z_t
+    finalize_child_mesh("prop_key_gold", grp_key, bm, m_gold, subdiv=1)
+    export_object_as_glb(grp_key, "prop_key_gold")
+
+    grp_bot = bpy.data.objects.new("prop_bottle_drinkme_Grp", None)
+    bpy.context.collection.objects.link(grp_bot)
+    bm = bmesh.new()
+    g_bd = bmesh.ops.create_cone(bm, cap_ends=True, cap_tris=False, segments=24, radius1=0.032, radius2=0.030, depth=0.085)
+    for v in g_bd['verts']:
+        v.co.z += 0.0425
+    g_sh = bmesh.ops.create_cone(bm, cap_ends=True, cap_tris=False, segments=24, radius1=0.030, radius2=0.012, depth=0.025)
+    for v in g_sh['verts']:
+        v.co.z += 0.0975
+    g_nk = bmesh.ops.create_cone(bm, cap_ends=True, cap_tris=False, segments=20, radius1=0.012, radius2=0.014, depth=0.025)
+    for v in g_nk['verts']:
+        v.co.z += 0.1225
+    finalize_child_mesh("prop_bottle_drinkme", grp_bot, bm, m_glass_bottle, subdiv=1, props={"Front_Label": "DRINK ME", "Back_Label": ""})
+
+    bm_f = bmesh.new()
+    bmesh.ops.create_cube(bm_f, size=1.0)
+    for v in bm_f.verts:
+        v.co.x *= 0.036
+        v.co.y = v.co.y * 0.003 - 0.033
+        v.co.z = v.co.z * 0.042 + 0.045
+    finalize_child_mesh("Front_Label", grp_bot, bm_f, m_icing, subdiv=1, props={"label": "DRINK ME"})
+
+    bm_b = bmesh.new()
+    bmesh.ops.create_cube(bm_b, size=1.0)
+    for v in bm_b.verts:
+        v.co.x *= 0.032
+        v.co.y = v.co.y * 0.003 + 0.033
+        v.co.z = v.co.z * 0.038 + 0.045
+    finalize_child_mesh("Back_Label", grp_bot, bm_b, m_icing, subdiv=1, props={"label": "SAFE_NO_POISON"})
+    export_object_as_glb(grp_bot, "prop_bottle_drinkme")
+
+    grp_cake = bpy.data.objects.new("prop_cake_eatme_Grp", None)
+    bpy.context.collection.objects.link(grp_cake)
+    bm = bmesh.new()
+    bmesh.ops.create_cone(bm, cap_ends=True, cap_tris=False, segments=28, radius1=0.038, radius2=0.040, depth=0.028)
+    for v in bm.verts:
+        ang = math.atan2(v.co.y, v.co.x)
+        v.co.x *= 1.0 + 0.05 * math.cos(ang * 12)
+        v.co.y *= 1.0 + 0.05 * math.cos(ang * 12)
+        v.co.z += 0.014
+    finalize_child_mesh("prop_cake_eatme", grp_cake, bm, m_cake, subdiv=1, props={"decal": "EAT ME"})
+    bm_cr = bmesh.new()
+    for i in range(12):
+        ang = i * (2 * math.pi / 12)
+        g_c = bmesh.ops.create_uvsphere(bm_cr, u_segments=10, v_segments=8, radius=0.0035)
+        for v in g_c['verts']:
+            v.co += Vector((0.024 * math.cos(ang), 0.024 * math.sin(ang), 0.029))
+    finalize_child_mesh("Cake_Currants", grp_cake, bm_cr, m_currant, subdiv=0)
+    export_object_as_glb(grp_cake, "prop_cake_eatme")
+
+    grp_box = bpy.data.objects.new("prop_box_glass_Grp", None)
+    bpy.context.collection.objects.link(grp_box)
+    bm = bmesh.new()
+    bmesh.ops.create_cube(bm, size=1.0)
+    for v in bm.verts:
+        v.co.x *= 0.12
+        v.co.y *= 0.08
+        v.co.z = v.co.z * 0.06 + 0.03
+    finalize_child_mesh("prop_box_glass", grp_box, bm, m_glass_box, subdiv=1)
+    export_object_as_glb(grp_box, "prop_box_glass")
+
+    grp_jar = bpy.data.objects.new("prop_jar_marmalade_Grp", None)
+    bpy.context.collection.objects.link(grp_jar)
+    bm = bmesh.new()
+    bmesh.ops.create_cone(bm, cap_ends=True, cap_tris=False, segments=24, radius1=0.045, radius2=0.042, depth=0.14)
+    for v in bm.verts:
+        v.co.z += 0.07
+    finalize_child_mesh("prop_jar_marmalade", grp_jar, bm, m_amber, subdiv=1, props={"decal": "ORANGE MARMALADE"})
+    bm_jl = bmesh.new()
+    bmesh.ops.create_cone(bm_jl, cap_ends=False, cap_tris=False, segments=24, radius1=0.046, radius2=0.045, depth=0.065)
+    for v in bm_jl.verts:
+        v.co.z += 0.07
+    finalize_child_mesh("Jar_Label", grp_jar, bm_jl, m_icing, subdiv=1)
+    export_object_as_glb(grp_jar, "prop_jar_marmalade")
+
+    grp_watch = bpy.data.objects.new("prop_watch_Grp", None)
+    bpy.context.collection.objects.link(grp_watch)
+    bm = bmesh.new()
+    bmesh.ops.create_cone(bm, cap_ends=True, cap_tris=False, segments=24, radius1=0.030, radius2=0.030, depth=0.012)
+    g_ring = bmesh.ops.create_uvsphere(bm, u_segments=12, v_segments=10, radius=0.008)
+    for v in g_ring['verts']:
+        v.co += Vector((0.0, 0.034, 0.0))
+    finalize_child_mesh("prop_watch", grp_watch, bm, m_gold, subdiv=1)
+    export_object_as_glb(grp_watch, "prop_watch")
+
+    # 2. Scenes
     s1_group = bpy.data.objects.new("S1_Riverbank", None)
-    s1_group.parent = root_obj
-    root_coll.objects.link(s1_group)
+    bpy.context.collection.objects.link(s1_group)
+    bm = bmesh.new()
+    bmesh.ops.create_grid(bm, x_segments=16, y_segments=16, size=35.0)
+    for v in bm.verts:
+        v.co.z = 0.25 * math.sin(v.co.x * 0.12) * math.cos(v.co.y * 0.12)
+    finalize_child_mesh("S1_Ground_Meadow", s1_group, bm, m_grass, subdiv=0)
 
-    # Ground Plane (60m x 40m)
-    bpy.ops.mesh.primitive_plane_add(size=1.0, location=(0, 0, 0))
-    ground = bpy.context.active_object
-    ground.name = "S1_Ground_Meadow"
-    ground.scale = (60.0, 40.0, 1.0)
-    ground.parent = s1_group
-    if 'M_Grass' in mats:
-        ground.data.materials.append(mats['M_Grass'])
+    bm = bmesh.new()
+    bmesh.ops.create_cone(bm, cap_ends=True, cap_tris=False, segments=16, radius1=0.85, radius2=0.55, depth=3.8)
+    for v in bm.verts:
+        v.co.z += 1.9
+    finalize_child_mesh("S1_Oak_Tree_Trunk", s1_group, bm, m_wood, loc=(-1.5, 2.0, 0), subdiv=1)
 
-    # Oak Tree Trunk at (0, 0, 0)
-    bpy.ops.mesh.primitive_cylinder_add(radius=0.8, depth=4.0, location=(0, 0, 2.0))
-    oak_trunk = bpy.context.active_object
-    oak_trunk.name = "S1_Oak_Tree_Trunk"
-    oak_trunk.parent = s1_group
-    if 'M_Wood' in mats:
-        oak_trunk.data.materials.append(mats['M_Wood'])
+    bm = bmesh.new()
+    bmesh.ops.create_uvsphere(bm, u_segments=18, v_segments=14, radius=2.8)
+    finalize_child_mesh("S1_Oak_Tree_Canopy", s1_group, bm, m_grass, loc=(-1.5, 2.0, 4.5), subdiv=1)
 
-    # Oak Tree Canopy
-    bpy.ops.mesh.primitive_ico_sphere_add(radius=3.5, location=(0, 0, 5.0))
-    oak_canopy = bpy.context.active_object
-    oak_canopy.name = "S1_Oak_Tree_Canopy"
-    oak_canopy.parent = s1_group
-    if 'M_Grass' in mats:
-        oak_canopy.data.materials.append(mats['M_Grass'])
+    create_empty_marker("COL_river_bank", s1_group, location=(0, 19.0, 1.0), custom_props={"collider": True, "material": "grass"})
+    create_empty_marker("SPAWN_S1", s1_group, location=(2.0, -1.0, 0.0), custom_props={"targetState": "S1_BANK", "heading": "NORTH"})
+    create_empty_marker("INT_sister_book", s1_group, location=(-0.2, 1.2, 0.5), custom_props={"type": "inspect", "promptKey": "UI_INSPECT", "item": "ch1_bank_book"})
+    create_empty_marker("INT_daisy_1", s1_group, location=(3.6, 1.2, 0.0), custom_props={"type": "pickup", "item": "daisy_1", "promptKey": "UI_PICK"})
+    create_empty_marker("INT_daisy_2", s1_group, location=(5.2, -1.1, 0.0), custom_props={"type": "pickup", "item": "daisy_2", "promptKey": "UI_PICK"})
+    create_empty_marker("INT_daisy_3", s1_group, location=(7.0, 0.6, 0.0), custom_props={"type": "pickup", "item": "daisy_3", "promptKey": "UI_PICK"})
+    create_empty_marker("PATH_rabbit_S1", s1_group, location=(-12.0, 3.0, 0.0), custom_props={"targetEntity": "chr_rabbit", "duration": 5.0})
+    create_empty_marker("PATH_rabbit_S2", s1_group, location=(8.5, 1.8, 0.0), custom_props={"targetEntity": "chr_rabbit", "duration": 4.0})
+    create_empty_marker("TRG_S2_hole", s1_group, location=(13.5, 2.0, 0.0), custom_props={"triggerId": "TRG_S2_HOLE", "oneShot": True, "bounds": [2.0, 2.0, 2.0]})
+    create_empty_marker("INT_rabbit_hole", s1_group, location=(14.0, 2.0, 0.0), custom_props={"type": "trigger", "promptKey": "UI_JUMP_IN"})
+    export_object_as_glb(s1_group, "ch1_s1_bank")
 
-    # River Collider & Boundary (Y = 18.0 to 20.0)
-    bpy.ops.mesh.primitive_cube_add(size=1.0, location=(0, 19.0, 1.0))
-    river_col = bpy.context.active_object
-    river_col.name = "COL_river_bank"
-    river_col.scale = (60.0, 2.0, 2.0)
-    river_col.parent = s1_group
-    river_col["collider"] = True
-    river_col["material"] = "grass"
-
-    # Hedgerow and Rabbit Hole Burrow at (29.5, -6.0)
-    bpy.ops.mesh.primitive_cube_add(size=1.0, location=(29.5, -6.0, 1.0))
-    hedge = bpy.context.active_object
-    hedge.name = "S1_Hedgerow"
-    hedge.scale = (1.0, 6.0, 2.0)
-    hedge.parent = s1_group
-    if 'M_Grass' in mats:
-        hedge.data.materials.append(mats['M_Grass'])
-
-    # S1 Markers
-    create_empty_marker("SPAWN_S1", s1_group, location=(2.0, -1.0, 0.0), custom_props={
-        "targetState": "S1_BANK",
-        "heading": "NORTH"
-    })
-    create_empty_marker("INT_sister_book", s1_group, location=(0.3, 0.2, 0.7), custom_props={
-        "type": "inspect",
-        "promptKey": "UI_INSPECT",
-        "item": "ch1_bank_book"
-    })
-    create_empty_marker("INT_daisy_1", s1_group, location=(5.2, 4.1, 0.0), custom_props={
-        "type": "pickup", "item": "daisy_1", "promptKey": "UI_PICK"
-    })
-    create_empty_marker("INT_daisy_2", s1_group, location=(-7.4, 2.8, 0.0), custom_props={
-        "type": "pickup", "item": "daisy_2", "promptKey": "UI_PICK"
-    })
-    create_empty_marker("INT_daisy_3", s1_group, location=(3.1, -8.5, 0.0), custom_props={
-        "type": "pickup", "item": "daisy_3", "promptKey": "UI_PICK"
-    })
-    create_empty_marker("PATH_rabbit_S1", s1_group, location=(-25.0, 5.0, 0.0), custom_props={
-        "targetEntity": "chr_rabbit", "duration": 5.0
-    })
-    create_empty_marker("PATH_rabbit_S2", s1_group, location=(4.0, 3.0, 0.0), custom_props={
-        "targetEntity": "chr_rabbit", "duration": 4.0
-    })
-    create_empty_marker("TRG_S2_hole", s1_group, location=(28.0, -6.0, 0.0), custom_props={
-        "triggerId": "TRG_S2_HOLE", "oneShot": True, "bounds": [2.0, 2.0, 2.0]
-    })
-    create_empty_marker("INT_rabbit_hole", s1_group, location=(29.5, -6.0, 0.0), custom_props={
-        "type": "trigger", "promptKey": "UI_JUMP_IN"
-    })
-
-    # -------------------------------------------------------------------------
-    # 2. Long Fall Shaft Well Segment (S3)
-    # -------------------------------------------------------------------------
     s3_group = bpy.data.objects.new("S3_Well_Shaft", None)
-    s3_group.parent = root_obj
-    root_coll.objects.link(s3_group)
-
-    # Well Shaft Wall (Inner dia 4.0m, thickness 0.3m -> Outer dia 4.6m, height 3.0m)
-    bpy.ops.mesh.primitive_cylinder_add(radius=2.3, depth=3.0, vertices=32, location=(0, 0, 1.5))
-    well_mesh = bpy.context.active_object
-    well_mesh.name = "S3_Well_Shaft_Mesh"
-    well_mesh.parent = s3_group
-    if 'M_Stone' in mats:
-        well_mesh.data.materials.append(mats['M_Stone'])
-
-    # 8 Slots evenly spaced around well wall
+    bpy.context.collection.objects.link(s3_group)
+    bm = bmesh.new()
+    bmesh.ops.create_cone(bm, cap_ends=False, cap_tris=False, segments=32, radius1=2.3, radius2=2.3, depth=36.0)
+    for v in bm.verts:
+        v.co.z += 18.0
+    finalize_child_mesh("S3_Well_Shaft_Mesh", s3_group, bm, m_stone, subdiv=0)
     slot_types = ["cupboard", "bookshelf", "map", "picture", "cupboard", "bookshelf", "empty", "empty"]
     for i in range(8):
         angle = i * (2 * math.pi / 8)
-        rx = 2.0 * math.cos(angle)
-        ry = 2.0 * math.sin(angle)
-        slot_name = f"SLOT_{i+1:02d}"
-        create_empty_marker(slot_name, s3_group, location=(rx, ry, 1.5), rotation=(0, 0, angle + math.pi), custom_props={
-            "slotType": slot_types[i],
-            "index": i + 1
-        })
+        create_empty_marker(f"SLOT_{i+1:02d}", s3_group, location=(2.0 * math.cos(angle), 2.0 * math.sin(angle), 18.0), rotation=(0, 0, angle + math.pi), custom_props={"slotType": slot_types[i], "index": i + 1})
+    create_empty_marker("INT_jar_marmalade", s3_group, location=(0.75, -0.25, 0.75), custom_props={"type": "pickup", "item": "marmalade_jar"})
+    create_empty_marker("INT_cupboard_return", s3_group, location=(-0.85, 0.35, -1.5), custom_props={"type": "trigger", "item": "cupboard_return"})
+    export_object_as_glb(s3_group, "ch1_s3_well")
 
-    # Marmalade Jar Prop
-    bpy.ops.mesh.primitive_cylinder_add(radius=0.04, depth=0.14, location=(0.0, 1.8, 1.5))
-    jar_mesh = bpy.context.active_object
-    jar_mesh.name = "prop_jar_marmalade"
-    jar_mesh.parent = s3_group
-    jar_mesh["decal"] = "ORANGE MARMALADE"
-    if 'M_Glass_Bottle' in mats:
-        jar_mesh.data.materials.append(mats['M_Glass_Bottle'])
-
-    # -------------------------------------------------------------------------
-    # 3. Corridor & Turn (S4)
-    # -------------------------------------------------------------------------
     s4_group = bpy.data.objects.new("S4_Passage", None)
-    s4_group.parent = root_obj
-    root_coll.objects.link(s4_group)
+    bpy.context.collection.objects.link(s4_group)
+    bm = bmesh.new()
+    bmesh.ops.create_cube(bm, size=1.0)
+    for v in bm.verts:
+        v.co.x = v.co.x * 24.0 + 12.0
+        v.co.y *= 2.4
+        v.co.z = v.co.z * 2.4 + 1.2
+    finalize_child_mesh("S4_Passage_Straight", s4_group, bm, m_stone, subdiv=0)
+    create_empty_marker("SPAWN_S4", s4_group, location=(0.0, 0.0, 0.0), custom_props={"targetState": "S4_PASSAGE"})
+    create_empty_marker("TRG_S4_corner", s4_group, location=(18.0, 0.0, 0.0), custom_props={"triggerId": "TRG_S4_CORNER", "oneShot": True, "bounds": [2.0, 2.0, 2.4]})
+    create_empty_marker("TRG_S4_exit", s4_group, location=(22.0, 0.0, 0.0), custom_props={"triggerId": "TRG_S4_EXIT", "oneShot": True, "bounds": [2.0, 2.0, 2.4]})
+    export_object_as_glb(s4_group, "ch1_s4_passage")
 
-    # Passage Straight (24m L x 2.0m W x 2.4m H)
-    bpy.ops.mesh.primitive_cube_add(size=1.0, location=(12.0, 0.0, 1.2))
-    passage_mesh = bpy.context.active_object
-    passage_mesh.name = "S4_Passage_Straight"
-    passage_mesh.scale = (24.0, 2.0, 2.4)
-    passage_mesh.parent = s4_group
-    if 'M_Stone' in mats:
-        passage_mesh.data.materials.append(mats['M_Stone'])
-
-    # S4 Markers
-    create_empty_marker("SPAWN_S4", s4_group, location=(0.0, 0.0, 0.0), custom_props={
-        "targetState": "S4_PASSAGE"
-    })
-    create_empty_marker("TRG_S4_corner", s4_group, location=(23.0, 0.0, 0.0), custom_props={
-        "triggerId": "TRG_S4_CORNER", "oneShot": True, "bounds": [2.0, 2.0, 2.4]
-    })
-
-    # -------------------------------------------------------------------------
-    # 4. Great Hall of Doors (S4 - S7)
-    # -------------------------------------------------------------------------
     s5_group = bpy.data.objects.new("S5_Great_Hall", None)
-    s5_group.parent = root_obj
-    root_coll.objects.link(s5_group)
+    bpy.context.collection.objects.link(s5_group)
+    bm = bmesh.new()
+    bmesh.ops.create_cube(bm, size=1.0)
+    for v in bm.verts:
+        v.co.x *= 24.0
+        v.co.y *= 7.0
+        v.co.z = v.co.z * 2.85 + 1.425
+    finalize_child_mesh("S5_Hall_Shell", s5_group, bm, m_wall, subdiv=0)
 
-    # Hall Shell (24.0m L x 7.0m W x 2.85m H)
-    bpy.ops.mesh.primitive_cube_add(size=1.0, location=(0.0, 0.0, 1.425))
-    hall_shell = bpy.context.active_object
-    hall_shell.name = "S5_Hall_Shell"
-    hall_shell.scale = (24.0, 7.0, 2.85)
-    hall_shell.parent = s5_group
-    if 'M_Wood' in mats:
-        hall_shell.data.materials.append(mats['M_Wood'])
-
-    # Floor Collider
-    bpy.ops.mesh.primitive_cube_add(size=1.0, location=(0.0, 0.0, -0.1))
-    hall_floor = bpy.context.active_object
-    hall_floor.name = "COL_hall_floor"
-    hall_floor.scale = (24.0, 7.0, 0.2)
-    hall_floor.parent = s5_group
-    hall_floor["collider"] = True
-    hall_floor["material"] = "wood"
-
-    # Wall Colliders
-    bpy.ops.mesh.primitive_cube_add(size=1.0, location=(0.0, 0.0, 1.425))
-    hall_walls = bpy.context.active_object
-    hall_walls.name = "COL_hall_walls"
-    hall_walls.scale = (24.0, 7.0, 2.85)
-    hall_walls.parent = s5_group
-    hall_walls["collider"] = True
-    hall_walls["material"] = "stone"
-
-    # 10 Locked Doors (1.0m W x 2.2m H)
     door_positions = [
-        # North wall (Y=3.5)
-        (-9.0, 3.5, 0.0, "INT_door_01"),
-        (-4.5, 3.5, 0.0, "INT_door_02"),
-        (0.0, 3.5, 0.0, "INT_door_03"),
-        (4.5, 3.5, 0.0, "INT_door_04"),
-        # South wall (Y=-3.5)
-        (-9.0, -3.5, 0.0, "INT_door_05"),
-        (-3.0, -3.5, 0.0, "INT_door_06"),
-        (3.0, -3.5, 0.0, "INT_door_07"),
-        (9.0, -3.5, 0.0, "INT_door_08"),
-        # East wall (X=12.0)
-        (12.0, -1.5, 0.0, "INT_door_09"),
-        (12.0, 1.5, 0.0, "INT_door_10")
+        (-9.0, 3.5, 0.0, "INT_door_1"), (-4.5, 3.5, 0.0, "INT_door_2"), (0.0, 3.5, 0.0, "INT_door_3"), (4.5, 3.5, 0.0, "INT_door_4"),
+        (-9.0, -3.5, 0.0, "INT_door_5"), (-3.0, -3.5, 0.0, "INT_door_6"), (3.0, -3.5, 0.0, "INT_door_7"), (9.0, -3.5, 0.0, "INT_door_8"),
+        (12.0, -1.5, 0.0, "INT_door_9"), (12.0, 1.5, 0.0, "INT_door_10")
     ]
     for dx, dy, dz, marker_id in door_positions:
-        bpy.ops.mesh.primitive_cube_add(size=1.0, location=(dx, dy, dz + 1.1))
-        dmesh = bpy.context.active_object
-        dmesh.name = f"Mesh_{marker_id}"
-        dmesh.scale = (1.0, 0.1, 2.2)
-        dmesh.parent = s5_group
-        if 'M_Wood' in mats:
-            dmesh.data.materials.append(mats['M_Wood'])
+        bm = bmesh.new()
+        bmesh.ops.create_cube(bm, size=1.0)
+        for v in bm.verts:
+            v.co.x *= 1.0
+            v.co.y *= 0.1
+            v.co.z *= 2.2
+        finalize_child_mesh(f"Mesh_{marker_id}", s5_group, bm, m_wood, loc=(dx, dy, dz + 1.1), subdiv=0)
+        create_empty_marker(marker_id, s5_group, location=(dx, dy, dz + 1.1), custom_props={"type": "door", "promptKey": "UI_OPEN", "requires": "prop_key_gold"})
 
-        create_empty_marker(marker_id, s5_group, location=(dx, dy, dz + 1.1), custom_props={
-            "type": "door", "promptKey": "UI_OPEN", "requires": "prop_key_gold"
-        })
-
-    # Glass Three-Legged Table at (4.0, 0.0, 0.0)
-    # Height = 0.72m, top dia = 0.50m, slab thickness = 0.035m
-    bpy.ops.mesh.primitive_cylinder_add(radius=0.25, depth=0.035, location=(4.0, 0.0, 0.7025))
-    table_top = bpy.context.active_object
-    table_top.name = "S5_Glass_Table_Top"
-    table_top.parent = s5_group
-    if 'M_Glass_Table' in mats:
-        table_top.data.materials.append(mats['M_Glass_Table'])
-
-    # 3 Tapered Legs
+    bm = bmesh.new()
+    bmesh.ops.create_cone(bm, cap_ends=True, cap_tris=False, segments=32, radius1=0.25, radius2=0.25, depth=0.035)
+    finalize_child_mesh("S5_Glass_Table_Top", s5_group, bm, m_glass_table, loc=(0.85, 0.6, 0.7025), subdiv=1)
     for leg_idx in range(3):
         ang = leg_idx * (2 * math.pi / 3)
-        lx = 4.0 + 0.18 * math.cos(ang)
-        ly = 0.0 + 0.18 * math.sin(ang)
-        bpy.ops.mesh.primitive_cylinder_add(radius=0.02, depth=0.685, location=(lx, ly, 0.3425))
-        leg = bpy.context.active_object
-        leg.name = f"S5_Glass_Table_Leg_{leg_idx+1}"
-        leg.parent = s5_group
-        if 'M_Glass_Table' in mats:
-            leg.data.materials.append(mats['M_Glass_Table'])
+        bm = bmesh.new()
+        bmesh.ops.create_cone(bm, cap_ends=True, cap_tris=False, segments=16, radius1=0.02, radius2=0.02, depth=0.685)
+        finalize_child_mesh(f"S5_Glass_Table_Leg_{leg_idx+1}", s5_group, bm, m_glass_table, loc=(0.85 + 0.18 * math.cos(ang), 0.6 + 0.18 * math.sin(ang), 0.3425), subdiv=1)
 
-    # Table Colliders & Markers
-    create_empty_marker("COL_table", s5_group, location=(4.0, 0.0, 0.36), custom_props={
-        "collider": True, "material": "glass"
-    })
-    create_empty_marker("INT_table", s5_group, location=(4.0, 0.0, 0.72), custom_props={
-        "type": "pickup", "item": "prop_key_gold", "promptKey": "UI_TAKE_KEY"
-    })
-    create_empty_marker("INT_bottle_drinkme", s5_group, location=(4.0, 0.1, 0.72), custom_props={
-        "type": "inspect", "item": "prop_bottle_drinkme", "promptKey": "UI_INSPECT_BOTTLE"
-    })
-    create_empty_marker("INT_table_leg", s5_group, location=(4.0, -0.25, 0.0), custom_props={
-        "type": "use", "promptKey": "UI_CLIMB"
-    })
-    create_empty_marker("INT_glass_box", s5_group, location=(4.1, -0.1, 0.0), custom_props={
-        "type": "pickup", "item": "prop_cake_eatme", "promptKey": "UI_OPEN_BOX"
-    })
+    create_empty_marker("INT_table", s5_group, location=(0.85, 0.6, 0.0), custom_props={"type": "table"})
+    create_empty_marker("INT_table_leg", s5_group, location=(0.85, 0.6, 0.0), custom_props={"type": "climb"})
+    create_empty_marker("INT_glass_box", s5_group, location=(0.88, 0.62, 0.035), custom_props={"type": "box"})
 
-    # Low Green Curtain at (10.5, 3.5, 0.0)
-    bpy.ops.mesh.primitive_plane_add(size=1.0, location=(10.5, 3.45, 0.3))
-    curtain = bpy.context.active_object
-    curtain.name = "S5_Low_Curtain"
-    curtain.scale = (0.8, 1.0, 0.6)
-    curtain.parent = s5_group
-    if 'M_Curtain' in mats:
-        curtain.data.materials.append(mats['M_Curtain'])
+    bm = bmesh.new()
+    bmesh.ops.create_cube(bm, size=1.0)
+    for v in bm.verts:
+        v.co.x *= 0.55
+        v.co.y *= 0.03
+        v.co.z *= 0.60
+    finalize_child_mesh("S5_Low_Curtain", s5_group, bm, m_curtain, loc=(-0.8, 3.32, 0.30), subdiv=1)
+    create_empty_marker("INT_curtain", s5_group, location=(-0.8, 3.32, 0.0), custom_props={"type": "trigger", "promptKey": "UI_PULL_CURTAIN"})
 
-    create_empty_marker("INT_curtain", s5_group, location=(10.5, 3.5, 0.0), custom_props={
-        "type": "trigger", "promptKey": "UI_PULL_CURTAIN"
-    })
+    bm = bmesh.new()
+    bmesh.ops.create_cube(bm, size=1.0)
+    for v in bm.verts:
+        v.co.x *= 0.24
+        v.co.y *= 0.05
+        v.co.z *= 0.381
+    finalize_child_mesh("S5_Little_Door_Mesh", s5_group, bm, m_wood, loc=(-0.8, 3.40, 0.1905), subdiv=1)
+    create_empty_marker("INT_little_door", s5_group, location=(-0.8, 3.40, 0.0), custom_props={"type": "door", "requires": "prop_key_gold", "promptKey": "UI_UNLOCK_LITTLE_DOOR"})
+    create_empty_marker("VISTA_ANCHOR", s5_group, location=(-0.8, 5.2, 0.0), custom_props={"vistaId": "ch1_garden_vista", "activeScene": "S5_HALL"})
+    create_empty_marker("SPAWN_S5", s5_group, location=(-2.2, 0.0, 0.0), custom_props={"targetState": "S5_HALL"})
+    create_empty_marker("COL_hall_floor", s5_group, location=(0.0, 0.0, -0.1), custom_props={"collider": True})
 
-    # Little Door (0.24m x 0.381m) & Passage (0.24m x 0.33m x 1.2m)
-    bpy.ops.mesh.primitive_cube_add(size=1.0, location=(10.5, 3.5, 0.1905))
-    ldoor = bpy.context.active_object
-    ldoor.name = "S5_Little_Door_Mesh"
-    ldoor.scale = (0.24, 0.05, 0.381)
-    ldoor.parent = s5_group
-    if 'M_Wood' in mats:
-        ldoor.data.materials.append(mats['M_Wood'])
+    for idx, lx in enumerate([-10.0, -6.0, -2.0, 2.0, 6.0, 10.0]):
+        lamp_id = f"LAMP_{idx+1}"
+        bm = bmesh.new()
+        bmesh.ops.create_uvsphere(bm, u_segments=14, v_segments=10, radius=0.16)
+        finalize_child_mesh(f"Mesh_{lamp_id}", s5_group, bm, m_lamp, loc=(lx, 0.0, 2.65), subdiv=0)
+        create_empty_marker(lamp_id, s5_group, location=(lx, 0.0, 2.85), custom_props={"lightColor": "#F5C26B", "intensity": 1.5, "range": 8.0})
 
-    create_empty_marker("INT_door_little", s5_group, location=(10.5, 3.5, 0.0), custom_props={
-        "type": "door", "requires": "prop_key_gold", "promptKey": "UI_UNLOCK_LITTLE_DOOR"
-    })
+    export_object_as_glb(s5_group, "ch1_s5_hall")
 
-    # Passage Tunnel leading to Garden Vista
-    bpy.ops.mesh.primitive_cube_add(size=1.0, location=(10.5, 4.1, 0.165))
-    lpassage = bpy.context.active_object
-    lpassage.name = "S5_Little_Passage_Mesh"
-    lpassage.scale = (0.24, 1.2, 0.33)
-    lpassage.parent = s5_group
-    if 'M_Stone' in mats:
-        lpassage.data.materials.append(mats['M_Stone'])
-
-    create_empty_marker("VISTA_ANCHOR", s5_group, location=(10.5, 4.7, 0.0), custom_props={
-        "vistaId": "ch1_garden_vista", "activeScene": "S5_HALL"
-    })
-
-    # Garden Vista Diorama Box (10m x 6m x 5m)
-    v_group = bpy.data.objects.new("Garden_Vista", None)
-    v_group.parent = root_obj
-    root_coll.objects.link(v_group)
-
-    bpy.ops.mesh.primitive_cube_add(size=1.0, location=(10.5, 7.7, 2.5))
-    vista_box = bpy.context.active_object
-    vista_box.name = "Garden_Vista_Box"
-    vista_box.scale = (10.0, 6.0, 5.0)
-    vista_box.parent = v_group
-
-    # 6 Hanging Ceiling Lamps
-    lamp_x_coords = [-10.0, -6.0, -2.0, 2.0, 6.0, 10.0]
-    for idx, lx in enumerate(lamp_x_coords):
-        lamp_id = f"LAMP_{idx+1:02d}"
-        bpy.ops.mesh.primitive_cylinder_add(radius=0.15, depth=0.3, location=(lx, 0.0, 2.7))
-        lmesh = bpy.context.active_object
-        lmesh.name = f"Mesh_{lamp_id}"
-        lmesh.parent = s5_group
-        if 'M_Emissive_Lamp' in mats:
-            lmesh.data.materials.append(mats['M_Emissive_Lamp'])
-
-        create_empty_marker(lamp_id, s5_group, location=(lx, 0.0, 2.85), custom_props={
-            "lightColor": "#F5C26B", "intensity": 1.5, "range": 8.0
-        })
-
-    # Camera Anchors
-    create_empty_marker("CAM_S5_intro", s5_group, location=(-11.5, 0.0, 2.0), custom_props={
-        "fov": 60.0, "duration": 3.0
-    })
-    create_empty_marker("CAM_S5_peek", s5_group, location=(10.5, 3.0, 0.15), custom_props={
-        "fov": 65.0, "duration": 2.5
-    })
-    create_empty_marker("CAM_S6_shrink", s5_group, location=(3.2, -0.8, 0.35), custom_props={
-        "fov": 70.0, "duration": 2.5
-    })
-    create_empty_marker("CAM_S6_cry", s5_group, location=(4.0, 0.0, 0.1), custom_props={
-        "fov": 75.0, "duration": 3.0
-    })
-    create_empty_marker("CAM_S7_end", s5_group, location=(4.5, -0.4, 0.15), custom_props={
-        "fov": 65.0, "duration": 4.0
-    })
-
-    create_empty_marker("SPAWN_S5", s5_group, location=(-11.0, 0.0, 0.0), custom_props={
-        "targetState": "S5_HALL"
-    })
-
-    # -------------------------------------------------------------------------
-    # 5. Interactive Props
-    # -------------------------------------------------------------------------
-    props_group = bpy.data.objects.new("Props_Interactive", None)
-    props_group.parent = root_obj
-    root_coll.objects.link(props_group)
-
-    # Little Golden Key (length 0.05m)
-    bpy.ops.mesh.primitive_cylinder_add(radius=0.005, depth=0.05, location=(4.0, 0.0, 0.725))
-    key_mesh = bpy.context.active_object
-    key_mesh.name = "prop_key_gold"
-    key_mesh.parent = props_group
-    if 'M_Gold_Key' in mats:
-        key_mesh.data.materials.append(mats['M_Gold_Key'])
-
-    # 'DRINK ME' Bottle (H=0.10m, dia 0.04m)
-    bpy.ops.mesh.primitive_cylinder_add(radius=0.02, depth=0.10, location=(4.0, 0.1, 0.77))
-    bottle_mesh = bpy.context.active_object
-    bottle_mesh.name = "prop_bottle_drinkme"
-    bottle_mesh.parent = props_group
-    bottle_mesh["decal"] = "DRINK ME"
-    if 'M_Glass_Bottle' in mats:
-        bottle_mesh.data.materials.append(mats['M_Glass_Bottle'])
-
-    # 'EAT ME' Cake (dia 0.05m, height 0.025m)
-    bpy.ops.mesh.primitive_cylinder_add(radius=0.025, depth=0.025, location=(4.1, -0.1, 0.0125))
-    cake_mesh = bpy.context.active_object
-    cake_mesh.name = "prop_cake_eatme"
-    cake_mesh.parent = props_group
-    cake_mesh["decal"] = "EAT ME"
-    if 'M_Cake' in mats:
-        cake_mesh.data.materials.append(mats['M_Cake'])
-
-    # Glass Currant Cake Box (0.10m x 0.07m x 0.05m)
-    bpy.ops.mesh.primitive_cube_add(size=1.0, location=(4.1, -0.1, 0.025))
-    box_mesh = bpy.context.active_object
-    box_mesh.name = "prop_box_glass"
-    box_mesh.scale = (0.10, 0.07, 0.05)
-    box_mesh.parent = props_group
-    if 'M_Glass_Box' in mats:
-        box_mesh.data.materials.append(mats['M_Glass_Box'])
-
-    # White Rabbit's Pocket Watch
-    bpy.ops.mesh.primitive_cylinder_add(radius=0.025, depth=0.01, location=(0, 0, 0))
-    watch_mesh = bpy.context.active_object
-    watch_mesh.name = "prop_watch"
-    watch_mesh.parent = props_group
-    if 'M_Gold_Key' in mats:
-        watch_mesh.data.materials.append(mats['M_Gold_Key'])
-
-    # White Rabbit's Fan & Kid Gloves
-    bpy.ops.mesh.primitive_cube_add(size=1.0, location=(0, 0, 0))
-    fan_mesh = bpy.context.active_object
-    fan_mesh.name = "prop_fan"
-    fan_mesh.scale = (0.15, 0.02, 0.10)
-    fan_mesh.parent = props_group
-
-    bpy.ops.mesh.primitive_cube_add(size=1.0, location=(0, 0, 0))
-    gloves_mesh = bpy.context.active_object
-    gloves_mesh.name = "prop_gloves"
-    gloves_mesh.scale = (0.10, 0.08, 0.02)
-    gloves_mesh.parent = props_group
-
-    print("[build_ch1_architecture] Scene procedural generation complete.")
-
-
-def export_gltf(output_file):
-    """Export scene to GLB format with custom properties enabled."""
-    if not IN_BLENDER:
-        return
-    os.makedirs(os.path.dirname(output_file), exist_ok=True)
-    bpy.ops.export_scene.gltf(
-        filepath=output_file,
-        export_format='GLB',
-        use_selection=False,
-        export_apply=True,
-        export_yup=True,
-        export_custom_props=True,
-        export_lights=False,
-        export_cameras=False,
-        export_animations=True,
-        export_current_frame=False
-    )
-    print(f"[export_gltf] Exported GLB to {output_file}")
-
-
-def main():
-    """Script entry point."""
-    out_path = "public/assets/models/ch1_greybox.glb"
-    out_src_path = "assets_src/greybox/ch1_greybox.glb"
-
-    if len(sys.argv) > 1 and sys.argv[-1].endswith(".glb"):
-        out_path = sys.argv[-1]
-
-    build_ch1_architecture()
-    export_gltf(out_path)
-    export_gltf(out_src_path)
+    bpy.ops.object.select_all(action='DESELECT')
+    for grp in (s1_group, s3_group, s4_group, s5_group):
+        select_hierarchy(grp)
+    for d in OUT_DIRS:
+        bpy.ops.export_scene.gltf(
+            filepath=os.path.join(d, "ch1_greybox.glb"),
+            export_format='GLB',
+            use_selection=True,
+            export_apply=True,
+            export_yup=True,
+            export_extras=True,
+            export_lights=False,
+            export_cameras=False,
+            export_animations=True
+        )
 
 
 if __name__ == "__main__":
-    main()
+    build_and_export_all()

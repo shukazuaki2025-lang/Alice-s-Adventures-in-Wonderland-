@@ -2,132 +2,115 @@ import { test, expect } from '@playwright/test';
 import { GameHarnessHelper } from './helpers/gameHarness';
 
 test.describe('Tier 3: Cross-Feature Combinations & Puzzle Invariants (INV-01 to INV-07)', () => {
-
-  test('INV-01: Curtain Access Lock invariant (keyTriesOnDoors < 2 vs >= 2)', async ({ page }) => {
+  test('INV-01: Curtain cannot be opened before keyTriesOnDoors >= 2', async ({ page }) => {
     const harness = new GameHarnessHelper(page);
     await harness.openGame('/?test=1&forceWebGL=1');
+    await harness.playToS5Hall();
 
-    await harness.goto('S5_HALL');
+    // Pick up gold key
+    await harness.movePlayerTo(0.92, -0.6);
+    await harness.pressKey('KeyE');
+    expect(await harness.getFlag('keyTaken')).toBe(true);
 
-    // Rule: curtain is locked when keyTriesOnDoors < 2
-    await harness.setFlag('keyTriesOnDoors', 0);
-    await harness.setFlag('curtainRevealed', false);
-    expect(await harness.getFlag('curtainRevealed')).toBe(false);
+    // Try opening curtain immediately (keyTriesOnDoors == 0) -> must remain false
+    await harness.movePlayerTo(-0.8, -3.32);
+    await harness.pressKey('KeyE');
+    expect(await harness.getFlag('curtainFound')).toBe(false);
 
-    await harness.setFlag('keyTriesOnDoors', 1);
-    expect(await harness.getFlag('curtainRevealed')).toBe(false);
+    // Try 1 locked door (keyTriesOnDoors == 1) -> curtain still blocked
+    await harness.movePlayerTo(-8.0, -3.4);
+    await harness.pressKey('KeyE');
+    expect(await harness.getFlag('keyTriesOnDoors')).toBe(1);
+    await harness.movePlayerTo(-0.8, -3.32);
+    await harness.pressKey('KeyE');
+    expect(await harness.getFlag('curtainFound')).toBe(false);
 
-    // Rule: curtain unlocks when keyTriesOnDoors >= 2
-    await harness.setFlag('keyTriesOnDoors', 2);
-    await harness.setFlag('curtainRevealed', true);
-    expect(await harness.getFlag('curtainRevealed')).toBe(true);
+    // Try 2nd locked door (keyTriesOnDoors == 2) -> curtain unlocks
+    await harness.movePlayerTo(-3.0, -3.4);
+    await harness.pressKey('KeyE');
+    expect(await harness.getFlag('keyTriesOnDoors')).toBe(2);
+    await harness.movePlayerTo(-0.8, -3.32);
+    await harness.pressKey('KeyE');
+    expect(await harness.getFlag('curtainFound')).toBe(true);
   });
 
-  test('INV-02: Glass Table Transparency & Visibility from below', async ({ page }) => {
+  test('INV-03 & INV-05: Picking up bottle auto-returns key to table & requires 2-sided 3D inspection before drinking', async ({ page }) => {
     const harness = new GameHarnessHelper(page);
     await harness.openGame('/?test=1&forceWebGL=1');
+    await harness.playToS5Hall();
 
-    await harness.goto('S6_SMALL');
-    await harness.setScale(0.254);
-
-    // Set table transparency state
-    await harness.setFlag('tableGlassTransparent', true);
-    expect(await harness.getFlag('tableGlassTransparent')).toBe(true);
-
-    // Key on table remains visible through glass
-    await harness.setFlag('keyOnTableVisible', true);
-    expect(await harness.getFlag('keyOnTableVisible')).toBe(true);
-  });
-
-  test('INV-03: Key Auto-Return on bottle pickup', async ({ page }) => {
-    const harness = new GameHarnessHelper(page);
-    await harness.openGame('/?test=1&forceWebGL=1');
-
-    await harness.goto('S5_HALL');
-
-    // Player holds golden key
-    await harness.addItem('prop_key_gold');
-    let snapshot = await harness.getState();
-    expect(snapshot.inventory.some((i) => i.id === 'prop_key_gold')).toBe(true);
-
-    // Picking up bottle triggers key auto-return
-    await harness.addItem('prop_bottle_drinkme');
-    await harness.setFlag('keyReturnedToTable', true);
-
-    expect(await harness.getFlag('keyReturnedToTable')).toBe(true);
-  });
-
-  test('INV-04: Size Scaling Dynamics (1.20m -> 0.254m transformation)', async ({ page }) => {
-    const harness = new GameHarnessHelper(page);
-    await harness.openGame('/?test=1&forceWebGL=1');
-
-    await harness.goto('S6_SMALL');
-
-    // Normal scale baseline
-    await harness.setScale(1.0);
-    expect((await harness.getState()).aliceScale).toBe(1.0);
-
-    // Execute smooth 2.5s shrinking transition to 0.254m
-    await harness.setScale(0.254);
-    await harness.setFlag('audioPitchFactor', 1.6);
-
-    const snapshot = await harness.getState();
-    expect(snapshot.aliceScale).toBe(0.254);
-    expect(await harness.getFlag('audioPitchFactor')).toBe(1.6);
-  });
-
-  test('INV-05: Bottle 3D Inspection 2-sided label verification', async ({ page }) => {
-    const harness = new GameHarnessHelper(page);
-    await harness.openGame('/?test=1&forceWebGL=1');
-
-    await harness.goto('S6_SMALL');
-
-    // Initially, "Drink" button is locked
-    await harness.setFlag('bottleInspectedFront', false);
-    await harness.setFlag('bottleInspectedBack', false);
-    await harness.setFlag('drinkButtonUnlocked', false);
-
-    expect(await harness.getFlag('drinkButtonUnlocked')).toBe(false);
-
-    // Rotate front label ("DRINK ME")
-    await harness.setFlag('bottleInspectedFront', true);
-    expect(await harness.getFlag('drinkButtonUnlocked')).toBe(false);
-
-    // Rotate back label (Confirm no "POISON")
-    await harness.setFlag('bottleInspectedBack', true);
-    await harness.setFlag('drinkButtonUnlocked', true);
-
-    expect(await harness.getFlag('drinkButtonUnlocked')).toBe(true);
-  });
-
-  test('INV-06: Cutscene Skip Parity (1.0s Esc skip terminal state equivalence)', async ({ page }) => {
-    const harness = new GameHarnessHelper(page);
-    await harness.openGame('/?test=1&forceWebGL=1');
-
-    // Test C5 Garden Peek cutscene skip
-    await harness.goto('S5_HALL');
-    await harness.setFlag('cutsceneC5Skipped', true);
-    await harness.setFlag('peekDone', true);
-    await harness.setFlag('littleDoorOpened', true);
-
-    expect(await harness.getFlag('cutsceneC5Skipped')).toBe(true);
+    // Pick up gold key, try 2 doors, open curtain, peek little door
+    await harness.movePlayerTo(0.92, -0.6);
+    await harness.pressKey('KeyE');
+    await harness.movePlayerTo(-8.0, -3.4);
+    await harness.pressKey('KeyE');
+    await harness.movePlayerTo(-3.0, -3.4);
+    await harness.pressKey('KeyE');
+    await harness.movePlayerTo(-0.8, -3.32);
+    await harness.pressKey('KeyE');
+    await harness.movePlayerTo(-0.8, -3.4);
+    await harness.pressKey('KeyE');
+    await harness.fastForward(8);
     expect(await harness.getFlag('peekDone')).toBe(true);
-    expect(await harness.getFlag('littleDoorOpened')).toBe(true);
+
+    // Pick up bottle on glass table -> INV-03: gold_key removed from inventory and returned to table
+    await harness.movePlayerTo(0.76, -0.54);
+    await harness.pressKey('KeyE');
+
+    const inv = await harness.getInventory();
+    expect(inv.some((i) => i.id === 'gold_key')).toBe(false);
+    expect(inv.some((i) => i.id === 'drink_me_bottle')).toBe(true);
+    expect(await harness.getFlag('keyReturnedToTable')).toBe(true);
+    expect(await harness.getFlag('keyOnTable')).toBe(true);
+
+    // INV-05: Inspecting only front label leaves Drink button disabled
+    await harness.lookAtBottleSide('front');
+    expect(await harness.getFlag('bottleInspectedFront')).toBe(true);
+    expect(await harness.getFlag('drinkButtonUnlocked')).toBe(false);
+    await expect(page.locator('#btn-inspect-drink')).toBeDisabled();
+
+    // Inspecting back label unlocks Drink button
+    await harness.lookAtBottleSide('back');
+    expect(await harness.getFlag('bottleInspectedBack')).toBe(true);
+    expect(await harness.getFlag('drinkButtonUnlocked')).toBe(true);
+    await expect(page.locator('#btn-inspect-drink')).toBeEnabled();
   });
 
-  test('INV-07: Marmalade Jar No-Drop during S3 fall', async ({ page }) => {
+  test('INV-06: Cutscene 1.0s Escape skip parity equals watching to completion', async ({ page }) => {
     const harness = new GameHarnessHelper(page);
     await harness.openGame('/?test=1&forceWebGL=1');
+    await harness.playToS1Bank();
 
-    await harness.goto('S3_FALL');
-    await harness.setFlag('jarTaken', true);
-    await harness.setFlag('jarDropBlocked', true);
+    // Trigger C1 by picking 2 daisies
+    await harness.movePlayerTo(3.6, -1.2);
+    await harness.pressKey('KeyE');
+    await harness.movePlayerTo(5.2, 1.1);
+    await harness.pressKey('KeyE');
 
-    // Dropping jar must be blocked while jarStored is false
+    // Hold Escape for 1.1s to skip C1
+    await harness.holdKey('Escape', 1100);
+    await harness.waitForState('S2_CHASE');
+    expect(await harness.getFlag('chaseStarted')).toBe(true);
+  });
+
+  test('INV-07: Marmalade Jar cannot be dropped mid-air during S3_FALL and C3 never gifts jarStored', async ({ page }) => {
+    const harness = new GameHarnessHelper(page);
+    await harness.openGame('/?test=1&forceWebGL=1');
+    await harness.playToS3Fall();
+
+    await harness.fastForward(16);
+    await harness.movePlayerTo(0.75, 0.25);
+    await harness.pressKey('KeyE');
+    expect(await harness.getFlag('jarTaken')).toBe(true);
+
+    // Attempt to drop jar with G -> blocked per INV-07
+    await harness.pressKey('KeyG');
     expect(await harness.getFlag('jarDropBlocked')).toBe(true);
+    expect(await harness.getFlag('jarStored')).toBe(false);
 
-    // Stowing jar in cupboard succeeds
-    await harness.setFlag('jarStored', true);
-    expect(await harness.getFlag('jarStored')).toBe(true);
+    // Finish fall without returning jar to cupboard -> C3 must NOT gift jarStored=true (B-04)
+    await harness.fastForward(80);
+    await harness.waitForState('S4_PASSAGE');
+    expect(await harness.getFlag('jarStored')).toBe(false);
   });
 });

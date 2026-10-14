@@ -1,17 +1,22 @@
 {
   "id": "C4",
   "title": "Rabbit Corner & Hall Reveal",
-  "duration": 7,
+  "duration": 6,
   "events": [
     {
       "time": 0,
       "type": "animation",
       "target": "chr_rabbit",
       "payload": {
-        "animation": "Rabbit_Scurry",
-        "dialogue": "S4_CORNER",
-        "text": "Oh my ears and whiskers, how late it's getting!",
-        "zh": "噢，我的耳朵和胡须啊，太迟了！"
+        "animation": "Rabbit_Scurry"
+      }
+    },
+    {
+      "time": 0.5,
+      "type": "dialogue",
+      "target": "chr_rabbit",
+      "payload": {
+        "lineId": "S4_CORNER"
       }
     },
     {
@@ -19,17 +24,15 @@
       "type": "dialogue",
       "target": "chr_alice",
       "payload": {
-        "lineId": "S4_GONE",
-        "text": "Where has it gone?",
-        "zh": "它到哪里去了？"
+        "lineId": "S4_GONE"
       }
     },
     {
       "time": 3.5,
       "type": "camera",
-      "target": "hall",
+      "target": "camera",
       "payload": {
-        "mode": "SWEEP_S5_INTRO"
+        "path": "CAM_SWEEP_S5_INTRO"
       }
     },
     {
@@ -37,13 +40,11 @@
       "type": "dialogue",
       "target": "narrator",
       "payload": {
-        "lineId": "S5_ENTER",
-        "text": "She found herself in a long, low hall, which was lit up by a row of lamps hanging from the roof.",
-        "zh": "她发现自己身处一间长而矮的大厅里，天花板上悬挂着一排吊灯。"
+        "lineId": "S5_ENTER"
       }
     },
     {
-      "time": 7,
+      "time": 6,
       "type": "camera",
       "target": "player",
       "payload": {
@@ -51,7 +52,5 @@
       }
     }
   ],
-  "terminalFlags": {
-    "doorsTried": 4
-  }
+  "terminalFlags": {}
 }

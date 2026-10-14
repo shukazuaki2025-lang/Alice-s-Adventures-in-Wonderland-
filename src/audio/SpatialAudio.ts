@@ -4,14 +4,21 @@ import * as THREE from 'three';
  * Three.js 3D Spatial Audio integration helper
  */
 export class SpatialAudioSystem {
-  private listener: THREE.AudioListener;
+  private listener: THREE.AudioListener | null = null;
+  private camera: THREE.Camera;
 
   constructor(camera: THREE.Camera) {
-    this.listener = new THREE.AudioListener();
-    camera.add(this.listener);
+    this.camera = camera;
   }
 
-  public getListener(): THREE.AudioListener {
+  public init(): void {
+    if (!this.listener) {
+      this.listener = new THREE.AudioListener();
+      this.camera.add(this.listener);
+    }
+  }
+
+  public getListener(): THREE.AudioListener | null {
     return this.listener;
   }
 
@@ -23,7 +30,11 @@ export class SpatialAudioSystem {
     refDistance = 1.0,
     maxDistance = 15.0,
     rolloffFactor = 1.0
-  ): THREE.PositionalAudio {
+  ): THREE.PositionalAudio | null {
+    if (!this.listener) {
+        console.warn('SpatialAudioSystem not initialized. Call init() after user gesture.');
+        return null;
+    }
     const positionalSound = new THREE.PositionalAudio(this.listener);
     positionalSound.setRefDistance(refDistance);
     positionalSound.setMaxDistance(maxDistance);

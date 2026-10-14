@@ -1,7 +1,7 @@
 {
   "id": "C6",
   "title": "Drink & Shrink",
-  "duration": 8.5,
+  "duration": 6,
   "events": [
     {
       "time": 0,
@@ -24,36 +24,37 @@
       "type": "dialogue",
       "target": "narrator",
       "payload": {
-        "lineId": "S6_DRINK_1",
-        "text": "It had, in fact, a sort of mixed flavour of cherry-tart, custard, pine-apple, roast turkey, toffee, and hot buttered toast...",
-        "zh": "事实上，它混合着樱桃馅饼、蛋奶羹、菠萝、烤火鸡、太妃糖和热黄油吐司的风味……"
+        "lineId": "S6_DRINK_1"
       }
     },
     {
-      "time": 4,
+      "time": 3.5,
       "type": "scale",
       "target": "chr_alice",
       "payload": {
         "from": 1,
-        "to": 0.212,
-        "duration": 2.5,
+        "to": 0.2117,
+        "duration": 2.5
+      }
+    },
+    {
+      "time": 3.5,
+      "type": "audio",
+      "target": "sfx",
+      "payload": {
         "sfx": "sfx_shrink"
       }
     },
     {
-      "time": 6.5,
+      "time": 5,
       "type": "dialogue",
       "target": "chr_alice",
       "payload": {
-        "lineId": "S6_SHRINK",
-        "text": "What a curious feeling! I must be shutting up like a telescope.",
-        "zh": "多么奇妙的感觉！我一定正像望远镜一样收缩呢。"
+        "lineId": "S6_SHRINK"
       }
     }
   ],
   "terminalFlags": {
-    "drankPotion": true,
-    "bottleDrank": true,
-    "audioPitchFactor": 1.6
+    "bottleDrank": true
   }
 }

@@ -1,0 +1,27 @@
+{
+  "events": {
+    "Alice_Walk": [
+      { "time": 0.2, "name": "Footstep" },
+      { "time": 0.7, "name": "Footstep" }
+    ],
+    "Alice_Run": [
+      { "time": 0.15, "name": "Footstep" },
+      { "time": 0.45, "name": "Footstep" }
+    ],
+    "Alice_CurtseyAir": [
+      { "time": 0.5, "name": "curtsey" }
+    ],
+    "Alice_Drink": [
+      { "time": 0.8, "name": "drink" }
+    ],
+    "Alice_ShrinkReact": [
+      { "time": 0.1, "name": "shrink" }
+    ],
+    "Alice_Slip": [
+      { "time": 0.2, "name": "slip" }
+    ],
+    "Alice_Eat": [
+      { "time": 0.5, "name": "eat" }
+    ]
+  }
+}

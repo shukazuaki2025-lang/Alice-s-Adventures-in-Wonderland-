@@ -6,10 +6,19 @@
     {
       "time": 0,
       "type": "camera",
-      "target": "Alice",
+      "target": "camera",
       "payload": {
         "mode": "TRACKING_SHOT",
-        "lookAt": "WEST"
+        "position": [
+          4,
+          4,
+          4
+        ],
+        "lookAt": [
+          4,
+          3,
+          0
+        ]
       }
     },
     {
@@ -38,9 +47,7 @@
       "type": "dialogue",
       "target": "chr_rabbit",
       "payload": {
-        "lineId": "S1_RABBIT_RUN",
-        "text": "Oh dear! Oh dear! I shall be late!",
-        "zh": "天哪！天哪！我要迟到了！"
+        "lineId": "S1_RABBIT_RUN"
       }
     },
     {
@@ -48,9 +55,7 @@
       "type": "dialogue",
       "target": "chr_alice",
       "payload": {
-        "lineId": "S1_RABBIT_WATCH",
-        "text": "A rabbit with a waistcoat-pocket, and a watch to take out of it...",
-        "zh": "穿着背心口袋还掏出怀表的兔子……"
+        "lineId": "S1_RABBIT_WATCH"
       }
     },
     {

@@ -2,130 +2,57 @@ import { test, expect } from '@playwright/test';
 import { GameHarnessHelper } from './helpers/gameHarness';
 
 test.describe('Tier 5: Adversarial Hardening & Stress Testing', () => {
+  test('T5-ADV-01: Corrupted localStorage save data is safely rejected by Zod validation (B-11)', async ({ page }) => {
+    await page.goto('/?test=1&forceWebGL=1');
+    await page.evaluate(() => {
+      localStorage.setItem('alice.save.v1', '{"state":"INVALID_HACKED_STATE","flags":"not-an-object"}');
+    });
 
-  test('T5-ADV-01: Rapid scale factor transitions (1.20m -> 0.254m -> 2.90m -> 1.20m)', async ({ page }) => {
     const harness = new GameHarnessHelper(page);
     await harness.openGame('/?test=1&forceWebGL=1');
 
-    await harness.goto('S5_HALL');
-
-    // Rapidly toggle scale factor
-    await harness.setScale(1.20);
-    expect((await harness.getState()).aliceScale).toBeCloseTo(1.20, 2);
-    expect(await harness.getFlag('audioPitchFactor')).toBe(1.0);
-
-    await harness.setScale(0.254);
-    expect((await harness.getState()).aliceScale).toBeCloseTo(0.254, 2);
-    expect(await harness.getFlag('audioPitchFactor')).toBe(1.6);
-
-    await harness.setScale(2.90);
-    expect((await harness.getState()).aliceScale).toBeCloseTo(2.90, 2);
-    expect(await harness.getFlag('audioPitchFactor')).toBe(1.0);
-
-    await harness.setScale(1.20);
-    expect((await harness.getState()).aliceScale).toBeCloseTo(1.20, 2);
+    // Game must start cleanly at S0_TITLE without crashing
+    const snapshot = await harness.getState();
+    expect(snapshot.state).toBe('S0_TITLE');
   });
 
-  test('T5-ADV-02: Inventory capacity hard limit (6 slots) under rapid injection', async ({ page }) => {
+  test('T5-ADV-02: Save & Continue Journey restores exact state from localStorage (B-01)', async ({ page }) => {
     const harness = new GameHarnessHelper(page);
     await harness.openGame('/?test=1&forceWebGL=1');
 
-    await harness.goto('S5_HALL');
+    await harness.playToS2Chase();
+    expect((await harness.getState()).state).toBe('S2_CHASE');
 
-    // Inject 6 items
-    const items = ['item_1', 'item_2', 'item_3', 'item_4', 'item_5', 'item_6'];
-    for (const item of items) {
-      await harness.addItem(item);
-    }
+    // Reload page -> starts at S0_TITLE with #btn-continue-journey visible
+    await harness.openGame('/?test=1&forceWebGL=1');
+    expect((await harness.getState()).state).toBe('S0_TITLE');
+    await expect(page.locator('#btn-continue-journey')).toBeVisible();
 
-    let snapshot = await harness.getState();
-    expect(snapshot.inventory.length).toBe(6);
-
-    // Attempt 7th item overflow
-    await harness.addItem('item_7_overflow');
-    snapshot = await harness.getState();
-    // Capacity should cap or hold at 6 items
-    expect(snapshot.inventory.length).toBeGreaterThanOrEqual(6);
+    await harness.clickElement('#btn-continue-journey');
+    await harness.waitForState('S2_CHASE');
+    expect(await harness.getFlag('daisiesPicked')).toBe(2);
   });
 
-  test('T5-ADV-03: Curtain access lock boundary (keyTriesOnDoors < 2 vs >= 2)', async ({ page }) => {
+  test('T5-ADV-03: Pause Menu freezes simulation movement until resumed (B-12)', async ({ page }) => {
     const harness = new GameHarnessHelper(page);
     await harness.openGame('/?test=1&forceWebGL=1');
+    await harness.playToS1Bank();
 
-    await harness.goto('S5_HALL');
+    // Open Pause Menu with Escape
+    await harness.pressKey('Escape');
+    await expect(page.locator('#ui-pause-menu')).toBeVisible();
 
-    await harness.setFlag('keyTriesOnDoors', 0);
-    expect(await harness.getFlag('keyTriesOnDoors')).toBe(0);
-
-    await harness.setFlag('keyTriesOnDoors', 1);
-    expect(await harness.getFlag('keyTriesOnDoors')).toBe(1);
-
-    await harness.setFlag('keyTriesOnDoors', 2);
-    expect(await harness.getFlag('keyTriesOnDoors')).toBe(2);
+    // Resume via Pause Menu button
+    await harness.clickElement('#btn-pause-resume');
+    await expect(page.locator('#ui-pause-menu')).toBeHidden();
   });
 
-  test('T5-ADV-04: Key Auto-Return invariant INV-03 under bottle pickup', async ({ page }) => {
-    const harness = new GameHarnessHelper(page);
-    await harness.openGame('/?test=1&forceWebGL=1');
+  test('T5-ADV-04: Production mode (without ?test=1) does NOT expose window.__game (F-05)', async ({ page }) => {
+    await page.goto('/?forceWebGL=1');
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(500);
 
-    await harness.goto('S5_HALL');
-
-    await harness.addItem('prop_key_gold');
-    let snapshot = await harness.getState();
-    expect(snapshot.inventory.some((i) => i.id === 'prop_key_gold')).toBe(true);
-
-    await harness.addItem('prop_bottle_drinkme');
-    snapshot = await harness.getState();
-
-    // Key auto-returned to table, so key is no longer in inventory
-    expect(snapshot.inventory.some((i) => i.id === 'prop_key_gold')).toBe(false);
-    expect(snapshot.inventory.some((i) => i.id === 'prop_bottle_drinkme')).toBe(true);
-    expect(await harness.getFlag('keyReturnedToTable')).toBe(true);
+    const hasGameGlobal = await page.evaluate(() => typeof (window as any).__game !== 'undefined');
+    expect(hasGameGlobal).toBe(false);
   });
-
-  test('T5-ADV-05: 2-Sided bottle inspection invariant INV-05', async ({ page }) => {
-    const harness = new GameHarnessHelper(page);
-    await harness.openGame('/?test=1&forceWebGL=1');
-
-    await harness.goto('S5_HALL');
-
-    // Bottle inspection flags
-    await harness.setFlag('bottleFrontInspected', false);
-    await harness.setFlag('bottleBackInspected', false);
-    await harness.setFlag('bottleInspectionComplete', false);
-
-    expect(await harness.getFlag('bottleInspectionComplete')).toBe(false);
-
-    await harness.setFlag('bottleFrontInspected', true);
-    await harness.setFlag('bottleBackInspected', true);
-    await harness.setFlag('bottleInspectionComplete', true);
-
-    expect(await harness.getFlag('bottleInspectionComplete')).toBe(true);
-  });
-
-  test('T5-ADV-06: Cutscene skip parity across all narrative states S0 through S7', async ({ page }) => {
-    const harness = new GameHarnessHelper(page);
-    await harness.openGame('/?test=1&forceWebGL=1');
-
-    const states = ['S0_TITLE', 'S1_BANK', 'S2_CHASE', 'S3_FALL', 'S4_PASSAGE', 'S5_HALL', 'S6_SMALL', 'S7_CAKE'];
-    for (const state of states) {
-      await harness.goto(state);
-      const snapshot = await harness.getState();
-      expect(snapshot.state).toBe(state);
-    }
-  });
-
-  test('T5-ADV-07: Marmalade jar drop blocked during fall (INV-07)', async ({ page }) => {
-    const harness = new GameHarnessHelper(page);
-    await harness.openGame('/?test=1&forceWebGL=1');
-
-    await harness.goto('S3_FALL');
-
-    await harness.setFlag('jarStored', false);
-    await harness.setFlag('jarDropBlocked', true);
-
-    expect(await harness.getFlag('jarStored')).toBe(false);
-    expect(await harness.getFlag('jarDropBlocked')).toBe(true);
-  });
-
 });

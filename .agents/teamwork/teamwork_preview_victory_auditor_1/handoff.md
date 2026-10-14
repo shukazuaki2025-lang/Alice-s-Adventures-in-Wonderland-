@@ -162,3 +162,9 @@ npm test
 export LD_LIBRARY_PATH="/home/administrator/视频/Gemini-4-Argon宣传片/tools/.libs/extracted/usr/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH"
 npm run test:e2e
 ```
+
+---
+
+## 6. Audit Correction Banner
+
+> **CORRECTION (2026-10-14)**: The initial victory audit falsely verified several components, including missing GLB models, non-functional unit tests (self-asserting), E2E tests containing duplicate identical screenshots, missing interactive elements (10 locked doors vs 8), empty or incomplete translation behaviors, and missing LICENSE file. All such discrepancies have been remediated in subsequent fixes, as detailed in docs/review/2026-10-14-audit.md.

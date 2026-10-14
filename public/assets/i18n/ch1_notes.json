@@ -1,0 +1,104 @@
+{
+  "curiosityNotes": {
+    "ch1_note_1": {
+      "id": "ch1_note_1",
+      "title": {
+        "en": "Tumbling Down Stairs & Victorian Courage",
+        "zh": "跌落楼梯与维多利亚少女的勇气",
+        "ja": "階段からの転落とヴィクトリア朝の勇気"
+      },
+      "triggerCondition": "S3_THOUGHT_1_COLLECTED",
+      "content": {
+        "en": "On July 4, 1862, Lewis Carroll first told Alice's story during a Thames rowing trip. Alice's spirited reaction to falling reveals her plucky, independent Victorian character.",
+        "zh": "1862年7月4日的金色午后，卡罗尔在泰晤士河划船出游时为小爱丽丝口述了这个故事。面对未知坠落，爱丽丝的勇敢自嘲展现了维多利亚少女独特的独立个性。",
+        "ja": "1862年7月4日の黄金の午後、キャロルはテムズ川の舟遊びでアリス物語を初めて語りました。"
+      },
+      "historicalFact": {
+        "en": "Alice Liddell was the real-life daughter of the Dean of Christ Church, Oxford, known for her curious nature.",
+        "zh": "真实的爱丽丝·利德尔是牛津大学基督教堂学院院长的女儿，以活泼好问闻名。",
+        "ja": "アリス・リデルは実在のオックスフォード大学ディーンの娘でした。"
+      },
+      "source": "British Library Manuscript (Add MS 46700)"
+    },
+    "ch1_note_2": {
+      "id": "ch1_note_2",
+      "title": {
+        "en": "4,000 Miles to the Earth's Center",
+        "zh": "四千英里与地心下落时长",
+        "ja": "地球の中心までの4000マイル"
+      },
+      "triggerCondition": "S3_THOUGHT_2_COLLECTED",
+      "content": {
+        "en": "As an Oxford mathematics lecturer, Carroll knew Earth's radius was roughly 3,959 miles. A fall straight through Earth's center under gravity would take approximately 42 minutes!",
+        "zh": "卡罗尔是牛津大学基督教堂学院的数学讲师。地球的平均半径约为3959英里，爱丽丝随口猜测的“四千英里”非常准确；在重力作用下穿越地心的坠落时长恰好约为42分钟！",
+        "ja": "オックスフォードの数学講師として、キャロルは地球の半径が約3,959マイルであることを知っていました。"
+      },
+      "historicalFact": {
+        "en": "Number 42 was Lewis Carroll's favorite number, appearing repeatedly throughout his works.",
+        "zh": "数字42是路易斯·卡罗尔最喜欢的特别数字，在他的作品中多次神秘出现。",
+        "ja": "数字の42はルイス・キャロルの大好きな特別な数字でした。"
+      },
+      "source": "NASA Earth Fact Sheet & Oxford Archives"
+    },
+    "ch1_note_3": {
+      "id": "ch1_note_3",
+      "title": {
+        "en": "Latitude, Longitude & Victorian Rote Education",
+        "zh": "经纬度与维多利亚时代的童年教育",
+        "ja": "緯度・経度とヴィクトリア朝の教育"
+      },
+      "triggerCondition": "S3_THOUGHT_3_COLLECTED",
+      "content": {
+        "en": "Alice loved high-sounding grand words without knowing what they meant, gently satirizing the rote memorization common in Victorian girls' education.",
+        "zh": "爱丽丝虽然不知道经纬度的具体含义，但觉得它们是“了不起的字眼”。这生动讽刺了维多利亚时代儿童死记硬背枯燥学问的教育现实。",
+        "ja": "アリスは大層な言葉の意味を知らずに使っており、当時の暗記教育を優しく皮肉っています。"
+      },
+      "historicalFact": {
+        "en": "Victorian upper-class girls were taught geography and French by governesses through strict recitation.",
+        "zh": "维多利亚时代的上流社会女孩通过女家庭教师以朗诵记忆的形式学习地理与法语。",
+        "ja": "ヴィクトリア朝の少女たちは家庭教師から厳格な暗記で地理を学びました。"
+      },
+      "source": "Martin Gardner, The Annotated Alice"
+    },
+    "ch1_note_4": {
+      "id": "ch1_note_4",
+      "title": {
+        "en": "The Antipathies vs. Antipodes Pun",
+        "zh": "对头人与对跖地的语言双关",
+        "ja": "対跖地と反感のダジャレ"
+      },
+      "triggerCondition": "S3_THOUGHT_4_COLLECTED",
+      "content": {
+        "en": "Alice's famous malapropism confuses 'Antipodes' (the other side of the earth) with 'Antipathies' (hostility), creating a brilliant Carrollian pun.",
+        "zh": "爱丽丝把“对跖地”（Antipodes，地球对面脚对脚的人）口误说成了“反感”（Antipathies）。中文巧妙地译为把“对跖人”叫成“对头人”。",
+        "ja": "アリスは「対跖地」（地球の裏側）を「反感」と言い間違え、見事な双関語を生み出しました。"
+      },
+      "historicalFact": {
+        "en": "Carroll delighted in linguistic slips and child malapropisms recorded in his journals.",
+        "zh": "卡罗尔非常喜欢记录儿童口误并将其融入口头文学与童话创作中。",
+        "ja": "キャロルは子供の言い間違いを日記に記録するのが好きでした。"
+      },
+      "source": "Oxford English Dictionary & The Annotated Alice"
+    },
+    "ch1_note_5": {
+      "id": "ch1_note_5",
+      "title": {
+        "en": "Orange Marmalade & Dinah the Oxford Cat",
+        "zh": "橘子酱与牛津小猫黛娜",
+        "ja": "マーマレードとオックスフォードの猫ダイナ"
+      },
+      "triggerCondition": "S3_JAR_PICKED",
+      "content": {
+        "en": "Dinah was the real dark tabby cat belonging to Alice Liddell at Christ Church, Oxford. Her sleepy musings capture a classic child's stream of consciousness.",
+        "zh": "黛娜不仅是小说中的角色，更是真实原型爱丽丝·利德尔在牛津院长官邸饲养的深色花斑猫。橘子酱是维多利亚时代的经典英国早餐果酱。",
+        "ja": "ダイナはオックスフォードの学长館で飼われていた本物の猫でした。"
+      },
+      "historicalFact": {
+        "en": "Orange marmalade preserves were a staple in Victorian pantries, traditionally kept in stoneware jars.",
+        "zh": "橘子酱储藏罐是维多利亚家庭橱柜里的常备食品，通常装在厚重的陶罐或玻璃罐中。",
+        "ja": "オレンジマーマレードはヴィクトリア朝の家庭の定番商品でした。"
+      },
+      "source": "Christ Church Oxford Archives"
+    }
+  }
+}

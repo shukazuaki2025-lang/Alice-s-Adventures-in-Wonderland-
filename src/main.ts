@@ -10,13 +10,17 @@ console.log('[Alice: Down the Rabbit-Hole] Initializing game runtime...');
 declare global {
   interface Window {
     __game?: {
-      goto: (state: string) => void;
-      setFlag: (flag: string, value: unknown) => void;
-      getFlag: (flag: string) => unknown;
-      addItem: (itemId: string) => void;
-      setScale: (scale: number) => void;
       getState: () => GameStateSnapshot;
-      triggerInteraction: (id: string) => void;
+      getFlags: () => Record<string, unknown>;
+      getFlag: (k: string) => unknown;
+      getInventory: () => unknown[];
+      getPlayerTransform: () => { position: { x: number, y: number, z: number }, rotation: { x: number, y: number, z: number }, scale: number };
+      getInteractables: () => unknown[];
+      getSceneMetrics: () => unknown;
+      setTimeScale: (n: number) => void;
+      fastForward: (seconds: number) => void;
+      movePlayerTo: (x: number, z: number) => void;
+      lookAtBottleSide: (side: 'front' | 'back') => void;
     };
   }
 }

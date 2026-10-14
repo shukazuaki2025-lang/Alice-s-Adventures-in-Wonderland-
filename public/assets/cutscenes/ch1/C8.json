@@ -8,7 +8,14 @@
       "type": "animation",
       "target": "chr_alice",
       "payload": {
-        "animation": "Alice_Eat",
+        "animation": "Alice_Eat"
+      }
+    },
+    {
+      "time": 0,
+      "type": "audio",
+      "target": "sfx",
+      "payload": {
         "sfx": "sfx_nibble"
       }
     },
@@ -17,9 +24,17 @@
       "type": "dialogue",
       "target": "chr_alice",
       "payload": {
-        "lineId": "S7_EAT",
-        "text": "Which way? Which way?",
-        "zh": "长高还是变矮？哪种方向？"
+        "lineId": "S7_EAT"
+      }
+    },
+    {
+      "time": 4,
+      "type": "scale",
+      "target": "chr_alice",
+      "payload": {
+        "from": 0.2117,
+        "to": 2.417,
+        "duration": 3.5
       }
     },
     {
@@ -35,22 +50,27 @@
       "type": "dialogue",
       "target": "narrator",
       "payload": {
-        "lineId": "S7_END",
-        "text": "She remained the same size... So she set to work, and very soon finished off the cake.",
-        "zh": "她保持着原来的大小……于是她继续吃起来，很快就把蛋糕吃光了。"
+        "lineId": "S7_END"
       }
     },
     {
       "time": 7.5,
       "type": "camera",
-      "target": "screen",
+      "target": "camera",
       "payload": {
-        "mode": "FADE_BLACK_END_CARD"
+        "path": "CAM_FADE_BLACK_END_CARD"
+      }
+    },
+    {
+      "time": 9.5,
+      "type": "state",
+      "target": "game",
+      "payload": {
+        "goto": "END"
       }
     }
   ],
   "terminalFlags": {
-    "boxOpened": true,
     "cakeEaten": true,
     "chapterCompleted": true
   }

@@ -18,7 +18,7 @@ export function generatePaperGrainTexture(): THREE.CanvasTexture {
 
   // Add 15% subtle paper noise grain
   for (let i = 0; i < data.length; i += 4) {
-    const noise = (Math.random() - 0.5) * 22;
+    const noise = (Math.random() - 0.5) * 38; // ~15% of 255
     data[i] = Math.min(255, Math.max(0, data[i] + noise));
     data[i + 1] = Math.min(255, Math.max(0, data[i + 1] + noise));
     data[i + 2] = Math.min(255, Math.max(0, data[i + 2] + noise));
@@ -37,8 +37,11 @@ export function createPaperGrainOverlayMaterial(): THREE.ShaderMaterial {
   const texture = generatePaperGrainTexture();
   return new THREE.ShaderMaterial({
     uniforms: {
+      tDiffuse: { value: null },
       tPaper: { value: texture },
       opacity: { value: 0.15 },
+      vignetteRadius: { value: 1.5 }, // Large enough to be mostly off-screen by default
+      colorGrade: { value: new THREE.Color(1.0, 1.0, 1.0) }
     },
     vertexShader: `
       varying vec2 vUv;
@@ -48,15 +51,29 @@ export function createPaperGrainOverlayMaterial(): THREE.ShaderMaterial {
       }
     `,
     fragmentShader: `
+      uniform sampler2D tDiffuse;
       uniform sampler2D tPaper;
       uniform float opacity;
+      uniform float vignetteRadius;
+      uniform vec3 colorGrade;
       varying vec2 vUv;
       void main() {
+        vec4 sceneColor = texture2D(tDiffuse, vUv);
         vec4 paper = texture2D(tPaper, vUv * 3.0);
-        gl_FragColor = vec4(paper.rgb, opacity);
+        
+        // Vignette calculation
+        vec2 center = vUv - 0.5;
+        float dist = length(center);
+        float vignette = smoothstep(vignetteRadius - 0.2, vignetteRadius + 0.1, dist);
+        
+        vec3 baseColor = sceneColor.rgb * colorGrade;
+        vec3 blended = mix(baseColor, baseColor * paper.rgb, opacity);
+        vec3 finalColor = mix(blended, vec3(0.0), vignette);
+        
+        gl_FragColor = vec4(finalColor, 1.0);
       }
     `,
-    transparent: true,
+    transparent: false,
     depthTest: false,
     depthWrite: false,
   });

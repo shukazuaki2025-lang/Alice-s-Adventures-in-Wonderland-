@@ -1,7 +1,7 @@
 {
   "id": "C5",
   "title": "Little Door Garden Peek",
-  "duration": 9,
+  "duration": 7,
   "events": [
     {
       "time": 0,
@@ -22,9 +22,9 @@
     {
       "time": 3,
       "type": "camera",
-      "target": "garden",
+      "target": "camera",
       "payload": {
-        "mode": "GLIDE_VISTA"
+        "path": "CAM_GLIDE_VISTA"
       }
     },
     {
@@ -32,9 +32,7 @@
       "type": "dialogue",
       "target": "narrator",
       "payload": {
-        "lineId": "S5_PEEK",
-        "text": "The loveliest garden you ever saw.",
-        "zh": "你所见过的最美丽的花园。"
+        "lineId": "S5_PEEK"
       }
     },
     {
@@ -47,17 +45,23 @@
       }
     },
     {
-      "time": 7,
+      "time": 5.5,
       "type": "dialogue",
       "target": "chr_alice",
       "payload": {
-        "lineId": "S5_PEEK_END",
-        "text": "Oh, how I wish I could shut up like a telescope!",
-        "zh": "噢，我多么希望能像望远镜一样合起来啊！"
+        "lineId": "S5_PEEK_END"
       }
     },
     {
-      "time": 8.5,
+      "time": 6.5,
+      "type": "animation",
+      "target": "chr_alice",
+      "payload": {
+        "animation": "Alice_KneelPeek_Out"
+      }
+    },
+    {
+      "time": 6.5,
       "type": "audio",
       "target": "sfx",
       "payload": {
@@ -66,8 +70,6 @@
     }
   ],
   "terminalFlags": {
-    "peekDone": true,
-    "littleDoorOpened": true,
-    "bottleAppeared": true
+    "peekDone": true
   }
 }

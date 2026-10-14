@@ -1,106 +1,91 @@
 import { test, expect } from '@playwright/test';
 import { GameHarnessHelper } from './helpers/gameHarness';
 
-test.describe('Tier 1: Feature Coverage (Happy Path - Features 1 through 27)', () => {
-
-  test('F01 & F14 & F24: Test harness initialization and canvas mounting', async ({ page }) => {
+test.describe('Tier 1: Feature Coverage (Happy Path - Genuine Input Verification)', () => {
+  test('F01 & F14 & F24: Read-only test harness initialization and canvas mounting', async ({ page }) => {
     const harness = new GameHarnessHelper(page);
     await harness.openGame('/?test=1&forceWebGL=1');
 
-    // Canvas element must be present in DOM
     const canvas = page.locator('#render-canvas');
     await expect(canvas).toBeVisible();
 
-    // Verify window.__game harness methods are exposed
+    // Verify window.__game exposes only read-only & simulation helpers (Integrity Red Line #1)
+    const hasMutators = await page.evaluate(() => {
+      const g = (window as any).__game;
+      return Boolean(g.goto || g.setFlag || g.addItem || g.setScale);
+    });
+    expect(hasMutators).toBe(false);
+
     const state = await harness.getState();
-    expect(state).toBeDefined();
     expect(state.state).toBe('S0_TITLE');
-    expect(state.aliceScale).toBe(1.0);
-    expect(state.inventory).toBeDefined();
-    expect(state.flags).toBeDefined();
+    expect(state.aliceScale).toBeCloseTo(1.0, 3);
+    expect(Array.isArray(state.inventory)).toBe(true);
   });
 
-  test('F18 & F21 & F22: S0-S7 State Machine transitions via goto()', async ({ page }) => {
+  test('F18 & F21 & F22: Input-driven progression from S0_TITLE through S5_HALL', async ({ page }) => {
     const harness = new GameHarnessHelper(page);
     await harness.openGame('/?test=1&forceWebGL=1');
 
-    const states = [
-      'S0_TITLE',
-      'S1_BANK',
-      'S2_CHASE',
-      'S3_FALL',
-      'S4_PASSAGE',
-      'S5_HALL',
-      'S6_SMALL',
-      'S7_CAKE',
-      'END',
-    ];
+    await harness.playToS1Bank();
+    expect((await harness.getState()).state).toBe('S1_BANK');
 
-    for (const targetState of states) {
-      await harness.goto(targetState);
-      const snapshot = await harness.getState();
-      expect(snapshot.state).toBe(targetState);
-    }
+    await harness.playToS2Chase();
+    expect((await harness.getState()).state).toBe('S2_CHASE');
+    expect(await harness.getFlag('daisiesPicked')).toBe(2);
+
+    await harness.playToS3Fall();
+    expect((await harness.getState()).state).toBe('S3_FALL');
+
+    await harness.playToS4Passage();
+    expect((await harness.getState()).state).toBe('S4_PASSAGE');
+    expect(await harness.getFlag('jarStored')).toBe(true);
+    expect(await harness.getFlag('curtsey')).toBe(true);
+
+    await harness.playToS5Hall();
+    expect((await harness.getState()).state).toBe('S5_HALL');
   });
 
-  test('F11 & F24: Inventory item injection and retrieval', async ({ page }) => {
+  test('F11 & D-03: Picking a daisy displays bespoke flower SVG icon (never a key icon)', async ({ page }) => {
+    const harness = new GameHarnessHelper(page);
+    await harness.openGame('/?test=1&forceWebGL=1');
+    await harness.playToS1Bank();
+
+    await harness.movePlayerTo(3.6, -1.2);
+    await harness.pressKey('KeyE');
+
+    const inv = await harness.getInventory();
+    expect(inv.some((i) => i.id === 'daisy')).toBe(true);
+
+    const slotSvg = page.locator('#ui-inventory-bar .ui-inventory-slot').first().locator('svg.icon-daisy');
+    await expect(slotSvg).toBeVisible();
+  });
+
+  test('D-01 & D-02: Language switcher updates 100% of Title and UI text without English leakage', async ({ page }) => {
     const harness = new GameHarnessHelper(page);
     await harness.openGame('/?test=1&forceWebGL=1');
 
-    await harness.addItem('prop_key_gold');
-    await harness.addItem('prop_cake_eatme');
+    // Switch to English
+    await page.click('.ui-lang-btn[data-lang="en"]');
+    const h1En = await page.locator('[data-ui="title_h1"]').textContent();
+    expect(h1En).toContain('Alice');
 
-    const snapshot = await harness.getState();
-    expect(snapshot.inventory.length).toBe(2);
-    expect(snapshot.inventory[0]?.id).toBe('prop_key_gold');
-    expect(snapshot.inventory[1]?.id).toBe('prop_cake_eatme');
-  });
-
-  test('F12 & F24: Alice scale modification via setScale()', async ({ page }) => {
-    const harness = new GameHarnessHelper(page);
-    await harness.openGame('/?test=1&forceWebGL=1');
-
-    // Set scale to small mode (0.254m / 1.20m = ~0.2117)
-    await harness.setScale(0.254);
-    let snapshot = await harness.getState();
-    expect(snapshot.aliceScale).toBe(0.254);
-
-    // Set scale to giant mode (2.90m)
-    await harness.setScale(2.90);
-    snapshot = await harness.getState();
-    expect(snapshot.aliceScale).toBe(2.90);
-  });
-
-  test('F05 & F24: State flags getter and setter operations', async ({ page }) => {
-    const harness = new GameHarnessHelper(page);
-    await harness.openGame('/?test=1&forceWebGL=1');
-
-    await harness.setFlag('keyTriesOnDoors', 2);
-    const value = await harness.getFlag('keyTriesOnDoors');
-    expect(value).toBe(2);
-
-    await harness.setFlag('curtainRevealed', true);
-    const boolValue = await harness.getFlag('curtainRevealed');
-    expect(boolValue).toBe(true);
+    // Switch to Chinese
+    await page.click('.ui-lang-btn[data-lang="zh"]');
+    const h1Zh = await page.locator('[data-ui="title_h1"]').textContent();
+    expect(h1Zh).toContain('爱丽丝');
+    const startZh = await page.locator('[data-ui="title_start"]').textContent();
+    expect(startZh).toContain('开始旅程');
   });
 
   test('F23: /making-of showcase page accessibility', async ({ page }) => {
     await page.goto('/making-of.html');
     await page.waitForLoadState('domcontentloaded');
-
-    const title = await page.title();
-    expect(title).toBeDefined();
-    
-    // Verify document loaded without fatal error
-    const body = page.locator('body');
-    await expect(body).toBeVisible();
+    await expect(page.locator('body')).toBeVisible();
   });
 
   test('F13: /viewer.html model viewer page accessibility', async ({ page }) => {
     await page.goto('/viewer.html');
     await page.waitForLoadState('domcontentloaded');
-
-    const body = page.locator('body');
-    await expect(body).toBeVisible();
+    await expect(page.locator('body')).toBeVisible();
   });
 });

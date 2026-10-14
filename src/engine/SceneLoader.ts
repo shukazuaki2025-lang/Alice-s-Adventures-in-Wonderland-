@@ -373,7 +373,7 @@ export class SceneLoader {
 
     // Floating ORANGE MARMALADE jar within reach beside Alice
     const jarGroup = new THREE.Group();
-    jarGroup.name = 'prop_jar_marmalade';
+    jarGroup.name = 'INT_jar_marmalade';
     jarGroup.position.set(0.75, 0.75, 0.25);
     const jarBody = new THREE.Mesh(
       new THREE.CylinderGeometry(0.14, 0.14, 0.32, 14),
@@ -387,6 +387,14 @@ export class SceneLoader {
     jarGroup.add(jarBody, jarLabel);
     this.wellScrollingGroup.add(jarGroup);
     this.propsMap.set('prop_jar_marmalade', jarGroup);
+    this.propsMap.set('INT_jar_marmalade', jarGroup);
+
+    // Open cupboard shelf to stow the empty jar
+    const returnCupboard = new THREE.Group();
+    returnCupboard.name = 'INT_cupboard_return';
+    returnCupboard.position.set(-0.75, 0.5, 0.25);
+    this.wellScrollingGroup.add(returnCupboard);
+    this.propsMap.set('INT_cupboard_return', returnCupboard);
 
     this.wellGroup.add(this.wellScrollingGroup);
   }
@@ -418,6 +426,12 @@ export class SceneLoader {
       arch.position.set(x, 1.0, 0);
       this.passageGroup.add(arch);
     }
+
+    const exitMarker = new THREE.Group();
+    exitMarker.name = 'TRG_S4_exit';
+    exitMarker.position.set(18.0, 0, 0);
+    this.passageGroup.add(exitMarker);
+    this.propsMap.set('TRG_S4_exit', exitMarker);
   }
 
   private buildHallEnvironment(): void {
@@ -449,18 +463,22 @@ export class SceneLoader {
 
     this.hallGroup.add(northWall, southWall, westWall, eastWall);
 
-    // 8 Locked Full-Size Doors along North & South walls
+    // Locked Full-Size Doors along North & South walls
     const doorX = [-8, -3, 2, 7];
     doorX.forEach((dx, idx) => {
       [-3.4, 3.4].forEach((dz, sideIdx) => {
+        const doorNum = idx * 2 + sideIdx + 1;
         const doorMesh = new THREE.Mesh(
           new THREE.BoxGeometry(1.0, 2.1, 0.08),
           createToonMaterial(0x5c3c24)
         );
         doorMesh.position.set(dx, 1.05, dz);
-        doorMesh.name = `INT_door_0${idx * 2 + sideIdx + 1}`;
+        const paddedName = `INT_door_0${doorNum}`;
+        doorMesh.name = paddedName;
         addInkOutline(doorMesh);
         this.hallGroup.add(doorMesh);
+        this.propsMap.set(paddedName, doorMesh);
+        this.propsMap.set(`INT_door_${doorNum}`, doorMesh);
       });
     });
 
@@ -517,10 +535,11 @@ export class SceneLoader {
     }
     this.hallGroup.add(tableGroup);
     this.propsMap.set('INT_table', tableGroup);
+    this.propsMap.set('INT_table_leg', tableGroup);
 
     // Golden Key prop_key_gold on table
     const keyGroup = new THREE.Group();
-    keyGroup.name = 'prop_key_gold';
+    keyGroup.name = 'INT_gold_key';
     keyGroup.position.set(0.92, 0.74, -0.6);
     const keyGeo = new THREE.TorusGeometry(0.04, 0.012, 8, 16);
     const keyMat = createToonMaterial(0xd4af37, { emissive: 0xd4af37, emissiveIntensity: 0.55 });
@@ -529,10 +548,11 @@ export class SceneLoader {
     keyGroup.add(keyMesh);
     this.hallGroup.add(keyGroup);
     this.propsMap.set('prop_key_gold', keyGroup);
+    this.propsMap.set('INT_gold_key', keyGroup);
 
     // Bottle prop_bottle_drinkme on table
     const bottleGroup = new THREE.Group();
-    bottleGroup.name = 'prop_bottle_drinkme';
+    bottleGroup.name = 'INT_bottle_drinkme';
     bottleGroup.position.set(0.76, 0.78, -0.54);
     const bottleGeo = new THREE.CylinderGeometry(0.035, 0.045, 0.14, 16);
     const bottleMat = createToonMaterial(0x64b5c6);
@@ -541,6 +561,7 @@ export class SceneLoader {
     bottleGroup.add(bottleMesh);
     this.hallGroup.add(bottleGroup);
     this.propsMap.set('prop_bottle_drinkme', bottleGroup);
+    this.propsMap.set('INT_bottle_drinkme', bottleGroup);
 
     // Glass box under table with EAT ME cake
     const boxGroup = new THREE.Group();
@@ -559,10 +580,11 @@ export class SceneLoader {
 
     this.hallGroup.add(boxGroup);
     this.propsMap.set('INT_glass_box', boxGroup);
+    this.propsMap.set('INT_cake_eatme', boxGroup);
 
     // Little Door & Low Crimson Curtain on North Wall (z = -3.4) visible behind Alice
     const doorGroup = new THREE.Group();
-    doorGroup.name = 'ch1_hall_door_little';
+    doorGroup.name = 'INT_little_door';
     doorGroup.position.set(-0.8, 0.19, -3.4);
     const doorFrame = new THREE.Mesh(
       new THREE.BoxGeometry(0.28, 0.381, 0.06),
@@ -572,6 +594,7 @@ export class SceneLoader {
     doorGroup.add(doorFrame);
     this.hallGroup.add(doorGroup);
     this.propsMap.set('ch1_hall_door_little', doorGroup);
+    this.propsMap.set('INT_little_door', doorGroup);
 
     const curtainGroup = new THREE.Group();
     curtainGroup.name = 'INT_curtain';

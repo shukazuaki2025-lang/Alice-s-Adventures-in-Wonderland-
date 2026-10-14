@@ -11,8 +11,8 @@
 - **Visual Direction**: Warm cream paper-grain (`#F4ECD8`), deep walnut-ink outlines (`#2B2420`), 3-tone cross-hatched toon shading, and custom Fresnel refractive glass keeping the gold key visible from beneath the three-legged table.
 - **Exact Metric World**:
   - **Alice**: `1.20 m` normal height (`scale = 1.0`) ↔ `0.254 m` (10 inches, `scale = 0.212`) after drinking the potion.
-  - **The Deep Well (`S3_FALL`)**: `4.0 m` inner diameter, 90-second floating-origin vertical fall with cupboards, maps, pictures, the `ORANGE MARMALADE` jar (pickup + cupboard return no-drop safety invariant), 5 floating thought bubbles, mid-air curtsey easter egg (`C`), and Dinah dream cloud.
-  - **The Long Low Hall (`S5_HALL` / `S6_SMALL` / `S7_CAKE`)**: `24.0 m × 7.0 m × 2.85 m` vaulted hall lit by a row of hanging lamps, 8 locked full-size doors, a `0.72 m` three-legged solid glass table, a `0.15 m` low curtain concealing the `0.381 m × 0.24 m` (15-inch) little door, garden vista peek, slippery table-leg climb attempts, and the glass box with the `EAT ME` currant cake.
+  - **The Deep Well (`S3_FALL`)**: `4.0 m` inner diameter, 90-second vertical fall with cupboards, maps, pictures, the `ORANGE MARMALADE` jar (pickup + cupboard return no-drop safety invariant), 5 floating thought bubbles, mid-air curtsey easter egg (`C`), and Dinah dream cloud.
+  - **The Long Low Hall (`S5_HALL` / `S6_SMALL` / `S7_CAKE`)**: `24.0 m × 7.0 m × 2.85 m` vaulted hall lit by a row of hanging lamps, 10 locked full-size doors, a `0.72 m` three-legged solid glass table, a `0.15 m` low curtain concealing the `0.381 m × 0.24 m` (15-inch) little door, garden vista peek, slippery table-leg climb attempts, and the glass box with the `EAT ME` currant cake.
 - **Trilingual Narrative (`zh` / `en` / `orig_1865`)**: Full Chapter 1 dialogue, subtitles (`zh` ≤ 28 characters per line), 60s/120s contextual stuck hints, and 5 unlockable Victorian Curiosity Notes.
 
 ---
@@ -24,14 +24,14 @@ All subagent prompt packages, specifications, and handoff records are archived i
 | Track | Role & Scope | Prompt & Docs |
 | :--- | :--- | :--- |
 | **Track A** | Project Bible, Metric Constants & Chapter 1 Design | [`CLAUDE.md`](./CLAUDE.md), [`docs/bible.md`](./docs/bible.md), [`docs/ch1-design.md`](./docs/ch1-design.md), [`docs/prompts/track_a/prompt.md`](./docs/prompts/track_a/prompt.md) |
-| **Track B** | Narrative Script, Trilingual Subtitles (`ch1.json`) & Curiosity Notes | [`public/assets/i18n/ch1.json`](./public/assets/i18n/ch1.json), [`public/assets/i18n/ch1_notes.json`](./public/assets/i18n/ch1_notes.json), [`docs/prompts/track_b/prompt.md`](./docs/prompts/track_b/prompt.md) |
-| **Track C** | Concept Art, Color Script & Victorian UI Design Specs | [`docs/ui/`](./docs/ui/), [`docs/prompts/track_c/prompt.md`](./docs/prompts/track_c/prompt.md) |
+| **Track B** | Narrative Script, Trilingual Subtitles (`ch1.json`) & Curiosity Notes | [`public/assets/i18n/ch1.json`](./public/assets/i18n/ch1.json), [`docs/prompts/track_b/prompt.md`](./docs/prompts/track_b/prompt.md) |
+| **Track C** | Concept Art, Color Script & Victorian UI Design Specs | [`docs/prompts/track_c/prompt.md`](./docs/prompts/track_c/prompt.md) |
 | **Track D** | Blender 3D Procedural Architecture, Greybox & Props | [`tools/blender/build_ch1_architecture.py`](./tools/blender/build_ch1_architecture.py), [`public/assets/models/`](./public/assets/models/), [`docs/prompts/track_d/prompt.md`](./docs/prompts/track_d/prompt.md) |
-| **Track E** | Characters (`chr_alice`, `chr_rabbit`, `chr_sister`, `chr_dinah_dream`) & Animation Clips | [`public/assets/models/chr_alice.events.json`](./public/assets/models/chr_alice.events.json), [`docs/prompts/track_e/prompt.md`](./docs/prompts/track_e/prompt.md) |
-| **Track F** | Scene Assembly & 52 Logic Markers (`SPAWN_`, `TRG_`, `INT_`, `CAM_`, `COL_`, `SLOT_`) | [`assets_src/`](./assets_src/), [`docs/prompts/track_f/prompt.md`](./docs/prompts/track_f/prompt.md) |
-| **Track G** | Core 3D Engine (Three.js + Rapier3D), Shaders, S0–S7 State Machine & C1–C8 Cutscenes | [`src/`](./src/), [`public/assets/cutscenes/ch1/`](./public/assets/cutscenes/ch1/), [`docs/prompts/track_g/prompt.md`](./docs/prompts/track_g/prompt.md) |
-| **Track H** | Victorian Book-Page HTML/CSS UI (12 Components, Live `zh`/`en` Toggle) | [`src/ui/UIManager.ts`](./src/ui/UIManager.ts), [`docs/prompts/track_h/prompt.md`](./docs/prompts/track_h/prompt.md) |
-| **Track I** | Procedural Web Audio Synthesizer (M1–M7 Music & 30+ Positional SFX) | [`src/audio/AudioManager.ts`](./src/audio/AudioManager.ts), [`docs/prompts/track_i/prompt.md`](./docs/prompts/track_i/prompt.md) |
+| **Track E** | Characters (`chr_alice`, `chr_rabbit`, `chr_sister`, `chr_dinah_dream`) & Animation Clips | [`docs/prompts/track_e/prompt.md`](./docs/prompts/track_e/prompt.md) |
+| **Track F** | Scene Assembly & 52 Logic Markers (`SPAWN_`, `TRG_`, `INT_`, `CAM_`, `COL_`, `SLOT_`) | [`public/assets/models/`](./public/assets/models/), [`docs/prompts/track_f/prompt.md`](./docs/prompts/track_f/prompt.md) |
+| **Track G** | Core 3D Engine (Three.js + Rapier3D), S0–S7 State Machine & C1–C8 Cutscenes | [`src/`](./src/), [`public/assets/cutscenes/ch1/`](./public/assets/cutscenes/ch1/), [`docs/prompts/track_g/prompt.md`](./docs/prompts/track_g/prompt.md) |
+| **Track H** | Victorian Book-Page HTML/CSS UI (Live `zh`/`en` Toggle) | [`src/ui/UIManager.ts`](./src/ui/UIManager.ts), [`docs/prompts/track_h/prompt.md`](./docs/prompts/track_h/prompt.md) |
+| **Track I** | Procedural Web Audio Synthesizer (Music & SFX) | [`src/audio/AudioManager.ts`](./src/audio/AudioManager.ts), [`docs/prompts/track_i/prompt.md`](./docs/prompts/track_i/prompt.md) |
 | **Track J** | Unit Tests, Playwright E2E Playthroughs (Tiers 1–5) & Performance Docs | [`tests/`](./tests/), [`docs/tests/ch1-interactions.md`](./docs/tests/ch1-interactions.md), [`docs/perf/ch1.md`](./docs/perf/ch1.md), [`docs/prompts/track_j/prompt.md`](./docs/prompts/track_j/prompt.md) |
 | **Track K** | `/making-of` Showcase Page, `/viewer.html` Asset Inspector & CI/CD | [`making-of.html`](./making-of.html), [`viewer.html`](./viewer.html), [`.github/workflows/ci.yml`](./.github/workflows/ci.yml), [`docs/prompts/track_k/prompt.md`](./docs/prompts/track_k/prompt.md) |
 

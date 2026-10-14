@@ -1,46 +1,56 @@
 {
   "id": "C7",
   "title": "Table Leg Slip & Crying",
-  "duration": 9,
+  "duration": 5,
   "events": [
     {
       "time": 0,
       "type": "animation",
       "target": "chr_alice",
       "payload": {
-        "animation": "Alice_Slip",
+        "animation": "Alice_Slip"
+      }
+    },
+    {
+      "time": 0,
+      "type": "audio",
+      "target": "sfx",
+      "payload": {
         "sfx": "sfx_slip"
       }
     },
     {
-      "time": 2,
-      "type": "dialogue",
+      "time": 1.5,
+      "type": "animation",
       "target": "chr_alice",
       "payload": {
-        "animation": "Alice_SitCry",
+        "animation": "Alice_SitCry"
+      }
+    },
+    {
+      "time": 1.5,
+      "type": "audio",
+      "target": "sfx",
+      "payload": {
         "sfx": "sfx_sniffle"
       }
     },
     {
-      "time": 4,
+      "time": 3,
       "type": "dialogue",
       "target": "chr_alice",
       "payload": {
-        "lineId": "S6_CRY_END",
-        "text": "Come, there's no use in crying like that! I advise you to leave off this minute!",
-        "zh": "来吧，这样哭是没用的！我劝你立刻停止！"
+        "lineId": "S6_CRY_END"
       }
     },
     {
-      "time": 6.5,
+      "time": 4.5,
       "type": "camera",
-      "target": "table_base",
+      "target": "camera",
       "payload": {
-        "mode": "PAN_GLASS_BOX"
+        "path": "CAM_PAN_GLASS_BOX"
       }
     }
   ],
-  "terminalFlags": {
-    "climbAttempts": 2
-  }
+  "terminalFlags": {}
 }

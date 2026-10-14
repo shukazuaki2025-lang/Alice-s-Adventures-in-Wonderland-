@@ -28,7 +28,6 @@ export class AudioManager {
   private alicePitchScale = 1.0;
 
   constructor() {
-    this.initAudioContext();
     this.bindEvents();
   }
 
@@ -69,11 +68,23 @@ export class AudioManager {
   private bindEvents(): void {
     // Unlock autoplay on user click / touch / start Journey
     const unlock = () => {
-      if (this.ctx && this.ctx.state === 'suspended') {
-        this.ctx.resume().then(() => {
+      if (!this.ctx) {
+        this.initAudioContext();
+        const resumeCtx = () => {
           this.isUnlocked = true;
           console.log('[AudioManager] AudioContext unlocked via user gesture');
-        });
+          if (this.currentTrackId) {
+             const track = this.currentTrackId;
+             this.currentTrackId = null;
+             this.playMusic(track);
+          }
+        };
+        const ctx = this.ctx as AudioContext | null;
+        if (ctx && ctx.state === 'suspended') {
+          ctx.resume().then(resumeCtx);
+        } else if (ctx) {
+          resumeCtx();
+        }
       }
       window.removeEventListener('click', unlock);
       window.removeEventListener('keydown', unlock);
@@ -96,6 +107,24 @@ export class AudioManager {
 
     // Music track triggers
     globalEventBus.on('playMusic', (trackId: string) => this.playMusic(trackId));
+    
+    // Automatically switch music on state change
+    globalEventBus.on('stateChanged', (state: string) => {
+      let track = 'M1';
+      if (state === 'S0_TITLE') track = 'M1';
+      else if (state === 'S1_BANK') track = 'M2';
+      else if (state === 'S2_CHASE') track = 'M3';
+      else if (state === 'S3_FALL') track = 'M4';
+      else if (state === 'S4_PASSAGE' || state === 'S5_HALL') track = 'M5';
+      else if (state === 'S6_SMALL') track = 'M6';
+      else if (state === 'S7_CAKE' || state === 'END') track = 'M7';
+      this.playMusic(track);
+    });
+
+    // Volume sliders
+    globalEventBus.on('setMasterVolume', (v: number) => this.setMasterVolume(v));
+    globalEventBus.on('setMusicVolume', (v: number) => this.setMusicVolume(v));
+    globalEventBus.on('setSfxVolume', (v: number) => this.setSfxVolume(v));
   }
 
   public setMasterVolume(val: number): void {
@@ -156,9 +185,9 @@ export class AudioManager {
    * Play procedural BGM track (M1 to M7)
    */
   public playMusic(trackId: string): void {
-    if (!this.synth || !this.ctx) return;
-
     if (this.currentTrackId === trackId) return;
+    this.currentTrackId = trackId;
+    if (!this.synth || !this.ctx) return;
 
     // Stop current track
     if (this.stopCurrentTrackFn) {
@@ -166,7 +195,6 @@ export class AudioManager {
       this.stopCurrentTrackFn = null;
     }
 
-    this.currentTrackId = trackId;
     this.stopCurrentTrackFn = this.synth.startMusicTrack(trackId, this.musicGain);
     console.log(`[AudioManager] Playing procedural music track ${trackId}`);
   }
@@ -196,31 +224,34 @@ export class AudioManager {
       case 'sfx_watch_open':
         this.synth.playWatchOpen(this.sfxGain);
         break;
-      case 'sfx_watch_tick':
+      case 'sfx_rabbit_tick':
         this.synth.playWatchTick(this.sfxGain);
         break;
       case 'sfx_rabbit_scurry':
         this.synth.playRabbitScurry(this.sfxGain);
         break;
+      case 'sfx_wind_loop':
+        this.synth.playWindLoop(this.sfxGain);
+        break;
       case 'sfx_hole_jump':
         this.synth.playHoleJump(this.sfxGain);
         break;
-      case 'sfx_jar_pick':
+      case 'sfx_jar_grab':
         this.synth.playJarPick(this.sfxGain);
         break;
-      case 'sfx_jar_place':
+      case 'sfx_jar_return':
         this.synth.playJarPlace(this.sfxGain);
         break;
       case 'sfx_thought_pop':
         this.synth.playThoughtPop(this.sfxGain);
         break;
-      case 'sfx_land_thump':
+      case 'sfx_thump_land':
         this.synth.playLandThump(this.sfxGain);
         break;
-      case 'sfx_door_locked':
+      case 'sfx_door_rattle':
         this.synth.playDoorLocked(this.sfxGain);
         break;
-      case 'sfx_key_pick':
+      case 'sfx_key_pickup':
         this.synth.playKeyPick(this.sfxGain);
         break;
       case 'sfx_key_down':
@@ -229,22 +260,22 @@ export class AudioManager {
       case 'sfx_key_turn_small':
         this.synth.playKeyTurnSmall(this.sfxGain);
         break;
-      case 'sfx_curtain':
+      case 'sfx_curtain_slide':
         this.synth.playCurtain(this.sfxGain);
         break;
       case 'sfx_little_door':
         this.synth.playLittleDoor(this.sfxGain);
         break;
-      case 'sfx_cork':
+      case 'sfx_bottle_cork':
         this.synth.playCork(this.sfxGain);
         break;
-      case 'sfx_drink':
+      case 'sfx_drink_gulp':
         this.synth.playDrink(this.sfxGain);
         break;
-      case 'sfx_shrink':
+      case 'sfx_shrink_magic':
         this.synth.playShrink(this.sfxGain);
         break;
-      case 'sfx_slip':
+      case 'sfx_table_slip':
         this.synth.playSlip(this.sfxGain);
         break;
       case 'sfx_sniffle':
@@ -253,7 +284,7 @@ export class AudioManager {
       case 'sfx_box_open':
         this.synth.playBoxOpen(this.sfxGain);
         break;
-      case 'sfx_nibble':
+      case 'sfx_cake_eat':
         this.synth.playNibble(this.sfxGain);
         break;
       default:

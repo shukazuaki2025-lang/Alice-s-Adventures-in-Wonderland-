@@ -1,5 +1,11 @@
 import { GameStateID, GameFlags, globalEventBus } from '../core/types';
 import { GAME_EVENTS } from '../core/events';
+import { z } from 'zod';
+
+const saveSchema = z.object({
+  state: z.string(),
+  flags: z.record(z.any())
+});
 
 export class StateMachine {
   public currentState: GameStateID = 'S0_TITLE';
@@ -48,9 +54,42 @@ export class StateMachine {
   };
 
   private readonly SAVE_KEY = 'alice.save.v1';
+  private savedData: any = null;
 
   constructor() {
-    this.loadState();
+    this.checkSavedGame();
+  }
+
+  public hasSavedGame(): boolean {
+    return this.savedData !== null;
+  }
+
+  public restoreSavedGame(): void {
+    if (this.savedData) {
+      if (this.savedData.state) {
+        this.currentState = this.savedData.state as GameStateID;
+      }
+      if (this.savedData.flags) {
+        this.flags = { ...this.flags, ...this.savedData.flags };
+      }
+    }
+  }
+
+  private checkSavedGame(): void {
+    try {
+      const raw = localStorage.getItem(this.SAVE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        const result = saveSchema.safeParse(parsed);
+        if (result.success) {
+          this.savedData = result.data;
+        } else {
+          console.warn('[StateMachine] Save validation failed:', result.error);
+        }
+      }
+    } catch (e) {
+      console.warn('[StateMachine] Check save error:', e);
+    }
   }
 
   public goto(nextState: GameStateID): void {
@@ -63,7 +102,7 @@ export class StateMachine {
 
   public setFlag(key: string, value: unknown): void {
     this.flags[key] = value as any;
-    this.saveState();
+    // Removed this.saveState(); DO NOT save on every flag update
   }
 
   public getFlag(key: string): unknown {
@@ -79,23 +118,6 @@ export class StateMachine {
       localStorage.setItem(this.SAVE_KEY, data);
     } catch (e) {
       console.warn('[StateMachine] Save state error:', e);
-    }
-  }
-
-  public loadState(): void {
-    try {
-      const raw = localStorage.getItem(this.SAVE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed.state) {
-          this.currentState = parsed.state;
-        }
-        if (parsed.flags) {
-          this.flags = { ...this.flags, ...parsed.flags };
-        }
-      }
-    } catch (e) {
-      console.warn('[StateMachine] Load state error, using defaults:', e);
     }
   }
 }

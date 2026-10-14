@@ -33,7 +33,7 @@
       "en": "and what is the use of a book, without pictures or conversations?",
       "zh": "一本书，又没有图画，又没有对话，有什么用呢？",
       "ja": "絵も会話もない本なんて、何の役に立つのかしら？",
-      "dur": 3.0
+      "dur": 3
     },
     "S1_IDLE": {
       "id": "S1_IDLE",
@@ -53,7 +53,7 @@
       "en": "Oh dear! Oh dear! I shall be late!",
       "zh": "天哪！天哪！我要迟到了！",
       "ja": "大変だ！大変だ！遅刻してしまう！",
-      "dur": 2.0,
+      "dur": 2,
       "audioSfx": "sfx_watch_open"
     },
     "S1_RABBIT_WATCH": {
@@ -74,7 +74,8 @@
       "en": "Follow the White Rabbit",
       "zh": "跟上白兔",
       "ja": "白ウサギの後を追う",
-      "dur": 3.0
+      "dur": 3,
+      "note": "new"
     },
     "S2_JUMP": {
       "id": "S2_JUMP",
@@ -84,7 +85,7 @@
       "en": "In another moment down went Alice after it, never once considering how in the world she was to get out again.",
       "zh": "她一下子就跟着钻了进去，压根没想过待会儿要怎么出来。",
       "ja": "アリスはすぐにその後を追って飛び込み、どうやって出るかなど全く考えませんでした。",
-      "dur": 4.0,
+      "dur": 4,
       "audioSfx": "sfx_hole_jump"
     },
     "S3_START": {
@@ -105,7 +106,7 @@
       "en": "ORANGE MARMALADE... empty!",
       "zh": "“橘子酱”！……空的。",
       "ja": "「オレンジマーマレード」……空っぽだわ！",
-      "dur": 2.0,
+      "dur": 2,
       "audioSfx": "sfx_jar_pick"
     },
     "S3_JAR_DROP_TRY": {
@@ -192,7 +193,8 @@
       "zh": "黛娜今晚肯定会想我的！猫吃蝙蝠吗？猫吃蝙蝠吗？",
       "ja": "今夜ダイナは私がいなくて寂しがるわ！……ネコはコウモリを食べるかしら？",
       "dur": 3.8,
-      "audioSfx": "sfx_thought_pop"
+      "audioSfx": "sfx_thought_pop",
+      "note": "adapted"
     },
     "S3_DOZE": {
       "id": "S3_DOZE",
@@ -202,7 +204,7 @@
       "en": "Do bats eat cats?",
       "zh": "……蝙蝠吃猫吗？",
       "ja": "……コウモリはネコを食べるかしら？",
-      "dur": 2.0
+      "dur": 2
     },
     "S3_LAND": {
       "id": "S3_LAND",
@@ -212,7 +214,7 @@
       "en": "thump! thump! ... and the fall was over.",
       "zh": "砰！砰！坠落结束了。",
       "ja": "ドスン！ドスン！……落下は終わりました。",
-      "dur": 2.0,
+      "dur": 2,
       "audioSfx": "sfx_land_thump"
     },
     "S4_UP": {
@@ -277,7 +279,8 @@
       "zh": "这扇也锁着。",
       "ja": "これも鍵がかかっているわ。",
       "dur": 1.5,
-      "audioSfx": "sfx_door_locked"
+      "audioSfx": "sfx_door_locked",
+      "note": "new"
     },
     "S5_DOOR_REPEAT_2": {
       "id": "S5_DOOR_REPEAT_2",
@@ -288,7 +291,8 @@
       "zh": "还是锁着的。",
       "ja": "やっぱり開かないわ。",
       "dur": 1.5,
-      "audioSfx": "sfx_door_locked"
+      "audioSfx": "sfx_door_locked",
+      "note": "new"
     },
     "S5_DOOR_REPEAT_3": {
       "id": "S5_DOOR_REPEAT_3",
@@ -299,7 +303,8 @@
       "zh": "这扇也打不开。",
       "ja": "これもビクともしないわ。",
       "dur": 1.5,
-      "audioSfx": "sfx_door_locked"
+      "audioSfx": "sfx_door_locked",
+      "note": "new"
     },
     "S5_DOORS_ALL": {
       "id": "S5_DOORS_ALL",
@@ -330,7 +335,7 @@
       "en": "Either the locks are too large, or the key is too small.",
       "zh": "要么是锁太大，要么是钥匙太小。",
       "ja": "鍵穴が大きすぎるか、鍵が小さすぎるかのどちらかね。",
-      "dur": 3.0
+      "dur": 3
     },
     "S5_CURTAIN_FOUND": {
       "id": "S5_CURTAIN_FOUND",
@@ -372,7 +377,7 @@
       "en": "she knelt down and looked along the passage into the loveliest garden you ever saw.",
       "zh": "她跪下来顺着通道望出去，那是你见过的最美的花园。",
       "ja": "彼女はひざまずき、通路の向こうにある見事な庭園を覗き込みました。",
-      "dur": 4.0,
+      "dur": 4,
       "audioSfx": "sfx_little_door"
     },
     "S5_PEEK_END_1": {
@@ -383,7 +388,7 @@
       "en": "and even if my head would go through, it would be of very little use without my shoulders.",
       "zh": "就算头能钻过去，没有肩膀也没用啊。",
       "ja": "頭が入ったとしても、肩が通らなければ意味がないわ。",
-      "dur": 3.0
+      "dur": 3
     },
     "S5_PEEK_END_2": {
       "id": "S5_PEEK_END_2",
@@ -403,7 +408,7 @@
       "en": "which certainly was not here before,",
       "zh": "刚才这儿明明没有的。",
       "ja": "さっきは絶対にここになかったのに。",
-      "dur": 2.0,
+      "dur": 2,
       "audioSfx": "sfx_key_down"
     },
     "S6_INSPECT": {
@@ -424,7 +429,7 @@
       "en": "It isn't marked 'poison'.",
       "zh": "没写“毒药”。那就尝一点。",
       "ja": "「毒」とは書いてないわ。少し試してみましょう。",
-      "dur": 2.0,
+      "dur": 2,
       "audioSfx": "sfx_cork"
     },
     "S6_DRINK_1": {
@@ -446,7 +451,7 @@
       "en": "... she very soon finished it off.",
       "zh": "她很快就喝光了。",
       "ja": "……彼女はすぐに飲み干してしまいました。",
-      "dur": 2.0
+      "dur": 2
     },
     "S6_SHRINK": {
       "id": "S6_SHRINK",
@@ -488,7 +493,8 @@
       "zh": "太滑了……",
       "ja": "滑りやすすぎるわ……",
       "dur": 1.5,
-      "audioSfx": "sfx_slip"
+      "audioSfx": "sfx_slip",
+      "note": "new"
     },
     "S6_CRY_END": {
       "id": "S6_CRY_END",
@@ -520,7 +526,7 @@
       "en": "Well, I'll eat it, and if it makes me grow larger, I can reach the key;",
       "zh": "好，我吃。要是变大，我就够得着钥匙；",
       "ja": "よし、食べてみましょう。大きくなれば鍵に手が届くし；",
-      "dur": 3.0
+      "dur": 3
     },
     "S7_DECIDE_2": {
       "id": "S7_DECIDE_2",
@@ -530,7 +536,7 @@
       "en": "and if it makes me grow smaller, I can creep under the door; so either way I'll get into the garden, and I don't care which happens!",
       "zh": "要是变小，我就从门底钻过去。变成哪样我都不在乎！",
       "ja": "小さくなればドアの下をくぐれるわ。どちらになっても庭に行けるわ！",
-      "dur": 4.0
+      "dur": 4
     },
     "S7_EAT": {
       "id": "S7_EAT",
@@ -540,7 +546,7 @@
       "en": "Which way? Which way?",
       "zh": "往哪边？往哪边？",
       "ja": "どっちかしら？どっちかしら？",
-      "dur": 2.0,
+      "dur": 2,
       "audioSfx": "sfx_nibble"
     },
     "S7_END": {
@@ -561,7 +567,8 @@
       "en": "Next: The Pool of Tears",
       "zh": "下一章：眼泪池",
       "ja": "次章：涙の池",
-      "dur": 2.0
+      "dur": 2,
+      "note": "new"
     },
     "S7_PREVIEW_ALICE": {
       "id": "S7_PREVIEW_ALICE",
@@ -571,7 +578,7 @@
       "en": "Curiouser and curiouser!",
       "zh": "越来越奇怪了！",
       "ja": "ますますおかしなことになってきたわ！",
-      "dur": 2.0
+      "dur": 2
     }
   },
   "curiosityNotes": {
@@ -859,9 +866,189 @@
       "ja": "Esc長押しでスキップ"
     },
     "chapter_complete": {
-      "en": "Chapter Complete",
-      "zh": "本章结束",
-      "ja": "章完了"
+      "en": "Chapter I Complete",
+      "zh": "第一章 结束",
+      "ja": "第1章 完了"
+    },
+    "ui_chapter_badge": {
+      "en": "Chapter I",
+      "zh": "第一章",
+      "ja": "第1章"
+    },
+    "btn_resume": {
+      "en": "Resume",
+      "zh": "继续游戏",
+      "ja": "再開"
+    },
+    "btn_return_title": {
+      "en": "Return to Title",
+      "zh": "返回标题页",
+      "ja": "タイトルに戻る"
+    },
+    "settings_reduce_motion": {
+      "en": "Reduce Motion",
+      "zh": "减弱动态效果",
+      "ja": "モーションを減らす"
+    },
+    "inspect_btn_close": {
+      "en": "Close Inspector",
+      "zh": "关闭检视",
+      "ja": "閉じる"
+    },
+    "inspect_btn_drink": {
+      "en": "Drink Potion",
+      "zh": "喝下药水",
+      "ja": "薬を飲む"
+    },
+    "inspect_front_label": {
+      "en": "Front Label",
+      "zh": "正面标签",
+      "ja": "表のラベル"
+    },
+    "inspect_back_label": {
+      "en": "Back Label (No Poison)",
+      "zh": "背面标签（无毒）",
+      "ja": "裏のラベル（毒なし）"
+    },
+    "hud_objective": {
+      "en": "Objective:",
+      "zh": "当前目标：",
+      "ja": "目標："
+    },
+    "hud_hint": {
+      "en": "Hint:",
+      "zh": "提示：",
+      "ja": "ヒント："
+    },
+    "hud_height": {
+      "en": "Height:",
+      "zh": "身高：",
+      "ja": "身長："
+    },
+    "curiosity_notes_modal": {
+      "en": "Thoughts Unlocked",
+      "zh": "新感悟",
+      "ja": "思考の記録"
+    },
+    "next_chapter": {
+      "en": "Next Chapter",
+      "zh": "下一章",
+      "ja": "次章"
+    },
+    "title_h1": {
+      "en": "Alice's Adventures in Wonderland",
+      "zh": "爱丽丝梦游仙境",
+      "ja": "不思議の国のアリス"
+    },
+    "title_h2": {
+      "en": "Chapter I: Down the Rabbit-Hole",
+      "zh": "第一章：掉进兔子洞",
+      "ja": "第1章：ウサギの穴を下って"
+    },
+    "btn_pause_resume": {
+      "en": "Resume",
+      "zh": "继续",
+      "ja": "再開"
+    },
+    "btn_pause_title": {
+      "en": "Return to Title",
+      "zh": "返回标题页",
+      "ja": "タイトルへ戻る"
+    },
+    "speaker_alice": {
+      "en": "Alice",
+      "zh": "爱丽丝",
+      "ja": "アリス"
+    },
+    "speaker_rabbit": {
+      "en": "White Rabbit",
+      "zh": "白兔先生",
+      "ja": "白ウサギ"
+    },
+    "speaker_narrator": {
+      "en": "Narrator",
+      "zh": "旁白",
+      "ja": "語り手"
+    },
+    "stat_notes_collected": {
+      "en": "Curiosity Notes Collected",
+      "zh": "收集奇思手记",
+      "ja": "集めた好奇心ノート"
+    },
+    "stat_curtsey_egg": {
+      "en": "Mid-air Curtsey Easter Egg",
+      "zh": "空中屈膝礼彩蛋",
+      "ja": "空中のカーテシー"
+    },
+    "stat_unlocked": {
+      "en": "✦ Unlocked",
+      "zh": "✦ 已解锁",
+      "ja": "✦ 解除済み"
+    },
+    "stat_locked": {
+      "en": "Locked",
+      "zh": "未解锁",
+      "ja": "未解除"
+    },
+    "item.daisy.name": {
+      "en": "Thames Meadow Daisy",
+      "zh": "河畔白雏菊",
+      "ja": "川辺のデイジー"
+    },
+    "item.daisy.desc": {
+      "en": "A fresh white-and-gold daisy picked on the sleepy riverbank for making a daisy-chain.",
+      "zh": "在困倦的夏日河岸采下的白瓣黄心小雏菊，适合编织花环。",
+      "ja": "眠気を誘う川辺で摘んだ白いデイジー。"
+    },
+    "item.watch.name": {
+      "en": "White Rabbit's Pocket Watch",
+      "zh": "白兔的黄铜怀表",
+      "ja": "白ウサギの懐中時計"
+    },
+    "item.watch.desc": {
+      "en": "A ticking brass pocket watch taken right out of a waistcoat-pocket.",
+      "zh": "从马甲口袋里掏出来的滴答作响的黄铜怀表。",
+      "ja": "チョッキのポケットから取り出した真鍮の懐中時計。"
+    },
+    "item.jar.name": {
+      "en": "Orange Marmalade Jar",
+      "zh": "橘子果酱空陶罐",
+      "ja": "オレンジマーマレードの瓶"
+    },
+    "item.jar.desc": {
+      "en": "Labeled 'ORANGE MARMALADE', but to Alice's great disappointment it is quite empty.",
+      "zh": "贴着“橘子果酱”标签的厚陶罐，可惜里面空空如也。贸然扔下去会砸伤别人。",
+      "ja": "「オレンジマーマレード」と貼られているが、中は空っぽだ。"
+    },
+    "item.key.name": {
+      "en": "Tiny Golden Key",
+      "zh": "三脚桌上的小金钥匙",
+      "ja": "小さな金の鍵"
+    },
+    "item.key.desc": {
+      "en": "A tiny filigree golden key found on the three-legged glass table; too small for the great hall doors, but just right for a 15-inch door.",
+      "zh": "在三脚玻璃桌上发现的精致小金钥匙；打不开大厅四周的大门，却正适合十五英寸高的小门。",
+      "ja": "三本脚のガラステーブルで見つけた小さな金の鍵。"
+    },
+    "item.bottle.name": {
+      "en": "“DRINK ME” Potion Bottle",
+      "zh": "“喝我”玻璃药水瓶",
+      "ja": "「私を飲んで」の小瓶"
+    },
+    "item.bottle.desc": {
+      "en": "A faceted teal glass bottle with a paper label reading 'DRINK ME' in large letters. Check both sides carefully to be sure it is not marked 'POISON'!",
+      "zh": "系着纸签的蓝绿色棱面玻璃瓶，上面印着漂亮的“喝我”大字。喝前务必转到背面确认没有“毒药”标记！",
+      "ja": "「私を飲んで」と書かれた紙ラベル付きのガラス瓶。裏に「毒」と書かれていないか確認しよう！"
+    },
+    "item.cake.name": {
+      "en": "“EAT ME” Currant Cake",
+      "zh": "“吃我”葡萄干小蛋糕",
+      "ja": "「私を食べて」のケーキ"
+    },
+    "item.cake.desc": {
+      "en": "A very small frosted cake inside a glass box, on which the words 'EAT ME' are beautifully marked in currants.",
+      "zh": "放在桌下玻璃小盒里的精致糖霜蛋糕，上面用深色葡萄干漂亮地拼出“吃我”字样。",
+      "ja": "レーズンで「私を食べて」と美しく描かれた小さなケーキ。"
     }
   }
 }

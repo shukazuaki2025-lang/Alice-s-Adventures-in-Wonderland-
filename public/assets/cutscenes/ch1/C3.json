@@ -1,23 +1,30 @@
 {
   "id": "C3",
   "title": "Leafpile Landing",
-  "duration": 4.5,
+  "duration": 5,
   "events": [
     {
       "time": 0,
       "type": "audio",
       "target": "sfx",
       "payload": {
-        "sfx": "sfx_land_thump",
-        "text": "thump! thump!"
+        "sfx": "sfx_land_thump"
       }
     },
     {
       "time": 1,
       "type": "camera",
-      "target": "Alice",
+      "target": "camera",
       "payload": {
-        "mode": "FADE_IN",
+        "path": "CAM_LANDING",
+        "animation": "Alice_Land"
+      }
+    },
+    {
+      "time": 1,
+      "type": "animation",
+      "target": "chr_alice",
+      "payload": {
         "animation": "Alice_Land"
       }
     },
@@ -26,9 +33,7 @@
       "type": "dialogue",
       "target": "chr_alice",
       "payload": {
-        "lineId": "S4_UP",
-        "text": "Not a bit hurt!",
-        "zh": "一点也没摔伤！"
+        "lineId": "S4_UP"
       }
     },
     {
@@ -40,7 +45,5 @@
       }
     }
   ],
-  "terminalFlags": {
-    "jarStored": true
-  }
+  "terminalFlags": {}
 }

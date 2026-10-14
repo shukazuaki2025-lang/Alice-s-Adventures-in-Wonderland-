@@ -119,6 +119,11 @@ export class ProceduralSynth {
     }
   }
 
+  public playWindLoop(dest: AudioNode): void {
+    // Simple wind simulation
+    this.playNoise(dest, 0.3, 800, 'lowpass', 1.0);
+  }
+
   public playHoleJump(dest: AudioNode): void {
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();

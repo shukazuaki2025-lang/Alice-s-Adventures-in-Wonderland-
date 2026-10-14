@@ -10,14 +10,14 @@ export const ALICE_HEIGHTS = {
 
 export const ALICE_SCALES = {
   NORMAL: 1.0,
-  SMALL: 0.254, // Or 0.254 / 1.20 = 0.2117
-  GIANT: 2.90,  // Or 2.90 / 1.20 = 2.4167
+  SMALL: 0.2117,
+  GIANT: 2.417,
 } as const;
 
 export const CAPSULE_DIMENSIONS = {
-  NORMAL: { radius: 0.25, height: 1.20 },
-  SMALL: { radius: 0.08, height: 0.254 },
-  GIANT: { radius: 0.60, height: 2.90 },
+  NORMAL: { radius: 0.18, height: 1.20 },
+  SMALL: { radius: 0.04, height: 0.254 },
+  GIANT: { radius: 0.43, height: 2.90 },
 } as const;
 
 export const CAMERA_PROFILES = {

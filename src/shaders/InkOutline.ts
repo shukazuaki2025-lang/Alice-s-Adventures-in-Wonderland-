@@ -1,39 +1,91 @@
 import * as THREE from 'three';
 
 /**
- * Ink Outline Material (#2B2420) using inverted hull rendering
+ * Ink Outline Material (#2B2420) using inverted hull rendering.
+ * Uses MeshBasicMaterial + onBeforeCompile so both regular Mesh and SkinnedMesh / MorphTargets work seamlessly.
  */
-export function createInkOutlineMaterial(thickness: number = 0.02): THREE.ShaderMaterial {
-  return new THREE.ShaderMaterial({
-    uniforms: {
-      outlineThickness: { value: thickness },
-      outlineColor: { value: new THREE.Color(0x2b2420) },
-    },
-    vertexShader: `
-      uniform float outlineThickness;
-      void main() {
-        vec3 norm = normalize(normalMatrix * normal);
-        vec3 pos = (modelViewMatrix * vec4(position, 1.0)).xyz;
-        pos += norm * outlineThickness;
-        gl_Position = projectionMatrix * vec4(pos, 1.0);
-      }
-    `,
-    fragmentShader: `
-      uniform vec3 outlineColor;
-      void main() {
-        gl_FragColor = vec4(outlineColor, 1.0);
-      }
-    `,
+export function createInkOutlineMaterial(
+  color: THREE.ColorRepresentation = 0x2b2420,
+  thickness: number = 0.006
+): THREE.MeshBasicMaterial {
+  const mat = new THREE.MeshBasicMaterial({
+    color: new THREE.Color(color),
     side: THREE.BackSide,
   });
+  mat.onBeforeCompile = (shader) => {
+    shader.uniforms.outlineThickness = { value: thickness };
+    shader.vertexShader = `uniform float outlineThickness;\n` + shader.vertexShader;
+    shader.vertexShader = shader.vertexShader.replace(
+      '#include <project_vertex>',
+      `
+      vec3 outlineNormal = normalize(objectNormal);
+      transformed += outlineNormal * outlineThickness;
+      #include <project_vertex>
+      `
+    );
+  };
+  return mat;
 }
 
 /**
- * Helper to add an ink outline mesh wrapper around an existing mesh
+ * Helper to add an ink outline mesh wrapper around an existing mesh/group.
+ * Automatically skips M_Glass_* and transparent meshes.
  */
-export function applyInkOutline(mesh: THREE.Mesh, thickness: number = 0.015): THREE.Mesh {
-  const outlineMaterial = createInkOutlineMaterial(thickness);
-  const outlineMesh = new THREE.Mesh(mesh.geometry, outlineMaterial);
-  mesh.add(outlineMesh);
-  return outlineMesh;
+export function applyInkOutline(
+  root: THREE.Object3D,
+  color: THREE.ColorRepresentation = 0x2b2420,
+  thickness: number = 0.006
+): void {
+  const outlineMat = createInkOutlineMaterial(color, thickness);
+  const meshesToProcess: THREE.Mesh[] = [];
+
+  root.traverse((child) => {
+    if ((child as THREE.Mesh).isMesh) {
+      const mesh = child as THREE.Mesh;
+      if (mesh.name.endsWith('_ink_outline') || mesh.userData?.hasInkOutline) return;
+
+      const mat = mesh.material;
+      let isTransparent = false;
+      let isGlass = false;
+
+      if (Array.isArray(mat)) {
+        isTransparent = mat.some((m) => m.transparent && m.opacity < 0.95);
+        isGlass = mat.some((m) => m.name?.startsWith('M_Glass_'));
+      } else if (mat) {
+        isTransparent = mat.transparent === true && (mat as THREE.Material).opacity < 0.95;
+        isGlass = Boolean(mat.name?.startsWith('M_Glass_'));
+      }
+
+      if (!isTransparent && !isGlass) {
+        meshesToProcess.push(mesh);
+      }
+    }
+  });
+
+  for (const mesh of meshesToProcess) {
+    mesh.userData.hasInkOutline = true;
+    if ((mesh as THREE.SkinnedMesh).isSkinnedMesh) {
+      const skinned = mesh as THREE.SkinnedMesh;
+      const outlineSkinned = new THREE.SkinnedMesh(skinned.geometry, outlineMat);
+      outlineSkinned.name = `${skinned.name}_ink_outline`;
+      outlineSkinned.castShadow = false;
+      outlineSkinned.receiveShadow = false;
+      if (skinned.skeleton) {
+        outlineSkinned.bind(skinned.skeleton, skinned.bindMatrix);
+      }
+      if (skinned.morphTargetDictionary && skinned.morphTargetInfluences) {
+        outlineSkinned.morphTargetDictionary = skinned.morphTargetDictionary;
+        outlineSkinned.morphTargetInfluences = skinned.morphTargetInfluences;
+      }
+      if (skinned.parent) {
+        skinned.parent.add(outlineSkinned);
+      }
+    } else {
+      const outlineMesh = new THREE.Mesh(mesh.geometry, outlineMat);
+      outlineMesh.name = `${mesh.name}_ink_outline`;
+      outlineMesh.castShadow = false;
+      outlineMesh.receiveShadow = false;
+      mesh.add(outlineMesh);
+    }
+  }
 }

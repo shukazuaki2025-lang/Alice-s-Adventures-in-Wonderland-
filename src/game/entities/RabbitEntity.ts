@@ -1,43 +1,79 @@
 import * as THREE from 'three';
-import { createToonMaterial } from '../../shaders/ToonShaders';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { convertMaterialsToToon } from '../../shaders/ToonShaders';
+import { applyInkOutline } from '../../shaders/InkOutline';
 
 export class RabbitEntity {
   public mesh: THREE.Group = new THREE.Group();
+  private mixer: THREE.AnimationMixer | null = null;
+  private actions: Map<string, THREE.AnimationAction> = new Map();
+  private waypoints: THREE.Vector3[] = [];
+  private currentWaypointIndex: number = 0;
+  private speed: number = 2.0;
 
   constructor() {
-    this.buildRabbitMesh();
+    this.loadModel();
   }
 
-  private buildRabbitMesh(): void {
-    const bodyGeo = new THREE.CylinderGeometry(0.12, 0.15, 0.45, 16);
-    const coatMat = createToonMaterial(0x800020); // Red waistcoat
-    const bodyMesh = new THREE.Mesh(bodyGeo, coatMat);
-    bodyMesh.position.y = 0.3;
-    this.mesh.add(bodyMesh);
+  private loadModel(): void {
+    const loader = new GLTFLoader();
+    loader.load('/assets/models/chr_rabbit.glb', (gltf) => {
+      const model = gltf.scene;
+      convertMaterialsToToon(model);
+      applyInkOutline(model);
+      this.mesh.add(model);
+      
+      this.mixer = new THREE.AnimationMixer(model);
+      gltf.animations.forEach((clip) => {
+        this.actions.set(clip.name, this.mixer!.clipAction(clip));
+      });
+      
+      this.playAnimation('Rabbit_Scurry');
+    });
+  }
 
-    const headGeo = new THREE.SphereGeometry(0.1, 16, 16);
-    const furMat = createToonMaterial(0xffffff); // White fur
-    const headMesh = new THREE.Mesh(headGeo, furMat);
-    headMesh.position.y = 0.6;
-    this.mesh.add(headMesh);
+  public playAnimation(name: string): void {
+    const action = this.actions.get(name);
+    if (action) {
+      this.mixer?.stopAllAction();
+      action.play();
+    }
+  }
 
-    // Rabbit Ears
-    const earGeo = new THREE.CylinderGeometry(0.02, 0.03, 0.25, 8);
-    const ear1 = new THREE.Mesh(earGeo, furMat);
-    ear1.position.set(-0.04, 0.75, 0);
-    ear1.rotation.z = -0.15;
-    const ear2 = new THREE.Mesh(earGeo, furMat);
-    ear2.position.set(0.04, 0.75, 0);
-    ear2.rotation.z = 0.15;
-    this.mesh.add(ear1);
-    this.mesh.add(ear2);
+  public setWaypoints(points: THREE.Vector3[]): void {
+    this.waypoints = points;
+    this.currentWaypointIndex = 0;
+    if (this.waypoints.length > 0) {
+      this.playAnimation('Rabbit_Scurry');
+    }
+  }
 
-    // Gold Pocket Watch
-    const watchGeo = new THREE.CylinderGeometry(0.03, 0.03, 0.01, 16);
-    const watchMat = createToonMaterial(0xd4af37);
-    const watchMesh = new THREE.Mesh(watchGeo, watchMat);
-    watchMesh.position.set(0.08, 0.35, 0.12);
-    watchMesh.rotation.x = Math.PI / 2;
-    this.mesh.add(watchMesh);
+  public scurryTowardExit(): void {
+    this.setWaypoints([new THREE.Vector3(29.5, 0, -6.0)]);
+  }
+
+  public update(dt: number): void {
+    if (this.mixer) {
+      this.mixer.update(dt);
+    }
+
+    if (this.waypoints.length > 0 && this.currentWaypointIndex < this.waypoints.length) {
+      const target = this.waypoints[this.currentWaypointIndex];
+      const distance = this.mesh.position.distanceTo(target);
+      
+      if (distance < 0.1) {
+        this.currentWaypointIndex++;
+        if (this.currentWaypointIndex >= this.waypoints.length) {
+          this.playAnimation('Rabbit_LookBack');
+        }
+      } else {
+        const direction = new THREE.Vector3().subVectors(target, this.mesh.position).normalize();
+        this.mesh.position.add(direction.multiplyScalar(this.speed * dt));
+        
+        // Face target
+        const targetRotation = Math.atan2(direction.x, direction.z);
+        this.mesh.rotation.y = targetRotation;
+      }
+    }
   }
 }

@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import RAPIER from '@dimforge/rapier3d-compat';
 import { PhysicsWorld } from './PhysicsWorld';
 import { ALICE_SCALES, CAPSULE_DIMENSIONS } from '../core/constants';
 import { globalEventBus } from '../core/types';
@@ -11,13 +10,16 @@ export class CharacterController {
   public scale: number = ALICE_SCALES.NORMAL;
   public moveSpeed: number = 2.5; // m/s
   public isScaling: boolean = false;
+  
+  public currentState: string = 'S1_BANK';
 
   private targetScale: number = ALICE_SCALES.NORMAL;
-  private currentCapsuleRadius: number = CAPSULE_DIMENSIONS.NORMAL.radius;
-  private currentCapsuleHeight: number = CAPSULE_DIMENSIONS.NORMAL.height;
+  public currentCapsuleRadius: number = CAPSULE_DIMENSIONS.NORMAL.radius;
+  public currentCapsuleHeight: number = CAPSULE_DIMENSIONS.NORMAL.height;
 
-  private body: RAPIER.RigidBody | null = null;
   private physicsWorld: PhysicsWorld;
+  public reduceMotion: boolean = false;
+  private swayTime: number = 0;
 
   constructor(physicsWorld: PhysicsWorld) {
     this.physicsWorld = physicsWorld;
@@ -25,91 +27,102 @@ export class CharacterController {
 
   public init(initialPosition: THREE.Vector3 = new THREE.Vector3(0, 0, 0)): void {
     this.position.copy(initialPosition);
-    if (this.physicsWorld.world) {
-      const bodyDesc = RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(
-        this.position.x,
-        this.position.y + this.currentCapsuleHeight / 2,
-        this.position.z
-      );
-      this.body = this.physicsWorld.world.createRigidBody(bodyDesc);
-      const colliderDesc = RAPIER.ColliderDesc.capsule(
-        this.currentCapsuleHeight / 2 - this.currentCapsuleRadius,
-        this.currentCapsuleRadius
-      );
-      this.physicsWorld.world.createCollider(colliderDesc, this.body);
-    }
   }
 
+  private scaleTime: number = 0;
+  private startScale: number = ALICE_SCALES.NORMAL;
+
   public setScale(newScale: number, smooth: boolean = false): void {
-    this.targetScale = newScale;
     if (!smooth) {
+      this.targetScale = newScale;
       this.scale = newScale;
       this.updateCapsuleDimensions(newScale);
       globalEventBus.emit(GAME_EVENTS.SCALE_CHANGED, this.scale);
     } else {
+      this.startScale = this.scale;
+      this.targetScale = newScale;
+      this.scaleTime = 0;
       this.isScaling = true;
     }
   }
 
   private updateCapsuleDimensions(scale: number): void {
     if (scale <= 0.3) {
-      // Small scale (0.254m)
       this.currentCapsuleRadius = CAPSULE_DIMENSIONS.SMALL.radius;
       this.currentCapsuleHeight = CAPSULE_DIMENSIONS.SMALL.height;
-      this.moveSpeed = 1.0;
     } else if (scale >= 2.0) {
-      // Giant scale (2.90m)
       this.currentCapsuleRadius = CAPSULE_DIMENSIONS.GIANT.radius;
       this.currentCapsuleHeight = CAPSULE_DIMENSIONS.GIANT.height;
-      this.moveSpeed = 4.5;
     } else {
-      // Normal scale (1.20m)
       this.currentCapsuleRadius = CAPSULE_DIMENSIONS.NORMAL.radius;
       this.currentCapsuleHeight = CAPSULE_DIMENSIONS.NORMAL.height;
-      this.moveSpeed = 2.5;
     }
   }
 
-  public update(deltaTime: number, inputVector: THREE.Vector3): void {
-    // Handle smooth 2.5s scaling interpolation (INV-04)
+  public update(deltaTime: number, inputVector: THREE.Vector3, cameraYaw: number = 0): void {
     if (this.isScaling) {
-      const step = (this.targetScale - this.scale) * (deltaTime / 2.5);
-      if (Math.abs(this.targetScale - this.scale) <= Math.abs(step) * 1.5) {
+      this.scaleTime += deltaTime;
+      const t = Math.min(this.scaleTime / 2.5, 1.0);
+      const ease = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      this.scale = this.startScale + (this.targetScale - this.startScale) * ease;
+      
+      if (t >= 1.0) {
         this.scale = this.targetScale;
         this.isScaling = false;
-      } else {
-        this.scale += step;
       }
       this.updateCapsuleDimensions(this.scale);
       globalEventBus.emit(GAME_EVENTS.SCALE_CHANGED, this.scale);
     }
+    
+    // speed logic
+    if (this.scale <= 0.3) {
+      this.moveSpeed = 0.5;
+    } else if (this.scale >= 2.0) {
+      this.moveSpeed = 4.5;
+    } else {
+      // normal
+      const isRunning = false; // Add sprint logic if needed
+      this.moveSpeed = isRunning ? 2.55 : 1.4;
+      if (this.currentState === 'S1_BANK') {
+        this.moveSpeed *= 0.85; // S1 sluggish
+      }
+    }
 
     if (inputVector.lengthSq() > 0.001) {
-      const move = inputVector.clone().normalize().multiplyScalar(this.moveSpeed * deltaTime);
-      this.position.add(move);
+      // transform input based on camera yaw
+      const move = inputVector.clone().normalize();
+      move.applyAxisAngle(new THREE.Vector3(0, 1, 0), cameraYaw);
+      move.multiplyScalar(this.moveSpeed * deltaTime);
+      
+      const resolvedMove = this.physicsWorld.resolveMovement(
+          this.position, 
+          move, 
+          this.currentCapsuleRadius, 
+          this.currentCapsuleHeight
+      );
 
-      // Facing angle
-      this.rotation.y = Math.atan2(move.x, move.z);
+      this.position.add(resolvedMove);
+
+      // Facing angle follows movement
+      if (resolvedMove.lengthSq() > 0.0001) {
+        this.rotation.y = Math.atan2(resolvedMove.x, resolvedMove.z);
+      } else {
+        this.rotation.y = Math.atan2(move.x, move.z);
+      }
     }
 
-    if (this.body) {
-      this.body.setNextKinematicTranslation({
-        x: this.position.x,
-        y: this.position.y + this.currentCapsuleHeight / 2,
-        z: this.position.z,
-      });
+    // Drowsy sway for S1
+    if (this.currentState === 'S1_BANK' && !this.reduceMotion && inputVector.lengthSq() < 0.001) {
+        this.swayTime += deltaTime;
+        // visual only sway, not modifying position physics-wise
+    } else {
+        this.swayTime = 0;
     }
 
-    this.physicsWorld.checkTriggers(this.position);
+    this.physicsWorld.checkTriggers(this.position, this.currentCapsuleRadius, this.currentCapsuleHeight);
   }
 
   public setPosition(pos: THREE.Vector3): void {
     this.position.copy(pos);
-    if (this.body) {
-      this.body.setTranslation(
-        { x: pos.x, y: pos.y + this.currentCapsuleHeight / 2, z: pos.z },
-        true
-      );
-    }
   }
 }

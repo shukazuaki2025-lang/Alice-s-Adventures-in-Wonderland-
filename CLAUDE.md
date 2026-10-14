@@ -34,7 +34,7 @@ Welcome to **Alice's Adventures in Wonderland — Chapter I: Down the Rabbit-Hol
    - Tone: A spirited, polite, but slightly pretentious and candid 7-year-old Victorian girl.
    - **Hard Length Constraint**: Every subtitle entry MUST NOT exceed **28 Chinese characters** (enforced via Zod schema validation in `npm run test`).
 3. **Japanese Interface Reservation (`ja`)**:
-   - Initial release holds empty strings `""`, with runtime automatic fallback to English (`en`).
+   - Initial release includes fully completed Japanese translations for all lines, directly populated instead of falling back to English.
 4. **Dialogue Types**:
    - `say`: Spoken dialogue with character nameplate.
    - `think`: Alice's inner monologue, presented in script typography without a nameplate.
