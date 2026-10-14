@@ -179,11 +179,11 @@ def key():
     for k in range(3):
         ang = k * 2 * math.pi / 3 + math.pi / 2
         cx, cz = -0.0215 + math.cos(ang) * 0.0036, math.sin(ang) * 0.0036
-        ring = [V(cx + 0.0036 * math.cos(a), 0.0, cz + 0.0036 * math.sin(a)) for a in [2 * math.pi * i / 18 for i in range(19)]]
-        mk.tube(ring, rx=0.0012, ry=0.0012, n=8, up_hint=(0, 1, 0), cap_start=False, cap_end=False, bm=bm)
-    sol.lathe(bm, [(0.0012, -0.022), (0.0021, -0.0215), (0.0023, -0.016), (0.0016, -0.0155), (0.0016, 0.0215), (0.0010, 0.0225)], seg=12, axis=(1, 0, 0))       # shaft
+        ring = [V(cx + 0.0036 * math.cos(a), 0.0, cz + 0.0036 * math.sin(a)) for a in [2 * math.pi * i / 32 for i in range(33)]]
+        mk.tube(ring, rx=0.0012, ry=0.0012, n=16, up_hint=(0, 1, 0), cap_start=False, cap_end=False, bm=bm)
+    sol.lathe(bm, [(0.0012, -0.022), (0.0021, -0.0215), (0.0023, -0.016), (0.0016, -0.0155), (0.0016, 0.0215), (0.0010, 0.0225)], seg=28, axis=(1, 0, 0))       # shaft
     for x in (-0.0155, -0.0110, 0.0):
-        sol.lathe(bm, [(0.0016, x - 0.001), (0.0030, x - 0.0006), (0.0030, x + 0.0006), (0.0016, x + 0.001)], seg=12, axis=(1, 0, 0))                          # collars
+        sol.lathe(bm, [(0.0016, x - 0.001), (0.0030, x - 0.0006), (0.0030, x + 0.0006), (0.0016, x + 0.001)], seg=24, axis=(1, 0, 0))                          # collars
     sol.box(bm, (0.0150, -0.0008, -0.0046), (0.0226, 0.0008, 0.0002), (60, 60))                                                                                 # bit
     sol.box(bm, (0.0176, -0.0009, -0.0046), (0.0186, 0.0009, -0.0022), (60, 60))
     sol.box(bm, (0.0202, -0.0009, -0.0046), (0.0212, 0.0009, -0.0014), (60, 60))
