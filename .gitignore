@@ -15,3 +15,7 @@ public/assets/models/dev/
 __pycache__/
 *.pyc
 docs/devlog/gate/logs/
+
+# temporary per-agent capture specs (never committed; delete when done)
+tests/e2e/_scratch_*.spec.ts
+tests/e2e/_tmp_*.spec.ts
