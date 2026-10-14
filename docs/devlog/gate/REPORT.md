@@ -1,20 +1,8 @@
 # Quality gate report
 
-- run: 2026-10-14T18:36:32.353Z  
-- mode: FULL  
-- result: **FAIL** — 28/38 checks
-
-## suite
-
-| | check | detail |
-|---|---|---|
-| ✅ | `typecheck` | 3s |
-| ✅ | `lint` | 5s |
-| ✅ | `unit` | 1s |
-| ✅ | `build` | 7s |
-| ❌ | `controls-e2e` | exit 1 after 129s — see docs/devlog/gate/logs/controls-e2e.log ::   1 failed \|     [chromium] › tests/e2e/controls.spec.ts:145:3 › Controls: camera orbit, zoom, camera-relative movement, animation › CTRL-07: the legs really alternate while walking (feet are not skating in place)  \|   7 passed (2.1m) |
-| ✅ | `scene-capture` | 117s |
-| ❌ | `full-e2e` | exit 1 after 314s — see docs/devlog/gate/logs/full-e2e.log ::     [chromium] › tests/e2e/tier3_combinations.spec.ts:5:3 › Tier 3: Cross-Feature Combinations & Puzzle Invariants (INV-01 to INV-07) › INV-01: Curtain cannot be opened before keyTriesOnDoors >= 2  \|     [chromium] › tests/e2e/tier3_combinations.spec.ts:96:3 › Tier 3: Cross-Feature Combinations & Pu |
+- run: 2026-10-14T21:14:16.573Z  
+- mode: NO-RUN (artefacts only, not valid for stopping)  
+- result: **FAIL** — 22/31 checks
 
 ## integrity
 
@@ -47,7 +35,7 @@
 
 | | check | detail |
 |---|---|---|
-| ✅ | `capture-fresh` | captured 2026-10-14T18:30:44.456Z |
+| ❌ | `capture-fresh` | src/ or a GLB changed after the last capture — re-run the capture (npm run gate) |
 | ❌ | `S1_BANK` | detail 7.795 (≥8), palette 0.532 (≥0.6), contrast 0.195 (≥0.2) |
 | ❌ | `S1_BANK_orbit` | palette 0.538 (≥0.6) |
 | ❌ | `S3_FALL` | detail 5.226 (≥8), palette 0.226 (≥0.6), hueEntropy 1.69 (≥2), contrast 0.083 (≥0.2), saturation 0.866 (≤0.8) |
