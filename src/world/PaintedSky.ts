@@ -34,6 +34,7 @@ export class PaintedSky {
       uSunDir: { value: new THREE.Vector3(0.45, 0.55, 0.7).normalize() },
       uClouds: { value: palette.clouds },
       uTime: { value: 0 },
+      uMode: { value: 0 },
     };
     const mat = new THREE.ShaderMaterial({
       uniforms: this.uniforms,
@@ -51,7 +52,7 @@ export class PaintedSky {
         }`,
       fragmentShader: /* glsl */ `
         uniform vec3 uTop, uMid, uHorizon, uGlow, uSunDir;
-        uniform float uClouds, uTime;
+        uniform float uClouds, uTime, uMode;
         varying vec3 vDir;
         float hash( vec2 p ) { return fract( sin( dot( p, vec2( 127.1, 311.7 ) ) ) * 43758.5453 ); }
         float vnoise( vec2 p ) {
@@ -80,6 +81,28 @@ export class PaintedSky {
         }
         void main() {
           vec3 d = normalize( vDir );
+          if ( uMode > 0.5 ) {
+            // CAVERN: the earth behind the passage - layered plum / umber / teal washes with faint root strokes and a
+            // lamp-warm haze lying toward the passage axis
+            vec2 p = vec2( d.x * 3.0 + d.z * 2.0, d.y * 3.2 );
+            float n1 = fbm3( p * 1.6 );
+            float n2 = fbm3( p * 4.2 + 7.0 );
+            float n3 = fbm3( p * 9.0 + 3.0 );
+            vec3 deep = vec3( 0.075, 0.05, 0.10 );
+            vec3 earth = vec3( 0.26, 0.15, 0.13 );
+            vec3 teal = vec3( 0.07, 0.15, 0.17 );
+            vec3 cc = mix( deep, earth, smoothstep( 0.38, 0.72, n1 ) );
+            cc = mix( cc, teal, smoothstep( 0.52, 0.78, n2 ) * 0.55 );
+            cc *= 0.85 + 0.3 * n3;
+            float root = smoothstep( 0.66, 0.76, fbm3( vec2( p.x * 7.0, p.y * 1.1 + n1 * 2.2 ) ) );
+            cc = mix( cc, vec3( 0.42, 0.27, 0.18 ), root * 0.35 );
+            float axis = pow( max( d.x, 0.0 ), 2.0 ) * ( 1.0 - smoothstep( 0.0, 0.55, abs( d.y ) ) );
+            cc += vec3( 0.34, 0.17, 0.07 ) * axis * ( 0.7 + 0.5 * n2 );
+            gl_FragColor = vec4( cc, 1.0 );
+            #include <tonemapping_fragment>
+            #include <colorspace_fragment>
+            return;
+          }
           float h = clamp( d.y, 0.0, 1.0 );
           // seamless azimuth coordinate (a plain atan() would leave a vertical seam behind the camera)
           float az = ( d.x * 5.0 + d.z * 3.1 ) / 2.6;
@@ -129,6 +152,11 @@ export class PaintedSky {
     this.mesh.name = 'PaintedSky';
     this.mesh.frustumCulled = false;
     this.mesh.renderOrder = -1000;
+  }
+
+  /** 'day' = painted sky dome, 'cavern' = the painted earth seen beyond the underground passage. */
+  public setMode(mode: 'day' | 'cavern'): void {
+    this.uniforms.uMode.value = mode === 'cavern' ? 1 : 0;
   }
 
   public setPalette(p: SkyPalette): void {

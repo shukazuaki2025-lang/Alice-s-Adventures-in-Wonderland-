@@ -38,14 +38,14 @@ export const GRADE_WELL: GradeParams = {
   satCompress: 0.2,
   vignette: 0.35,
   vignetteTint: [0.6, 0.52, 0.72],
-  exposure: 1.35,
-  clarity: 0.75,
-  clarityBroad: 0.5,
+  exposure: 1.45,
+  clarity: 0.5,
+  clarityBroad: 0.35,
   bloom: 0.35,
   bloomTint: [1.0, 0.75, 0.45],
   bloomThreshold: 0.85,
   granulation: 0.05,
-  mottle: 0.03,
+  mottle: 0.12,
 };
 
 export const GRADE_WELL_TWILIGHT: GradeParams = {
@@ -56,7 +56,7 @@ export const GRADE_WELL_TWILIGHT: GradeParams = {
   vignetteTint: [0.5, 0.44, 0.7],
 };
 
-export const GRADE_PASSAGE: GradeParams = { ...GRADE_WELL, vignette: 0.32 };
+export const GRADE_PASSAGE: GradeParams = { ...GRADE_WELL, vignette: 0.3, clarity: 0.8, clarityBroad: 0.5 };
 
 export const GRADE_HALL: GradeParams = {
   ...NEUTRAL_GRADE,
@@ -68,14 +68,14 @@ export const GRADE_HALL: GradeParams = {
   satCompress: 0.2,
   vignette: 0.3,
   vignetteTint: [0.58, 0.5, 0.7],
-  exposure: 1.25,
+  exposure: 1.4,
   clarity: 0.5,
   clarityBroad: 0.35,
   bloom: 0.3,
   bloomTint: [1.0, 0.78, 0.46],
   bloomThreshold: 0.9,
   granulation: 0.04,
-  mottle: 0.03,
+  mottle: 0.12,
 };
 
 /**
@@ -92,7 +92,7 @@ export class SceneLightingManager {
   private hallLamps: THREE.PointLight[] = [];
   private passageLights: THREE.PointLight[] = [];
   private wellAnchors: THREE.Vector3[] = [];
-  private wellLampIntensity = 7;
+  private wellLampIntensity = 10;
   private vistaLight: THREE.SpotLight;
   private sunOffset = new THREE.Vector3(18, 28, 14);
 
@@ -283,7 +283,7 @@ export class SceneLightingManager {
       case 'END': {
         // amber gas-lamp pools on the ceiling and walls, cool lilac air in between, a violet haze down the hall
         this.scene.background = new THREE.Color(0x3a2d3b);
-        this.scene.fog = new THREE.FogExp2(0x6f5d86, 0.04);
+        this.scene.fog = new THREE.FogExp2(0x6f5d86, 0.05);
         setHeightLight([0.8, 0.76, 0.9], [1.14, 1.06, 0.96], 0, 2.6);
         this.ambientLight.color.setHex(0xa498c4);
         this.ambientLight.intensity = 0.35;

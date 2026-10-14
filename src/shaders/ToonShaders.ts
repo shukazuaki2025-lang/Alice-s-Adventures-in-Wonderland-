@@ -52,7 +52,7 @@ export const paintLight = {
   heightLow: { value: new THREE.Vector3(1, 1, 1) },
   heightHigh: { value: new THREE.Vector3(1, 1, 1) },
   heightRange: { value: new THREE.Vector2(0, 3) },
-  washGain: { value: 1 },
+  washGain: { value: 1.5 },
 };
 
 export function setHeightLight(low: [number, number, number], high: [number, number, number], y0: number, y1: number): void {
@@ -147,7 +147,7 @@ function applyPaintFinish(material: THREE.MeshToonMaterial, wash: WashKind = 'no
         vec2 bp = an.y > 0.75 ? vec2( vPaintP.x * 0.9 + vPaintP.z * 0.4, vPaintP.z * 19.0 - vPaintP.x * 5.0 )
                               : vec2( vPaintP.y * 1.1, ( vPaintP.x + vPaintP.z ) * 19.0 );
         float stroke = pNoise( vec3( bp.x, bp.y, 5.0 ) ) + 0.5 * pNoise( vec3( bp.x * 2.0, bp.y * 2.3, 9.0 ) ) - 0.75;
-        wc *= 1.0 + stroke * 0.16 * min( wa, 1.2 );
+        wc *= 1.0 + stroke * 0.24 * min( wa, 1.2 );
         diffuseColor.rgb = wc;
       }`
       )

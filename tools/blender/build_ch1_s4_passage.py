@@ -149,10 +149,7 @@ def main():
                 u0 = lerp(ua, ub, j / rows)
                 u1 = lerp(ua, ub, (j + 1) / rows)
                 v0, v1 = s0 / L, s1 / L
-                uvs = {tuple(p00): (u0, v0), tuple(p01): (u0, v1), tuple(p11): (u1, v1), tuple(p10): (u1, v0)}
-                fc = UP.qface(bm, [p00, p10, p11, p01], want, lambda co, uvs=uvs: uvs[tuple(co)] if tuple(co) in uvs else (0, 0))
-                if fc is None:
-                    continue
+                UP.qface(bm, [p00, p10, p11, p01], want, uv_list=[(u0, v0), (u1, v0), (u1, v1), (u0, v1)])
 
     for k in range(10):
         skin(B['bay' + BAY_VARIANTS[k]], RIB_X[k], RIB_X[k + 1], 0.0, 1.0)
@@ -167,8 +164,6 @@ def main():
     for i in range(n_f):
         for j in range(4):
             f_ = fl.faces.new((verts[i][j], verts[i + 1][j], verts[i + 1][j + 1], verts[i][j + 1]))
-            if f_.normal.z < 0 if f_.normal.length else False:
-                f_.normal_flip()
             for loop in f_.loops:
                 co = loop.vert.co
                 loop[uvl].uv = ((co.x - X0) / 10.0, (-co.y + FZ) / (2 * FZ))
@@ -191,10 +186,10 @@ def main():
             nrm = (0.0, (nya + nyb) / 2, (nza + nzb) / 2)
             # inner face (towards the corridor), then both side faces
             UP.qface(bm, [V(rx - 0.15, ya, za), V(rx + 0.15, ya, za), V(rx + 0.15, yb, zb), V(rx - 0.15, yb, zb)], nrm,
-                     lambda co, sa=sa, sb=sb, rx=rx, ya=ya: (uu(sa if abs(co.y - ya) < 1e-6 else sb), (co.x - rx + 0.15) / 0.3))
+                     uv_list=[(uu(sa), 0.0), (uu(sa), 1.0), (uu(sb), 1.0), (uu(sb), 0.0)])
             for sx in (-1, 1):
                 UP.qface(bm, [V(rx + sx * 0.15, ya, za), V(rx + sx * 0.15, yb, zb), V(rx + sx * 0.15, wb[0], wb[1]), V(rx + sx * 0.15, wa[0], wa[1])], (sx, 0, 0),
-                         lambda co, sa=sa, sb=sb, ya=ya: (uu(sa if abs(co.y - ya) < 1e-6 else sb), 0.1 + 0.8 * ((co.z * 7.0) % 1.0)))
+                         uv_list=[(uu(sa), 0.1), (uu(sb), 0.1), (uu(sb), 0.9), (uu(sa), 0.9)])
 
     # ---------------------------------------------------------------------------------------- string course and plinth (stone)
     for sgn in (-1, 1):
@@ -221,11 +216,10 @@ def main():
             n3 = Vector((0.0, ny, nz))
             mb = Matrix.Translation(P) @ basis(n3)
             tmp = bmesh.new()
-            UP.abox(tmp, (-0.05, -0.004, -0.10), (0.05, 0.012, 0.10), METAL['brass'], scale=0.4)
+            UP.abox(tmp, (-0.05, -0.06, -0.10), (0.05, 0.012, 0.10), METAL['brass'], scale=0.4)
             UP.place(B['brass'], tmp, mb)
             horiz = Vector((0.0, ny, 0.0)).normalized()
             c = Vector((lx, y_w + horiz.y * 0.44, z_w + 0.02))
-            arm = Matrix.Translation(Vector((lx, y_w, z_w))) @ Matrix.Rotation(math.radians(90), 4, 'X' if horiz.y < 0 else 'X')
             # arm: lathe along the horizontal direction pointing into the corridor
             axis = Vector((0.0, horiz.y, 0.0))
             rot = Vector((0, 0, 1)).rotation_difference(axis).to_matrix().to_4x4()
@@ -238,8 +232,6 @@ def main():
                 a_ = q * math.pi / 2 + math.pi / 4
                 put_brass('brass', [(0.004, -0.12), (0.004, 0.16)], METAL['brass'], Matrix.Translation(c + Vector((math.cos(a_) * 0.082, math.sin(a_) * 0.082, 0.0))), seg=5)
             put_brass('brass', [(0.001, 0.27), (0.018, 0.27), (0.018, 0.285), (0.001, 0.31)], METAL['brass'], m, seg=8)
-            if side < 0:
-                pass
         e = bpy.data.objects.new(f'LAMP_{i}', None)
         bpy.context.scene.collection.objects.link(e)
         e.location = V(lx, 0.0, 2.2)
@@ -354,7 +346,7 @@ def main():
         x_c = RIB_X[k] + 1.78                                    # off the lantern (lamps sit at local 1.0)
         for side, what in zip((-1, 1), plan[k]):
             if what == 'picture':
-                picture(side, x_c, 0.32, pic_keys[ip % len(pic_keys)])
+                picture(side, x_c, 0.20, pic_keys[ip % len(pic_keys)])
                 ip += 1
             elif what == 'shelf':
                 shelf(side, x_c, 0.62)
@@ -388,7 +380,7 @@ def main():
     def end_cap(x, facing, key):
         bm = B[key]
         uvl = bm.loops.layers.uv.get('UVMap') or bm.loops.layers.uv.new('UVMap')
-        poly = [(SEC['y'][i], SEC['z'][i]) for i in idxs] + [(-HALF_W, 0.0), (HALF_W, 0.0)]
+        poly = [(SEC['y'][i], SEC['z'][i]) for i in idxs]
         c = bm.verts.new(V(x, 0.0, 1.0))
         vs = [bm.verts.new(V(x, y, z)) for y, z in poly]
         for a in range(len(vs)):
@@ -420,7 +412,6 @@ def main():
         f_.normal_update()
         if f_.normal.x > 0:
             f_.normal_flip()
-    bm.faces.new((cv_, vs[-1], vs[0])) if False else None
     th, dp = 0.24, 0.34
     uvf = lambda co: (0.25 + 0.1 * ((co.y * 1.3) % 1.0), 0.25 + 0.1 * ((co.z * 1.3) % 1.0))
     for sgn in (-1, 1):

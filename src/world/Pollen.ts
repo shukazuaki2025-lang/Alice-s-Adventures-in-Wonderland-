@@ -48,6 +48,20 @@ export class Pollen {
     this.points.name = 'Pollen';
   }
 
+  /** daytime pollen vs warm dust motes in gaslight (smaller for the tiny Alice) */
+  public setLook(kind: 'pollen' | 'dust' | 'dust-small'): void {
+    const mat = this.points.material as THREE.PointsMaterial;
+    if (kind === 'pollen') {
+      mat.color.setHex(0xfff1b8);
+      mat.size = 0.09;
+      mat.opacity = 0.8;
+    } else {
+      mat.color.setHex(0xffd08a);
+      mat.size = kind === 'dust' ? 0.045 : 0.02;
+      mat.opacity = 0.65;
+    }
+  }
+
   public update(dt: number, center: THREE.Vector3): void {
     this.time += dt;
     const pos = this.points.geometry.attributes.position as THREE.BufferAttribute;

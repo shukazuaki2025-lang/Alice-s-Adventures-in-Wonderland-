@@ -134,8 +134,13 @@ export class GameManager {
     // Dinah only drifts through the well's lavender dusk (added at t >= 70 s of S3); she used to linger in every later scene
     if (state !== 'S3_FALL') this.dinahDreamEntity.mesh.removeFromParent();
     const outdoors = state === 'S0_TITLE' || state === 'S1_BANK' || state === 'S2_CHASE';
-    this.sky.mesh.visible = outdoors;
-    this.pollen.points.visible = outdoors;
+    const cavern = state === 'S4_PASSAGE';
+    this.sky.setMode(cavern ? 'cavern' : 'day');
+    this.sky.mesh.visible = outdoors || cavern;
+    // pollen by day, dust motes turning gold in the lamplight underground
+    const motes = state === 'S4_PASSAGE' || state === 'S5_HALL' || state === 'S6_SMALL' || state === 'S7_CAKE';
+    this.pollen.points.visible = outdoors || motes;
+    this.pollen.setLook(outdoors ? 'pollen' : state === 'S6_SMALL' || state === 'S7_CAKE' ? 'dust-small' : 'dust');
     if (!outdoors) {
       this.characterController.setPosition(new THREE.Vector3(0, 0, 0));
     }

@@ -861,17 +861,23 @@ def mat_unit(R, deg, z0):
     return Matrix.Rotation(math.radians(-deg), 4, 'Z') @ Matrix.Translation((R, 0.0, z0))
 
 
-def qface(bm, pts, want, uvs=None, uv_name='UVMap'):
-    """One face from 3-D points, flipped if needed so that its normal points along `want`."""
+def qface(bm, pts, want, uvs=None, uv_name='UVMap', uv_list=None):
+    """One face from 3-D points, flipped if needed so that its normal points along `want`. UVs come from `uvs(co)` (a function of the vertex
+    position) or `uv_list` (one (u, v) per input point)."""
     uvl = bm.loops.layers.uv.get(uv_name) or bm.loops.layers.uv.new(uv_name)
+    verts = [bm.verts.new(p) for p in pts]
     try:
-        fc = bm.faces.new([bm.verts.new(p) for p in pts])
+        fc = bm.faces.new(verts)
     except ValueError:
         return None
     fc.normal_update()
     if fc.normal.dot(Vector(want)) < 0:
         fc.normal_flip()
-    if uvs:
+    if uv_list is not None:
+        uvmap = {v: uv for v, uv in zip(verts, uv_list)}
+        for loop in fc.loops:
+            loop[uvl].uv = uvmap[loop.vert]
+    elif uvs:
         for loop in fc.loops:
             loop[uvl].uv = uvs(loop.vert.co)
     return fc
