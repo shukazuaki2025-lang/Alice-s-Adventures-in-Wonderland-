@@ -80,10 +80,10 @@ _BRICK_WASH = dict(course=(0.084, 0.098), length=(0.25, 0.31), joint=0.015, beve
                    pal=pal('#E8DEC4', '#D9CCAA', '#EFE5CE', '#C9774F', '#D4A07A', '#E2D4B6', '#BE6A48'))
 
 VARIANTS = {
-    'A': dict(brick=_BRICK_RED, lit=True, strata=('#52392A', '#A66C3E', '#D3C7A8', '#6E7A82', '#46332A'), edges=(1.0, 1.55, 1.95, 2.28, 2.62)),
-    'B': dict(brick=_BRICK_STOCK, lit=False, strata=('#A67A4C', '#503A2B', '#C0A472', '#767A7E', '#4A3829'), edges=(1.0, 1.4, 1.85, 2.2, 2.55)),
-    'C': dict(brick=_BRICK_WASH, lit=True, strata=('#4A3626', '#9C623A', '#DDD2B6', '#647A70', '#3F3126'), edges=(1.0, 1.5, 1.88, 2.25, 2.6)),
-    'D': dict(brick=_BRICK_BLUE, lit=False, strata=('#6A4C36', '#B98A4C', '#55646C', '#B3A27C', '#42322A'), edges=(1.0, 1.35, 1.8, 2.15, 2.5)),
+    'A': dict(brick=_BRICK_RED, lit=True, strata=('#5E4535', '#9C6C44', '#C2B598', '#6F767A', '#4E3B2F'), edges=(1.0, 1.55, 1.95, 2.28, 2.62)),
+    'B': dict(brick=_BRICK_STOCK, lit=False, strata=('#936E4C', '#5A4431', '#B49E76', '#737679', '#51402F'), edges=(1.0, 1.4, 1.85, 2.2, 2.55)),
+    'C': dict(brick=_BRICK_WASH, lit=True, strata=('#533D2D', '#966439', '#CDC3A8', '#627068', '#46362B'), edges=(1.0, 1.5, 1.88, 2.25, 2.6)),
+    'D': dict(brick=_BRICK_BLUE, lit=False, strata=('#684E39', '#A87F4B', '#5E686E', '#A99C7C', '#49392E'), edges=(1.0, 1.35, 1.8, 2.15, 2.5)),
 }
 
 
@@ -93,11 +93,11 @@ def _earth_vault(U, S, hh, seed, strata, edges, period):
     img = base[0].copy()
     grain = rfield(W, Hs, max(2, int(period * 3)), max(8, Hs // 3), seed + 1)           # long horizontal brush strokes (along the corridor)
     stroke = rfield(W, Hs, max(2, int(period * 2)), max(6, Hs // 14), seed + 2)
-    tex = (0.80 + 0.30 * rfbm(W, Hs, int(period * 4), 6, 4, seed + 3)) * (0.94 + 0.12 * grain) * (0.94 + 0.12 * stroke)
+    tex = (0.90 + 0.34 * rfbm(W, Hs, int(period * 4), 6, 4, seed + 3)) * (0.94 + 0.12 * grain) * (0.94 + 0.12 * stroke)
     h2 = hh[:, None]
     for k in range(1, len(strata)):
-        warp = (rfbm(W, Hs, int(period * 2.5) + k, 4, 3, seed + 10 * k) - 0.5) * 0.42 + (rfield(W, Hs, int(period * 14), 40, seed + 77 + k) - 0.5) * 0.04
-        m = sstep(-0.025, 0.025, (h2 + warp) - edges[k - 1] - (0.0 if k == 1 else 0.0)) if k > 1 else sstep(-0.025, 0.025, h2 + warp - edges[0])
+        warp = (rfbm(W, Hs, int(period * 2.5) + k, 4, 3, seed + 10 * k) - 0.5) * 0.30 + (rfield(W, Hs, int(period * 12), 40, seed + 77 + k) - 0.5) * 0.02
+        m = sstep(-0.07, 0.07, (h2 + warp) - edges[k - 1]) if k > 1 else sstep(-0.07, 0.07, h2 + warp - edges[0])
         img = img * (1 - m[..., None]) + base[k] * m[..., None]
     img = img * tex[..., None]
     # chalk lens flecks, iron staining, damp
@@ -108,22 +108,30 @@ def _earth_vault(U, S, hh, seed, strata, edges, period):
 
 
 def _draw_stones(cv, rng, n, x_rng, v_rng, scale, palette):
-    """Embedded stones: shadowed socket, domed body, lit top-left rim, one or two cracks."""
+    """Embedded stones: irregular faceted polygons (lit upper-left facet, shaded lower-right facet), a soft contact shadow, a crack or two.
+    They are partly buried: a lighter 'soil lip' is smeared over one side so they read as dug-out cobbles rather than stickers."""
     cv.begin()
     for _ in range(n):
         x = rng.uniform(*x_rng)
         v = rng.uniform(*v_rng)
-        r = scale * rng.uniform(0.5, 1.2)
-        ang = rng.uniform(-0.5, 0.5)
+        r = scale * rng.uniform(0.45, 1.25)
+        k = int(rng.integers(7, 11))
+        ang0 = rng.uniform(0, TAU)
+        rad = [r * rng.uniform(0.72, 1.18) for _ in range(k)]
+        sq = rng.uniform(0.55, 0.9)
+        pts = [(x + rad[i] * math.cos(ang0 + TAU * i / k), v + rad[i] * sq * math.sin(ang0 + TAU * i / k)) for i in range(k)]
         col = palette[int(rng.integers(len(palette)))]
-        ry = r * rng.uniform(0.6, 0.95)
-        cv.dab(x + r * 0.10, v - ry * 0.12, r * 1.08, ry * 1.10, ang, col * 0.45, 95)                # socket shadow
-        cv.dab(x, v, r, ry, ang, col, 255)
-        cv.dab(x - r * 0.18, v + ry * 0.22, r * 0.68, ry * 0.58, ang, np.clip(col * 1.25 + 0.05, 0, 1), 170)
-        cv.dab(x + r * 0.32, v - ry * 0.28, r * 0.55, ry * 0.5, ang, col * 0.78, 150)
-        if rng.random() < 0.5:
-            cv.line([(x - r * 0.4, v + ry * 0.2), (x, v), (x + r * 0.3, v - ry * 0.4)], 1.2, col * 0.35, 220)
-    cv.flush(blur=0.5)
+        cv.poly([(px + r * 0.12, py - r * 0.10) for px, py in pts], col * 0.4, 70)               # contact shadow
+        cv.poly(pts, col * (0.92 + 0.12 * rng.random()), 255)
+        half = [pts[i] for i in range(k // 2 + 1)]                                                   # lit facet = one side of the polygon
+        cv.poly([(x, v)] + half, np.clip(col * 1.22 + 0.04, 0, 1), 120)
+        rest = [pts[i] for i in range(k // 2, k)] + [pts[0]]
+        cv.poly([(x, v)] + rest, col * 0.78, 110)
+        if rng.random() < 0.45:
+            cv.line([(x - r * 0.3, v + r * 0.1), (x + r * 0.05, v - r * 0.05), (x + r * 0.35, v - r * 0.3)], 1.1, col * 0.38, 190)
+        if rng.random() < 0.6:                                                                      # soil lip over the lower side
+            cv.dab(x, v - r * sq * 0.95, r * 0.9, r * 0.22, ang0 * 0.1, palette[int(rng.integers(len(palette)))] * 0.55, 120)
+    cv.flush(blur=0.45)
 
 
 def _roots(cv, rng, n, x_rng, v_rng, wmax, length=22):
@@ -169,7 +177,7 @@ def bay_texture(variant, ppm=320, seed=4000, lamps=((1.0, 1.5),)):
         mm = np.maximum(mm, 0.7 * jm * sstep(0.5, 0.8, rfbm(W, strip_rows, int(BAY * 9), 7, 3, seed + 44 + side)) * low)
         mcol = pal('#56783A', '#7B9C48', '#A3B95D', '#486634')[np.minimum((rfbm(W, strip_rows, int(BAY * 20), 12, 2, seed + 46 + side) * 4).astype(int), 3)]
         layer = layer * (1 - 0.8 * mm[..., None]) + mcol * (0.8 * mm[..., None])
-        layer = layer * (1.0 - 0.38 * sstep(0.68, 0.88, rfield(W, strip_rows, int(BAY * 16), 4, seed + 48 + side)) * (0.3 + 0.7 * low))[..., None] * np.array([0.98, 0.98, 1.04], np.float32)
+        layer = layer * (1.0 - 0.22 * sstep(0.66, 0.9, rfield(W, strip_rows, int(BAY * 12), 4, seed + 48 + side)) * (0.3 + 0.7 * low))[..., None] * np.array([0.98, 0.98, 1.04], np.float32)
         if side == 0:
             img[:r_lo] = layer[:r_lo]
         else:
@@ -502,18 +510,18 @@ def cavern_ground(size=1024, seed=5500):
 
 
 def puddle_texture(size=512, seed=5600):
-    """Wet flagstone water: deep teal, a warm column of reflected lantern/doorway light, ripple rings and a pale rim."""
+    """Wet flagstone water: a pale sky-blue sheen over deep teal, a warm column of reflected lantern/doorway light, ripple rings and a soft rim."""
     yy, xx = np.mgrid[0:size, 0:size].astype(np.float32) / size
-    base = np.ones((size, size, 3), np.float32) * _rgb('#2B4756')
+    base = np.ones((size, size, 3), np.float32) * _rgb('#4A7488')
     base = base * (0.85 + 0.30 * rfbm(size, size, 4, 4, 3, seed))[..., None]
-    sky = np.clip(1.0 - yy * 1.4, 0, 1)[..., None]
-    base = mix(base, np.ones_like(base) * _rgb('#6C7FA0'), (sky[..., 0] * 0.35))
-    refl = np.exp(-((xx - 0.5) / 0.09) ** 2) * np.clip(1.0 - yy * 0.9, 0, 1) * (0.7 + 0.3 * np.sin(yy * 60))
-    base = base + refl[..., None] * np.array([1.0, 0.72, 0.28], np.float32) * 0.85
-    base = base + (np.exp(-(((xx - 0.5) / 0.05) ** 2 + ((yy - 0.18) / 0.05) ** 2)))[..., None] * np.array([1.0, 0.95, 0.7], np.float32)
+    sky = np.clip(1.0 - yy * 1.2, 0, 1)
+    base = mix(base, np.ones_like(base) * _rgb('#A9BCD8'), sky * 0.45)
+    refl = np.exp(-((xx - 0.5) / 0.12) ** 2) * np.clip(1.0 - yy * 0.7, 0, 1) * (0.75 + 0.25 * np.sin(yy * 50))
+    base = base + refl[..., None] * np.array([1.0, 0.74, 0.30], np.float32) * 0.95
+    base = base + (np.exp(-(((xx - 0.5) / 0.06) ** 2 + ((yy - 0.20) / 0.06) ** 2)))[..., None] * np.array([1.0, 0.97, 0.78], np.float32)
     rr = np.sqrt((xx - 0.62) ** 2 + (yy - 0.62) ** 2)
-    ring = np.clip(1.0 - np.abs(((rr * 28) % 1.0) - 0.5) * 6, 0, 1) * np.exp(-rr * 4)
-    base = base + ring[..., None] * 0.20
-    rim = np.clip((np.sqrt((xx - 0.5) ** 2 + (yy - 0.5) ** 2) - 0.40) / 0.10, 0, 1)
-    base = mix(base, np.ones_like(base) * _rgb('#8C9AA0'), rim * 0.45)
+    ring = np.clip(1.0 - np.abs(((rr * 24) % 1.0) - 0.5) * 6, 0, 1) * np.exp(-rr * 3.5)
+    base = base + ring[..., None] * 0.30
+    rim = np.clip((np.sqrt((xx - 0.5) ** 2 + (yy - 0.5) ** 2) - 0.38) / 0.12, 0, 1)
+    base = mix(base, np.ones_like(base) * _rgb('#9AA5A8'), rim * 0.65)
     return np.clip(base, 0, 1)

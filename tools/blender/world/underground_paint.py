@@ -513,7 +513,8 @@ def well_wall(items, W=6144, H=1536, seed=1865, log=print):
     rng = np.random.default_rng(seed + 5)
     patches = [('plaster', 12, 2.55), ('tiles_green', 62, 0.45), ('boards', 105, 1.3), ('plaster', 140, 4.05), ('iron', 178, 3.45),
                ('tiles_blue', 207, 2.2), ('plaster', 236, 0.95), ('boards', 262, 4.45), ('tiles_mustard', 296, 1.5), ('iron', 330, 5.2),
-               ('plaster', 352, 3.5), ('tiles_green', 118, 5.05)]
+               ('plaster', 352, 3.5), ('tiles_green', 118, 5.05), ('plaster', 40, 3.2), ('plaster', 95, 4.9), ('plaster', 200, 1.75), ('plaster', 318, 4.15),
+               ('plaster', 222, 5.2), ('tiles_blue', 160, 0.9)]
     for kind, deg, zc in patches:
         pw = rng.uniform(1.25, 1.9)
         ph = rng.uniform(0.85, 1.25)
@@ -653,8 +654,8 @@ def _bake_well_light(img, items, W, H, C, ppm_u, ppm_v, Vz, U, seed, log):
         frames.append((cx - hw - 5, Y(z0 - 0.03), cx + hw + 5, Y(z0 + h + 0.03)))
     ao = 0.0
     if rects:
-        ao = ao + 0.36 * blur_mask(rect_mask(W, H, rects), 26)
-        ao = ao + 0.36 * blur_mask(rect_mask(W, H, under), 40)
+        ao = ao + 0.44 * blur_mask(rect_mask(W, H, rects), 26)
+        ao = ao + 0.42 * blur_mask(rect_mask(W, H, under), 40)
     if frames:
         sh = [(a + 9, b - 11, c + 13, d - 11) for a, b, c, d in frames]
         ao = ao + 0.40 * blur_mask(rect_mask(W, H, sh), 11)
@@ -700,8 +701,8 @@ def _bake_well_light(img, items, W, H, C, ppm_u, ppm_v, Vz, U, seed, log):
         soot += radial_glow((H, W), [(X(d), Y(z + 0.42), 0.34 * ppm_u, 1.0) for d, z in lamps], 1.6)
         img = img * (1.0 - 0.45 * np.clip(soot, 0, 1))[..., None] * np.array([1.0, 0.95, 0.9], np.float32)
     gg = np.clip(G, 0, 1)[..., None]
-    cool = np.array([1.14, 1.08, 1.18], np.float32)
-    warm = np.array([1.75, 1.40, 0.98], np.float32)
+    cool = np.array([1.28, 1.22, 1.30], np.float32)
+    warm = np.array([1.95, 1.55, 1.05], np.float32)
     img = img * (cool * (1 - gg) + warm * gg)
     img += (np.clip(G - 0.55, 0, 1.2) ** 1.5)[..., None] * np.array([0.20, 0.10, 0.02], np.float32)
     return img

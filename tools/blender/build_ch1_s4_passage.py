@@ -192,9 +192,11 @@ def main():
                          uv_list=[(uu(sa), 0.1), (uu(sb), 0.1), (uu(sb), 0.9), (uu(sa), 0.9)])
 
     # ---------------------------------------------------------------------------------------- string course and plinth (stone)
+    # single-sided: only the faces turned towards the corridor, so from outside the cut-away wall nothing floats in front of Alice
     for sgn in (-1, 1):
-        sol.box(B['stone'], (X0, min(sgn * (HALF_W - 0.13), sgn * HALF_W), SPRING - 0.07), (X1, max(sgn * (HALF_W - 0.13), sgn * HALF_W), SPRING + 0.07), (0.7, 0.7))
-        sol.box(B['stone'], (X0, min(sgn * (HALF_W - 0.06), sgn * HALF_W), 0.0), (X1, max(sgn * (HALF_W - 0.06), sgn * HALF_W), 0.14), (0.7, 0.7))
+        keep_skip = ('py', 'nz', 'nx', 'px') if sgn > 0 else ('ny', 'nz', 'nx', 'px')       # sgn>0 wall at y=+HW: inward face is 'ny'
+        sol.box(B['stone'], (X0, min(sgn * (HALF_W - 0.13), sgn * HALF_W), SPRING - 0.07), (X1, max(sgn * (HALF_W - 0.13), sgn * HALF_W), SPRING + 0.07), (0.7, 0.7), skip=keep_skip)
+        sol.box(B['stone'], (X0, min(sgn * (HALF_W - 0.06), sgn * HALF_W), 0.0), (X1, max(sgn * (HALF_W - 0.06), sgn * HALF_W), 0.14), (0.7, 0.7), skip=keep_skip)
 
     # ---------------------------------------------------------------------------------------- brass wall lanterns
     def basis(n3):
@@ -335,6 +337,46 @@ def main():
             UP.alathe(T['pres'], [(0.001, 0.0), (0.02, 0.0), (0.028, 0.06), (0.026, 0.12), (0.01, 0.14), (0.001, 0.14)], PRC['wax'],
                       Matrix.Translation(f.p(0.28 + off, 0.07, -0.20)), seg=6)
         put_unit(T, side, x_c, z0)
+
+    def flank_matrix(side, x_c, h_c, half_h):
+        """frame for something hung on the vault flank (side -1 = wall at y=+HALF_W): local -x leaves the surface, +y runs along the corridor, +z climbs the arc."""
+        s_l = PS.s_at_height(h_c, side)
+        idx = int(np.argmin(np.abs(SEC['s'] - s_l)))
+        y_w, z_w, ny, nz, _ = sec_point(idx)
+        n3 = Vector((0.0, ny, nz))
+        xl = -n3
+        yl = Vector((1.0, 0.0, 0.0))
+        zl = xl.cross(yl)
+        if zl.z < 0:
+            yl = -yl
+            zl = xl.cross(yl)
+        P = Vector((x_c, y_w, z_w)) - zl * half_h + n3 * 0.03
+        return Matrix(((xl.x, yl.x, zl.x, P.x), (xl.y, yl.y, zl.y, P.y), (xl.z, yl.z, zl.z, P.z), (0, 0, 0, 1)))
+
+    def flank_picture(side, x_c, h_c, key):
+        T = new_T()
+        f = UP.UnitFrame()
+        w_, h_ = 0.78, 0.60
+        fw = 0.05
+        for (a0_, a1_, zz0, zz1) in ((-w_ / 2 - fw, w_ / 2 + fw, h_, h_ + fw), (-w_ / 2 - fw, w_ / 2 + fw, -fw, 0.0), (-w_ / 2 - fw, -w_ / 2, 0.0, h_), (w_ / 2, w_ / 2 + fw, 0.0, h_)):
+            f.box(T['brass'], a0_, a1_, -0.14, 0.05, zz0, zz1, METAL['brass'], scale=0.5)
+        f.box(T['wood'], -w_ / 2, w_ / 2, -0.14, 0.02, 0.0, h_, WC['dark'])
+        r = ART[key]
+        ins = 0.012
+        f.quad(T['art'], -w_ / 2, w_ / 2, 0.0, h_, 0.022, (r[0] + ins, r[1] + ins, r[2] - ins, r[3] - ins))
+        m = flank_matrix(side, x_c, h_c, h_ / 2)
+        for k_, bm_ in T.items():
+            if len(bm_.faces):
+                sol.append_bm(B[k_], bm_, m)
+            bm_.free()
+
+    fk = ['seascape', 'orchard', 'lady', 'moon', 'meadow', 'cat', 'boy', 'still', 'gent', 'botanical']
+    for k in range(10):
+        flank_picture(-1, RIB_X[k] + 1.85, 1.62, fk[k % len(fk)])
+        if k % 2 == 1:
+            flank_picture(1, RIB_X[k] + 1.55, 1.62, fk[(k + 4) % len(fk)])
+        else:
+            flank_picture(1, RIB_X[k] + 1.95, 1.7, fk[(k + 7) % len(fk)])
 
     pic_keys = ['lady', 'seascape', 'orchard', 'moon', 'cat', 'boy', 'meadow', 'still', 'gent', 'sampler', 'botanical']
     plan = {  # bay -> (side -1 = left wall (game z -), side +1) -> what hangs there

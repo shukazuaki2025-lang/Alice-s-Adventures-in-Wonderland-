@@ -83,9 +83,9 @@ def main():
     kinds_cycle = (['books', 'cupboard', 'jars', 'china', 'books', 'cupboard', 'jars', 'books', 'china', 'cupboard'],
                    ['jars', 'books', 'cupboard', 'china', 'books', 'jars', 'cupboard', 'books', 'china', 'jars'],
                    ['cupboard', 'books', 'china', 'jars', 'cupboard', 'books', 'jars', 'china', 'books', 'cupboard'])
-    gap_cycle = (['lantern', 'picture', 'tapestry', 'niche', 'lantern', 'picture', 'niche', 'map', 'lantern', 'tapestry'],
-                 ['picture', 'lantern', 'niche', 'map', 'lantern', 'tapestry', 'map', 'niche', 'lantern', 'picture'],
-                 ['tapestry', 'niche', 'lantern', 'picture', 'map', 'lantern', 'tapestry', 'niche', 'lantern', 'map'])
+    gap_cycle = (['lantern', 'picture', 'tapestry', 'lantern', 'niche', 'lantern', 'picture', 'map', 'niche', 'lantern'],
+                 ['picture', 'lantern', 'niche', 'map', 'lantern', 'tapestry', 'lantern', 'niche', 'lantern', 'picture'],
+                 ['tapestry', 'niche', 'lantern', 'picture', 'lantern', 'map', 'lantern', 'picture', 'niche', 'lantern'])
     WOOD_PICK = ['walnut', 'oak', 'sage', 'teal', 'cream', 'oxblood', 'mustard', 'walnut', 'sage', 'teal', 'oxblood', 'oak']
     units, gaps = [], []
     for t, z0 in enumerate(TIERS):
