@@ -5,7 +5,7 @@ import { applyInkOutline } from '../shaders/InkOutline';
 import { createGlassTableMaterial } from '../shaders/GlassRefraction';
 import { PhysicsWorld } from '../physics/PhysicsWorld';
 import { Meadow } from '../world/Meadow';
-import { LightGlows, collectGlowSpecs } from '../world/LightGlows';
+import { LAMP_TINTS, LightGlows, collectGlowSpecs } from '../world/LightGlows';
 
 export interface ParsedLogicMarkers {
   spawns: Map<string, THREE.Vector3>;
@@ -422,7 +422,7 @@ export class SceneLoader {
       returnCupboard.traverse((obj) => {
         if ((obj as THREE.Mesh).isMesh) applyInkOutline(obj as THREE.Mesh, 0x2b2420, 0.003);
       });
-      this.addGlowsFor(segment, segment, { scale: 2.0, minRadius: 0.4, maxRadius: 1.4 });
+      this.addGlowsFor(segment, segment, { scale: 2.0, minRadius: 0.4, maxRadius: 1.4, tints: LAMP_TINTS });
       for (let k = 0; k < 4; k++) {
         const tile = k === 0 ? segment : segment.clone(true);
         tile.position.y = -12 + 6 * k;
@@ -503,7 +503,7 @@ export class SceneLoader {
         if (/S4_Flag/.test(mesh.name)) mesh.receiveShadow = true;
       });
       this.lampAnchors.passage = SceneLoader.lampAnchorsOf(root);
-      this.addGlowsFor(root, root, { scale: 2.2, minRadius: 0.5, maxRadius: 2.6 });
+      this.addGlowsFor(root, root, { scale: 2.2, minRadius: 0.5, maxRadius: 2.6, tints: LAMP_TINTS });
       this.passageGroup.add(root);
     } catch (e) {
       console.warn('[SceneLoader] Passage GLB unavailable, building the placeholder corridor:', e);
@@ -589,7 +589,7 @@ export class SceneLoader {
       this.hallCurtainNode = root.getObjectByName('Hall_Curtain') ?? null;
       this.hallCurtainNode?.removeFromParent();           // re-parented into INT_curtain so the game can slide it aside
       this.lampAnchors.hall = SceneLoader.lampAnchorsOf(root);
-      this.addGlowsFor(root, root, { scale: 2.4, minRadius: 0.45, maxRadius: 2.0 });
+      this.addGlowsFor(root, root, { scale: 2.4, minRadius: 0.45, maxRadius: 2.0, tints: LAMP_TINTS });
       this.hallGroup.add(root);
       this.hallPainted = true;
     } catch (e) {

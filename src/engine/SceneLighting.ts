@@ -3,6 +3,8 @@ import { GameStateID as GameState } from '../core/types';
 import { GradeParams, NEUTRAL_GRADE, lerpGrade } from '../shaders/PaperGrain';
 import { setHeightLight } from '../shaders/ToonShaders';
 
+import { LAMP_TINTS } from '../world/LightGlows';
+
 /**
  * Colour grade of each world, applied by the final post pass (src/shaders/PaperGrain.ts).
  * Every one is a split-tone: lights lean toward warm paper-amber, shadows toward cool violet-teal, so there are always two
@@ -33,10 +35,10 @@ export const GRADE_WELL: GradeParams = {
   shadowTint: [0.95, 0.96, 1.06],
   highlightTint: [1.04, 1.0, 0.94],
   lift: [0.015, 0.01, 0.03],
-  contrast: 0.25,
+  contrast: 0.4,
   saturation: 0.92,
   satCompress: 0.2,
-  vignette: 0.35,
+  vignette: 0.4,
   vignetteTint: [0.6, 0.52, 0.72],
   exposure: 1.45,
   clarity: 0.5,
@@ -45,7 +47,7 @@ export const GRADE_WELL: GradeParams = {
   bloomTint: [1.0, 0.75, 0.45],
   bloomThreshold: 0.85,
   granulation: 0.05,
-  mottle: 0.12,
+  mottle: 0.16,
 };
 
 export const GRADE_WELL_TWILIGHT: GradeParams = {
@@ -56,7 +58,7 @@ export const GRADE_WELL_TWILIGHT: GradeParams = {
   vignetteTint: [0.5, 0.44, 0.7],
 };
 
-export const GRADE_PASSAGE: GradeParams = { ...GRADE_WELL, vignette: 0.3, clarity: 0.8, clarityBroad: 0.5 };
+export const GRADE_PASSAGE: GradeParams = { ...GRADE_WELL, vignette: 0.3, contrast: 0.28, clarity: 1.0, clarityBroad: 0.6 };
 
 export const GRADE_HALL: GradeParams = {
   ...NEUTRAL_GRADE,
@@ -68,14 +70,14 @@ export const GRADE_HALL: GradeParams = {
   satCompress: 0.2,
   vignette: 0.3,
   vignetteTint: [0.58, 0.5, 0.7],
-  exposure: 1.4,
-  clarity: 0.5,
-  clarityBroad: 0.35,
-  bloom: 0.3,
+  exposure: 1.3,
+  clarity: 0.65,
+  clarityBroad: 0.45,
+  bloom: 0.22,
   bloomTint: [1.0, 0.78, 0.46],
   bloomThreshold: 0.9,
   granulation: 0.04,
-  mottle: 0.12,
+  mottle: 0.14,
 };
 
 /**
@@ -232,7 +234,7 @@ export class SceneLightingManager {
       case 'S3_FALL': {
         // lantern pools (warm, real point lights + painted glows) against cool violet shaft-light from far above
         this.scene.background = new THREE.Color(0x281e29);
-        this.scene.fog = new THREE.FogExp2(0x3a2c4a, 0.09);
+        this.scene.fog = new THREE.FogExp2(0x3a2c4a, 0.07);
         // light leaks down the shaft from far above (cool, brighter) while the depths hold only lantern warmth (deep, plum)
         setHeightLight([0.62, 0.56, 0.68], [1.08, 1.08, 1.26], -3.5, 4.5);
         this.ambientLight.color.setHex(0x7a6a98);
@@ -244,8 +246,8 @@ export class SceneLightingManager {
         this.sunLight.intensity = 0.55;
         this.sunOffset.set(2, 12, 3);
         this.sunLight.position.set(2, 12, 3);
-        this.wellLights.forEach((l) => {
-          l.color.setHex(0xffb061);
+        this.wellLights.forEach((l, i) => {
+          l.color.setHex(LAMP_TINTS[i % LAMP_TINTS.length]);
           l.intensity = this.wellLampIntensity;
           l.distance = 7.5;
           l.decay = 2;
@@ -267,8 +269,8 @@ export class SceneLightingManager {
         this.sunLight.intensity = 0.6;
         this.sunOffset.set(6, 8, 4);
         this.sunLight.position.set(6, 8, 4);
-        this.passageLights.forEach((l) => {
-          l.color.setHex(0xffb061);
+        this.passageLights.forEach((l, i) => {
+          l.color.setHex(LAMP_TINTS[(i + 2) % LAMP_TINTS.length]);
           l.intensity = 5;
           l.distance = 9;
           l.decay = 2;
@@ -294,8 +296,8 @@ export class SceneLightingManager {
         this.sunLight.intensity = 0.6;
         this.sunOffset.set(4, 10, 5);
         this.sunLight.position.set(4, 10, 5);
-        this.hallLamps.forEach((l) => {
-          l.color.setHex(0xffb866);
+        this.hallLamps.forEach((l, i) => {
+          l.color.setHex(LAMP_TINTS[i % LAMP_TINTS.length]);
           l.intensity = 7;
           l.distance = 10;
           l.decay = 2;

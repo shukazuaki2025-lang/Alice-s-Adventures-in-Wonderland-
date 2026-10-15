@@ -8,6 +8,9 @@ import * as THREE from 'three';
  * Each glow is a warm core, an amber body and a rose-violet outer wash with a slightly wobbling brush edge, and a very slow
  * candle flicker. The card is nudged toward the camera so that a lamp hanging against a wall is not sliced in half by it.
  */
+/** hand-tinted lamp glass: amber, rose-gold, honey, peach ... each lamp pools a slightly different warm light */
+export const LAMP_TINTS = [0xffb866, 0xff9c7a, 0xffd27a, 0xffc2a0, 0xffe090, 0xff9a60];
+
 export interface GlowSpec {
   /** position in the glow set's parent space */
   position: THREE.Vector3;
@@ -119,7 +122,7 @@ export class LightGlows {
 export function collectGlowSpecs(
   root: THREE.Object3D,
   target: THREE.Object3D,
-  opts: { cell?: number; scale?: number; minRadius?: number; maxRadius?: number; intensity?: number } = {}
+  opts: { cell?: number; scale?: number; minRadius?: number; maxRadius?: number; intensity?: number; tints?: number[] } = {}
 ): GlowSpec[] {
   const cell = opts.cell ?? 0.35;
   const scale = opts.scale ?? 2.4;
@@ -177,13 +180,14 @@ export function collectGlowSpecs(
           }
         }
       }
+      const tint = opts.tints && opts.tints.length ? opts.tints[out.length / 2 % opts.tints.length | 0] : color;
       const size = box.getSize(new THREE.Vector3());
       const span = Math.max(size.x, size.y, size.z, 0.08);
       const radius = Math.min(maxR, Math.max(minR, span * scale));
       const centre = box.getCenter(new THREE.Vector3());
-      out.push({ position: centre, radius, color, intensity: gain });
+      out.push({ position: centre, radius, color: tint, intensity: gain });
       // a second, much wider and fainter wash gives the pool of light on the surrounding air / walls
-      out.push({ position: centre.clone(), radius: radius * 1.9, color, intensity: gain * 0.28 });
+      out.push({ position: centre.clone(), radius: radius * 1.9, color: tint, intensity: gain * 0.28 });
     }
   });
   return out;
