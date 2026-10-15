@@ -4,8 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <title>Alice's Adventures in Wonderland — Chapter I: Down the Rabbit-Hole</title>
+    <title>Alice: Down the Rabbit-Hole</title>
     <meta name="description" content="A 3D Victorian picture-book interactive narrative game based on Lewis Carroll's 1865 masterpiece." />
+    <meta property="og:title" content="Alice: Down the Rabbit-Hole" />
+    <meta property="og:description" content="A 3D Victorian picture-book interactive narrative game based on Lewis Carroll's 1865 masterpiece." />
     <style>
       :root {
         --paper-bg: #F7F3EA;
@@ -83,15 +85,7 @@
     </style>
   </head>
   <body>
-    <div id="game-container">
-      <canvas id="render-canvas"></canvas>
-      <div id="ui-root">
-        <div id="loading-screen" class="loading-screen">
-          <h1 class="loading-title">Alice's Adventures in Wonderland</h1>
-          <p class="loading-subtitle">Chapter I. Down the Rabbit-Hole</p>
-        </div>
-      </div>
-    </div>
-    <script type="module" src="/src/main.ts"></script>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

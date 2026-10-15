@@ -54,7 +54,7 @@ export function applyInkOutline(
       let isGlass = false;
       // Fine facial parts (eyes, lids, lips, brows, mouth) are drawn by their painted textures; a hull would swamp them.
       const matNames = Array.isArray(mat) ? mat.map((m) => m.name) : [mat?.name ?? ''];
-      if (matNames.some((n) => /^M_Alice_(Eye|Lid|Lips|Mouth|Brow)/.test(n))) return;
+      if (matNames.some((n) => /^M_(Alice|Sister)_(Eye|Lid|Lips|Mouth|Brow)/.test(n))) return;
 
       if (Array.isArray(mat)) {
         isTransparent = mat.some((m) => m.transparent && m.opacity < 0.95);

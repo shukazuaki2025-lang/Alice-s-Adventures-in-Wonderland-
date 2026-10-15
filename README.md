@@ -30,7 +30,7 @@ All subagent prompt packages, specifications, and handoff records are archived i
 | **Track E** | Characters (`chr_alice`, `chr_rabbit`, `chr_sister`, `chr_dinah_dream`) & Animation Clips | [`docs/prompts/track_e/prompt.md`](./docs/prompts/track_e/prompt.md) |
 | **Track F** | Scene Assembly & 52 Logic Markers (`SPAWN_`, `TRG_`, `INT_`, `CAM_`, `COL_`, `SLOT_`) | [`public/assets/models/`](./public/assets/models/), [`docs/prompts/track_f/prompt.md`](./docs/prompts/track_f/prompt.md) |
 | **Track G** | Core 3D Engine (Three.js + Rapier3D), S0–S7 State Machine & C1–C8 Cutscenes | [`src/`](./src/), [`public/assets/cutscenes/ch1/`](./public/assets/cutscenes/ch1/), [`docs/prompts/track_g/prompt.md`](./docs/prompts/track_g/prompt.md) |
-| **Track H** | Victorian Book-Page HTML/CSS UI (Live `zh`/`en` Toggle) | [`src/ui/UIManager.ts`](./src/ui/UIManager.ts), [`docs/prompts/track_h/prompt.md`](./docs/prompts/track_h/prompt.md) |
+| **Track H** | Victorian Book-Page React UI (Live `zh`/`en`/`ja` Toggle) | [`src/App.tsx`](./src/App.tsx), [`src/ui/styles/victorian.css`](./src/ui/styles/victorian.css), [`docs/prompts/track_h/prompt.md`](./docs/prompts/track_h/prompt.md) |
 | **Track I** | Procedural Web Audio Synthesizer (Music & SFX) | [`src/audio/AudioManager.ts`](./src/audio/AudioManager.ts), [`docs/prompts/track_i/prompt.md`](./docs/prompts/track_i/prompt.md) |
 | **Track J** | Unit Tests, Playwright E2E Playthroughs (Tiers 1–5) & Performance Docs | [`tests/`](./tests/), [`docs/tests/ch1-interactions.md`](./docs/tests/ch1-interactions.md), [`docs/perf/ch1.md`](./docs/perf/ch1.md), [`docs/prompts/track_j/prompt.md`](./docs/prompts/track_j/prompt.md) |
 | **Track K** | `/making-of` Showcase Page, `/viewer.html` Asset Inspector & CI/CD | [`making-of.html`](./making-of.html), [`viewer.html`](./viewer.html), [`.github/workflows/ci.yml`](./.github/workflows/ci.yml), [`docs/prompts/track_k/prompt.md`](./docs/prompts/track_k/prompt.md) |
@@ -48,9 +48,9 @@ npm install
 ```bash
 npm run dev
 ```
-- **Main Game**: `http://localhost:5173/` (append `?forceWebGL=1` to force WebGL2 fallback or `?test=1` to expose `window.__game`)
-- **3D Asset & Animation Viewer**: `http://localhost:5173/viewer.html`
-- **Making-Of Multi-Agent Showcase**: `http://localhost:5173/making-of.html`
+- **Main Game**: `http://localhost:3000/` (append `?forceWebGL=1` to force WebGL2 fallback or `?test=1` to expose `window.__game`)
+- **3D Asset & Animation Viewer**: `http://localhost:3000/viewer.html`
+- **Making-Of Multi-Agent Showcase**: `http://localhost:3000/making-of.html`
 
 ### 3. Build & Verification
 ```bash

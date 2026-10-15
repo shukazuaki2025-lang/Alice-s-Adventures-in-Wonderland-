@@ -16,7 +16,7 @@ export default defineConfig({
   workers: 1, // Single worker to prevent port/state conflicts
   reporter: process.env.CI ? [['github'], ['list']] : [['list']],
   use: {
-    baseURL: 'http://localhost:5173',
+    baseURL: 'http://localhost:3000',
     headless: true,
     viewport: { width: 1280, height: 720 },
     ignoreHTTPSErrors: true,
@@ -67,7 +67,7 @@ export default defineConfig({
   ],
   webServer: {
     command: 'npm run dev',
-    port: 5173,
+    port: 3000,
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
   },

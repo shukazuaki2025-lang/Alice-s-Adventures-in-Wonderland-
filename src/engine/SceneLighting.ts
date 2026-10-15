@@ -3,8 +3,6 @@ import { GameStateID as GameState } from '../core/types';
 import { GradeParams, NEUTRAL_GRADE, lerpGrade } from '../shaders/PaperGrain';
 import { setHeightLight } from '../shaders/ToonShaders';
 
-import { LAMP_TINTS } from '../world/LightGlows';
-
 /**
  * Colour grade of each world, applied by the final post pass (src/shaders/PaperGrain.ts).
  * Every one is a split-tone: lights lean toward warm paper-amber, shadows toward cool violet-teal, so there are always two
@@ -13,71 +11,81 @@ import { LAMP_TINTS } from '../world/LightGlows';
  */
 export const GRADE_DAY: GradeParams = {
   ...NEUTRAL_GRADE,
-  shadowTint: [0.96, 0.975, 1.04],
-  highlightTint: [1.03, 1.005, 0.95],
-  lift: [0.008, 0.006, 0.02],
-  contrast: 0.2,
-  saturation: 1.0,
-  satCompress: 0.0,
-  vignette: 0.22,
-  vignetteTint: [0.7, 0.66, 0.8],
-  clarity: 0.35,
-  clarityBroad: 0.25,
-  bloom: 0.18,
+  shadowTint: [0.90, 0.94, 1.10],
+  highlightTint: [1.05, 1.01, 0.93],
+  lift: [0.008, 0.01, 0.025],
+  contrast: 0.30,
+  saturation: 0.96,
+  satCompress: 0.12,
+  vignette: 0.20,
+  vignetteTint: [0.68, 0.64, 0.82],
+  clarity: 0.58,
+  clarityBroad: 0.40,
+  bloom: 0.14,
   bloomTint: [1.0, 0.9, 0.7],
   bloomThreshold: 0.9,
-  granulation: 0.04,
-  mottle: 0.03,
+  granulation: 0.05,
+  mottle: 0.08,
 };
 
 export const GRADE_WELL: GradeParams = {
   ...NEUTRAL_GRADE,
-  shadowTint: [0.95, 0.96, 1.06],
-  highlightTint: [1.04, 1.0, 0.94],
-  lift: [0.015, 0.01, 0.03],
-  contrast: 0.4,
-  saturation: 0.92,
-  satCompress: 0.2,
-  vignette: 0.4,
-  vignetteTint: [0.6, 0.52, 0.72],
-  exposure: 1.45,
-  clarity: 0.5,
-  clarityBroad: 0.35,
-  bloom: 0.35,
-  bloomTint: [1.0, 0.75, 0.45],
-  bloomThreshold: 0.85,
-  granulation: 0.05,
-  mottle: 0.16,
+  shadowTint: [0.84, 0.92, 1.18],
+  highlightTint: [1.08, 1.01, 0.90],
+  lift: [0.02, 0.028, 0.055],
+  contrast: 0.45,
+  saturation: 0.72,
+  satCompress: 0.42,
+  vignette: 0.26,
+  vignetteTint: [0.55, 0.52, 0.76],
+  exposure: 1.48,
+  clarity: 0.92,
+  clarityBroad: 0.62,
+  bloom: 0.14,
+  bloomTint: [1.0, 0.82, 0.55],
+  bloomThreshold: 0.88,
+  granulation: 0.06,
+  mottle: 0.14,
 };
 
 export const GRADE_WELL_TWILIGHT: GradeParams = {
   ...GRADE_WELL,
-  shadowTint: [0.94, 0.94, 1.1],
-  highlightTint: [1.01, 0.97, 1.0],
+  shadowTint: [0.86, 0.90, 1.18],
+  highlightTint: [1.02, 0.98, 1.0],
   bloomTint: [0.85, 0.68, 0.95],
   vignetteTint: [0.5, 0.44, 0.7],
 };
 
-export const GRADE_PASSAGE: GradeParams = { ...GRADE_WELL, vignette: 0.3, contrast: 0.28, clarity: 1.0, clarityBroad: 0.6 };
+export const GRADE_PASSAGE: GradeParams = {
+  ...GRADE_WELL,
+  exposure: 1.45,
+  vignette: 0.22,
+  contrast: 0.44,
+  saturation: 0.76,
+  satCompress: 0.35,
+  clarity: 1.05,
+  clarityBroad: 0.70,
+  bloom: 0.12,
+};
 
 export const GRADE_HALL: GradeParams = {
   ...NEUTRAL_GRADE,
-  shadowTint: [0.95, 0.96, 1.06],
-  highlightTint: [1.04, 1.005, 0.94],
-  lift: [0.012, 0.008, 0.028],
-  contrast: 0.25,
-  saturation: 0.92,
-  satCompress: 0.2,
-  vignette: 0.3,
-  vignetteTint: [0.58, 0.5, 0.7],
-  exposure: 1.3,
-  clarity: 0.65,
-  clarityBroad: 0.45,
-  bloom: 0.22,
-  bloomTint: [1.0, 0.78, 0.46],
+  shadowTint: [0.86, 0.93, 1.16],
+  highlightTint: [1.07, 1.01, 0.91],
+  lift: [0.015, 0.018, 0.04],
+  contrast: 0.40,
+  saturation: 0.78,
+  satCompress: 0.32,
+  vignette: 0.24,
+  vignetteTint: [0.58, 0.52, 0.74],
+  exposure: 1.36,
+  clarity: 0.85,
+  clarityBroad: 0.56,
+  bloom: 0.14,
+  bloomTint: [1.0, 0.82, 0.52],
   bloomThreshold: 0.9,
-  granulation: 0.04,
-  mottle: 0.14,
+  granulation: 0.05,
+  mottle: 0.12,
 };
 
 /**
@@ -94,7 +102,7 @@ export class SceneLightingManager {
   private hallLamps: THREE.PointLight[] = [];
   private passageLights: THREE.PointLight[] = [];
   private wellAnchors: THREE.Vector3[] = [];
-  private wellLampIntensity = 10;
+  private wellLampIntensity = 8.5;
   private vistaLight: THREE.SpotLight;
   private sunOffset = new THREE.Vector3(18, 28, 14);
 
@@ -211,69 +219,70 @@ export class SceneLightingManager {
     this.passageLights.forEach((l) => (l.visible = false));
     this.vistaLight.visible = false;
 
+    const stainedLanternTints = [0xffcb74, 0x6cc8e8, 0xff9a74, 0x78d8a8, 0xd49eff, 0xffe088];
+
     switch (state) {
       case 'S0_TITLE':
       case 'S1_BANK':
       case 'S2_CHASE': {
         // warm afternoon sun, cool sky bounce from above, olive-gold bounce from the grass, lilac-cream haze in the distance
         this.scene.background = new THREE.Color(0xdfeef5);
-        this.scene.fog = new THREE.FogExp2(0xdcd8e6, 0.015);
-        setHeightLight([1, 1, 1], [1, 1, 1], 0, 3);
+        this.scene.fog = new THREE.FogExp2(0xdcd8e6, 0.010);
+        setHeightLight([0.84, 0.88, 0.98], [1.14, 1.09, 0.98], 0.0, 4.2);
         this.ambientLight.color.setHex(0xfff2cc);
-        this.ambientLight.intensity = 0.62;
+        this.ambientLight.intensity = 0.56;
         this.hemiLight.color.setHex(0xc4dcff);
-        this.hemiLight.groundColor.setHex(0x8f8a58);
-        this.hemiLight.intensity = 0.78;
+        this.hemiLight.groundColor.setHex(0x6e7848);
+        this.hemiLight.intensity = 0.82;
         this.sunLight.color.setHex(0xffeabd);
-        this.sunLight.intensity = 1.45;
+        this.sunLight.intensity = 1.55;
         this.sunOffset.set(18, 28, 14);
         this.sunLight.position.set(18, 28, 14);
         break;
       }
 
       case 'S3_FALL': {
-        // lantern pools (warm, real point lights + painted glows) against cool violet shaft-light from far above
+        // stained-glass lantern pools against cool cerulean-violet shaft-light from above
         this.scene.background = new THREE.Color(0x281e29);
-        this.scene.fog = new THREE.FogExp2(0x3a2c4a, 0.07);
-        // light leaks down the shaft from far above (cool, brighter) while the depths hold only lantern warmth (deep, plum)
-        setHeightLight([0.62, 0.56, 0.68], [1.08, 1.08, 1.26], -3.5, 4.5);
-        this.ambientLight.color.setHex(0x7a6a98);
-        this.ambientLight.intensity = 0.4;
-        this.hemiLight.color.setHex(0x8a9ad0);
-        this.hemiLight.groundColor.setHex(0x6a4430);
-        this.hemiLight.intensity = 0.5;
-        this.sunLight.color.setHex(0xffb86c);
-        this.sunLight.intensity = 0.55;
-        this.sunOffset.set(2, 12, 3);
-        this.sunLight.position.set(2, 12, 3);
+        this.scene.fog = new THREE.FogExp2(0x2c2442, 0.014);
+        setHeightLight([0.48, 0.56, 0.84], [1.28, 1.18, 0.98], -4.2, 4.2);
+        this.ambientLight.color.setHex(0x8898c8);
+        this.ambientLight.intensity = 0.52;
+        this.hemiLight.color.setHex(0x9ec4f8);
+        this.hemiLight.groundColor.setHex(0x523858);
+        this.hemiLight.intensity = 0.75;
+        this.sunLight.color.setHex(0xffe4a8);
+        this.sunLight.intensity = 1.25;
+        this.sunOffset.set(3, 10, 4);
+        this.sunLight.position.set(3, 10, 4);
         this.wellLights.forEach((l, i) => {
-          l.color.setHex(LAMP_TINTS[i % LAMP_TINTS.length]);
+          l.color.setHex(stainedLanternTints[i % stainedLanternTints.length]);
           l.intensity = this.wellLampIntensity;
-          l.distance = 7.5;
-          l.decay = 2;
+          l.distance = 8.5;
+          l.decay = 1.8;
           l.visible = true;
         });
         break;
       }
 
       case 'S4_PASSAGE': {
-        this.scene.background = new THREE.Color(0x2b222c);
-        this.scene.fog = new THREE.FogExp2(0x4a3a52, 0.07);
-        setHeightLight([0.8, 0.76, 0.9], [1.1, 1.05, 0.97], 0, 2.4);
-        this.ambientLight.color.setHex(0x7a68a0);
-        this.ambientLight.intensity = 0.4;
-        this.hemiLight.color.setHex(0xd6b88c);
-        this.hemiLight.groundColor.setHex(0x4a3b4e);
-        this.hemiLight.intensity = 0.5;
-        this.sunLight.color.setHex(0xf5c26b);
-        this.sunLight.intensity = 0.6;
+        this.scene.background = new THREE.Color(0x262038);
+        this.scene.fog = new THREE.FogExp2(0x2e2846, 0.011);
+        setHeightLight([0.52, 0.62, 0.88], [1.26, 1.16, 0.96], 0.0, 2.3);
+        this.ambientLight.color.setHex(0x8896c8);
+        this.ambientLight.intensity = 0.54;
+        this.hemiLight.color.setHex(0xffe4b8);
+        this.hemiLight.groundColor.setHex(0x3a4868);
+        this.hemiLight.intensity = 0.78;
+        this.sunLight.color.setHex(0xffe29e);
+        this.sunLight.intensity = 1.25;
         this.sunOffset.set(6, 8, 4);
         this.sunLight.position.set(6, 8, 4);
         this.passageLights.forEach((l, i) => {
-          l.color.setHex(LAMP_TINTS[(i + 2) % LAMP_TINTS.length]);
-          l.intensity = 5;
-          l.distance = 9;
-          l.decay = 2;
+          l.color.setHex(stainedLanternTints[(i + 1) % stainedLanternTints.length]);
+          l.intensity = 6.5;
+          l.distance = 10.5;
+          l.decay = 1.8;
           l.visible = true;
         });
         break;
@@ -283,24 +292,24 @@ export class SceneLightingManager {
       case 'S6_SMALL':
       case 'S7_CAKE':
       case 'END': {
-        // amber gas-lamp pools on the ceiling and walls, cool lilac air in between, a violet haze down the hall
-        this.scene.background = new THREE.Color(0x3a2d3b);
-        this.scene.fog = new THREE.FogExp2(0x6f5d86, 0.05);
-        setHeightLight([0.8, 0.76, 0.9], [1.14, 1.06, 0.96], 0, 2.6);
-        this.ambientLight.color.setHex(0xa498c4);
-        this.ambientLight.intensity = 0.35;
-        this.hemiLight.color.setHex(0xffe0b0);
-        this.hemiLight.groundColor.setHex(0x74627a);
-        this.hemiLight.intensity = 0.45;
-        this.sunLight.color.setHex(0xf5c26b);
-        this.sunLight.intensity = 0.6;
+        // amber & stained-glass chandelier pools on the ceiling and walls, cool cerulean-lilac air in between
+        this.scene.background = new THREE.Color(0x322842);
+        this.scene.fog = new THREE.FogExp2(0x42365c, 0.010);
+        setHeightLight([0.62, 0.68, 0.92], [1.24, 1.14, 0.96], 0.0, 2.5);
+        this.ambientLight.color.setHex(0x98a4d4);
+        this.ambientLight.intensity = 0.48;
+        this.hemiLight.color.setHex(0xffe8b8);
+        this.hemiLight.groundColor.setHex(0x485278);
+        this.hemiLight.intensity = 0.68;
+        this.sunLight.color.setHex(0xffe4a0);
+        this.sunLight.intensity = 1.20;
         this.sunOffset.set(4, 10, 5);
         this.sunLight.position.set(4, 10, 5);
         this.hallLamps.forEach((l, i) => {
-          l.color.setHex(LAMP_TINTS[i % LAMP_TINTS.length]);
-          l.intensity = 7;
-          l.distance = 10;
-          l.decay = 2;
+          l.color.setHex(stainedLanternTints[i % stainedLanternTints.length]);
+          l.intensity = 7.5;
+          l.distance = 11.5;
+          l.decay = 1.8;
           l.visible = true;
         });
         this.vistaLight.visible = true;

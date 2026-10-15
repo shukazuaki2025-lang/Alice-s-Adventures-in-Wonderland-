@@ -359,14 +359,16 @@ export class Meadow {
       if (clover > 0.6) return r < 0.5 ? 6 : r < 0.75 ? 4 : 11;
       return r < 0.3 ? 4 : r < 0.46 ? 5 : r < 0.58 ? 6 : r < 0.68 ? 7 : r < 0.78 ? 8 : r < 0.87 ? 9 : r < 0.94 ? 10 : 11;
     };
-    // low-frequency colour wash per card (rgb multiplier)
+    // multi-hue gouache wash per card (sunlit ochre, cool cerulean-sage, lavender-heather, terracotta-rose, deep forest shadow)
     const tintFor = (x: number, z: number, flower: boolean): [number, number, number] => {
-      const warm = nT(x / 10, z / 10);          // 0 cool blue-green .. 1 warm olive-gold
-      const val = 0.86 + nT(x / 3.5 + 40, z / 3.5) * 0.3;
-      const k = flower ? 0.35 : 1;
-      const r = (0.9 + warm * 0.26) * val;
-      const gch = (1.0 + (0.5 - Math.abs(warm - 0.5)) * 0.1) * val;
-      const b = (1.12 - warm * 0.34) * val;
+      const warm = nT(x / 7.5, z / 7.5);          // 0 cool cerulean-teal .. 1 warm ochre-gold
+      const floral = nC(x / 5.5 + 19, z / 5.5);   // 0 emerald-sage .. 1 lavender-rose drift
+      const dappled = nA(x / 2.6 + 13, z / 2.6);  // dappled sunlight and canopy shadow pools
+      const val = 0.56 + dappled * 0.82;
+      const k = flower ? 0.65 : 1.0;
+      const r = (0.78 + warm * 0.48 + Math.max(0, floral - 0.55) * 0.55) * val;
+      const gch = (0.86 + (0.5 - Math.abs(warm - 0.45)) * 0.36 - Math.max(0, floral - 0.65) * 0.22) * val;
+      const b = (1.28 - warm * 0.52 + Math.max(0, floral - 0.5) * 0.62) * val;
       return [1 + (r - 1) * k, 1 + (gch - 1) * k, 1 + (b - 1) * k];
     };
 
@@ -377,7 +379,7 @@ export class Meadow {
         alphaTest: 0.35,
         side: THREE.DoubleSide,
         emissive: new THREE.Color(0x203010),
-        emissiveIntensity: 0.55,
+        emissiveIntensity: 0.38,
       });
       mat.onBeforeCompile = (shader) => {
         shader.uniforms.uTime = this.uniforms.uTime;
@@ -406,7 +408,7 @@ export class Meadow {
         shader.fragmentShader = shader.fragmentShader.replace('void main() {', 'varying vec3 vTint;\nvoid main() {');
         shader.fragmentShader = shader.fragmentShader.replace('#include <map_fragment>', '#include <map_fragment>\n\tdiffuseColor.rgb *= vTint;');
       };
-      mat.customProgramCacheKey = () => 'meadow-v2';
+      mat.customProgramCacheKey = () => 'meadow-v3';
       const mesh = new THREE.InstancedMesh(geo, mat, count);
       mesh.frustumCulled = false;
       const m = new THREE.Matrix4();
@@ -443,9 +445,11 @@ export class Meadow {
         mesh.setMatrixAt(placed, m);
         tiles[placed] = cell;
         const t = tintFor(x, z, flowers);
-        // a touch of per-card variation so neighbouring tufts are never identical
-        const j = 0.95 + rng() * 0.1;
-        tints.set([t[0] * j, t[1] * j, t[2] * j], placed * 3);
+        // per-card brush variation so neighbouring tufts carry distinct gouache pigment tones
+        const jr = 0.84 + rng() * 0.32;
+        const jg = 0.86 + rng() * 0.28;
+        const jb = 0.84 + rng() * 0.32;
+        tints.set([t[0] * jr, t[1] * jg, t[2] * jb], placed * 3);
         placed++;
       }
       mesh.count = placed;
@@ -457,8 +461,8 @@ export class Meadow {
       return mesh;
     };
 
-    this.group.add(place(opts.grassCount ?? 5200, grassCell, [0.45, 0.8], 0.45, false, opts.grassHeight ?? 0.8));
-    this.group.add(place(opts.flowerCount ?? 900, flowerCell, [0.26, 0.44], 0.35, true));
+    this.group.add(place(opts.grassCount ?? 5200, grassCell, [0.45, 0.82], 0.45, false, opts.grassHeight ?? 0.8));
+    this.group.add(place(opts.flowerCount ?? 1400, flowerCell, [0.28, 0.48], 0.40, true));
     this.group.name = 'MeadowDressing';
   }
 

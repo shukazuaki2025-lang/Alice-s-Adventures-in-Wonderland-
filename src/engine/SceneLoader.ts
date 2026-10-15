@@ -329,11 +329,84 @@ export class SceneLoader {
         [13.2, 1.5, 3.0],
         [3.0, 0.0, 9.0],
       ],
-      grassCount: 8200,
-      flowerCount: 2600,
-      grassHeight: 0.55,
+      grassCount: 8600,
+      flowerCount: 3800,
+      grassHeight: 0.58,
     });
     this.bankGroup.add(this.meadow.group);
+    this.addBankFoliageAndRockRelief();
+  }
+
+  /**
+   * Adds instanced 3D sculpted foliage boughs, hanging blossom garlands, mossy riverbank stones, and streamside iris clusters
+   * in 1 draw call so S1_BANK and S1_BANK_orbit have rich layered canopy silhouette and gouache colour variety.
+   */
+  private addBankFoliageAndRockRelief(): void {
+    const count = 140;
+    const geo = new THREE.DodecahedronGeometry(0.32, 1);
+    const mat = createToonMaterial(0xffffff, { wash: 'strong' });
+    mat.name = 'M_S1_Foliage_Relief';
+    const inst = new THREE.InstancedMesh(geo, mat, count);
+    inst.name = 'S1_CanopyAndFlora_Instanced';
+    inst.castShadow = true;
+    inst.receiveShadow = true;
+
+    const palette = [
+      0xd8c848, // sunlit lemon-gold leaf cluster
+      0x74a844, // warm apple-green bough
+      0x3c7e54, // deep emerald canopy
+      0x2e6468, // cool viridian-teal under-bough
+      0x7c68a4, // wisteria-lavender blossom cluster
+      0xd86e68, // wild rose-hawthorn cluster
+      0x8c7e68, // mossy grey-ochre riverbank stone
+      0x4e8898, // streamside blue-flag iris cluster
+    ];
+
+    const m = new THREE.Matrix4();
+    const pos = new THREE.Vector3();
+    const quat = new THREE.Quaternion();
+    const scl = new THREE.Vector3();
+    const col = new THREE.Color();
+
+    let idx = 0;
+    // 1. Multi-layered oak canopy boughs & hanging garlands around (-1.5, y=2.1..4.6, -2.0)
+    for (let i = 0; i < 65; i++) {
+      const a = (i * 2.39996) % (Math.PI * 2);
+      const r = 0.8 + ((i * 0.618) % 1) * 3.4;
+      const h = 2.15 + ((i * 0.382) % 1) * 2.3;
+      pos.set(-1.5 + Math.cos(a) * r, h, -2.0 + Math.sin(a) * r);
+      quat.setFromEuler(new THREE.Euler(i * 0.7, i * 1.1, i * 0.5));
+      const sx = 0.8 + (i % 4) * 0.32;
+      const sy = 0.45 + (i % 3) * 0.22;
+      scl.set(sx, sy, sx * 0.9);
+      m.compose(pos, quat, scl);
+      inst.setMatrixAt(idx, m);
+      col.setHex(palette[i % 6]);
+      inst.setColorAt(idx, col);
+      idx++;
+    }
+
+    // 2. Mossy riverbank stones, root knots, and flowering cushion shrubs across the meadow & bank edge
+    for (let i = 0; i < 75 && idx < count; i++) {
+      const x = -12 + ((i * 3.73) % 30);
+      const z = -5.6 + ((i * 2.17) % 14);
+      // Keep clear of Alice's spawn (2, 0) and Sister (-0.2, -1.2)
+      if (Math.hypot(x - 2.0, z) < 1.3 || Math.hypot(x + 0.2, z + 1.2) < 1.1) continue;
+      pos.set(x, 0.08 + (i % 3) * 0.05, z);
+      quat.setFromEuler(new THREE.Euler((i % 5) * 0.2, i * 0.9, (i % 3) * 0.15));
+      const s = 0.35 + (i % 5) * 0.16;
+      scl.set(s * 1.3, s * 0.65, s);
+      m.compose(pos, quat, scl);
+      inst.setMatrixAt(idx, m);
+      col.setHex(palette[i % palette.length]);
+      inst.setColorAt(idx, col);
+      idx++;
+    }
+
+    inst.count = idx;
+    inst.instanceMatrix.needsUpdate = true;
+    if (inst.instanceColor) inst.instanceColor.needsUpdate = true;
+    this.bankGroup.add(inst);
   }
 
   /** Per-frame world animation (river flow, wind). */
@@ -422,7 +495,8 @@ export class SceneLoader {
       returnCupboard.traverse((obj) => {
         if ((obj as THREE.Mesh).isMesh) applyInkOutline(obj as THREE.Mesh, 0x2b2420, 0.003);
       });
-      this.addGlowsFor(segment, segment, { scale: 2.0, minRadius: 0.4, maxRadius: 1.4, tints: LAMP_TINTS });
+      this.addWellSegmentRelief(segment);
+      this.addGlowsFor(segment, segment, { scale: 0.9, minRadius: 0.22, maxRadius: 0.55, intensity: 0.45, tints: LAMP_TINTS });
       for (let k = 0; k < 4; k++) {
         const tile = k === 0 ? segment : segment.clone(true);
         tile.position.y = -12 + 6 * k;
@@ -434,6 +508,58 @@ export class SceneLoader {
       console.warn('[SceneLoader] Well GLB unavailable, building the placeholder shaft:', e);
       return false;
     }
+  }
+
+  /**
+   * Adds 180 sculpted 3D relief masonry blocks, multi-coloured leather books, Delft porcelain plates, and emerald ivy tufts
+   * around each 6 m well segment in 1 InstancedMesh draw call.
+   */
+  private addWellSegmentRelief(segment: THREE.Group): void {
+    const count = 180;
+    const geo = new THREE.BoxGeometry(0.28, 0.22, 0.16);
+    const mat = createToonMaterial(0xffffff, { wash: 'normal' });
+    mat.name = 'M_S3_Books_Relief';
+    const inst = new THREE.InstancedMesh(geo, mat, count);
+    inst.name = 'S3_Well_Polychrome_Relief';
+
+    const palette = [
+      0x2e6eb8, // cobalt leather folio
+      0x38988a, // turquoise glazed ceramic / spine
+      0x489a58, // emerald botanical volume / ivy
+      0xe6b848, // gilded ochre atlas
+      0xc84850, // crimson morocco binding
+      0x7e549e, // amethyst velvet tome
+      0xf4ebd4, // cream vellum scroll / Delft plate
+      0x5882b8, // slate-blue ashlar stone block
+    ];
+
+    const m = new THREE.Matrix4();
+    const pos = new THREE.Vector3();
+    const quat = new THREE.Quaternion();
+    const scl = new THREE.Vector3();
+    const col = new THREE.Color();
+
+    for (let i = 0; i < count; i++) {
+      const a = (i / count) * Math.PI * 2 * 5 + (i % 7) * 0.23;
+      const y = (i / count) * 5.85 + 0.08;
+      const r = 3.68 + (i % 3) * 0.07;
+      pos.set(Math.cos(a) * r, y, Math.sin(a) * r);
+      quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), -a + Math.PI / 2);
+      const isBook = i % 3 !== 0;
+      if (isBook) {
+        scl.set(0.32 + (i % 4) * 0.12, 1.1 + (i % 3) * 0.35, 0.85 + (i % 2) * 0.3);
+      } else {
+        // Protruding stone corbel / brick course
+        scl.set(1.6 + (i % 3) * 0.5, 0.65, 1.1);
+      }
+      m.compose(pos, quat, scl);
+      inst.setMatrixAt(i, m);
+      col.setHex(palette[i % palette.length]);
+      inst.setColorAt(i, col);
+    }
+    inst.instanceMatrix.needsUpdate = true;
+    if (inst.instanceColor) inst.instanceColor.needsUpdate = true;
+    segment.add(inst);
   }
 
   private async buildWellEnvironment(): Promise<void> {
@@ -503,13 +629,81 @@ export class SceneLoader {
         if (/S4_Flag/.test(mesh.name)) mesh.receiveShadow = true;
       });
       this.lampAnchors.passage = SceneLoader.lampAnchorsOf(root);
-      this.addGlowsFor(root, root, { scale: 2.2, minRadius: 0.5, maxRadius: 2.6, tints: LAMP_TINTS });
+      this.addGlowsFor(root, root, { scale: 0.85, minRadius: 0.22, maxRadius: 0.65, intensity: 0.40, tints: LAMP_TINTS });
       this.passageGroup.add(root);
     } catch (e) {
       console.warn('[SceneLoader] Passage GLB unavailable, building the placeholder corridor:', e);
       this.buildPassagePlaceholder();
     }
+    this.addPassageArchitecturalRelief();
     this.addPassageExit();
+  }
+
+  /**
+   * Populates S4_PASSAGE with polychrome Victorian encaustic floor tiles, carved stone arch voussoirs, wall-niche curiosities,
+   * and mossy ceiling roots in 1 InstancedMesh draw call.
+   */
+  private addPassageArchitecturalRelief(): void {
+    const count = 240;
+    const geo = new THREE.BoxGeometry(0.32, 0.18, 0.26);
+    const mat = createToonMaterial(0xffffff, { wash: 'normal' });
+    mat.name = 'M_S4_Brick_Relief';
+    const inst = new THREE.InstancedMesh(geo, mat, count);
+    inst.name = 'S4_Passage_Polychrome_Relief';
+
+    const palette = [
+      0x2c6eb4, // cobalt encaustic tile / delft jar
+      0x349688, // verdigris-teal glazed tile
+      0x4e9a54, // emerald moss / botanical spine
+      0xe8bd4c, // saffron-ochre keystone / brass
+      0xc84a52, // terracotta-crimson tile
+      0x7c549c, // amethyst slate block
+      0xf5ecd6, // cream limestone voussoir
+      0x5484b8, // cerulean puddle reflection / stone
+    ];
+
+    const m = new THREE.Matrix4();
+    const pos = new THREE.Vector3();
+    const quat = new THREE.Quaternion();
+    const scl = new THREE.Vector3();
+    const col = new THREE.Color();
+
+    let idx = 0;
+    // 1. Polychrome encaustic floor border tiles & cobblestone relief along x = -3 .. 18
+    for (let i = 0; i < 110; i++) {
+      const x = -3.0 + (i / 110) * 21.0;
+      const lane = (i % 5) - 2; // z lanes across the 3m floor
+      const z = lane * 0.58 + ((i * 0.37) % 0.16 - 0.08);
+      pos.set(x, 0.008 + (i % 3) * 0.004, z);
+      quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), (i % 2) * (Math.PI / 4));
+      scl.set(1.15, 0.08, 1.15);
+      m.compose(pos, quat, scl);
+      inst.setMatrixAt(idx, m);
+      col.setHex(palette[i % palette.length]);
+      inst.setColorAt(idx, col);
+      idx++;
+    }
+
+    // 2. Protruding wall masonry courses, bookshelf niches & vaulted arch voussoirs along both sides and ceiling
+    for (let i = 0; i < 130 && idx < count; i++) {
+      const x = -2.5 + (i / 130) * 20.5;
+      const archAngle = ((i * 1.37) % 1) * Math.PI; // 0 (right wall) -> pi/2 (vault crown) -> pi (left wall)
+      const z = Math.cos(archAngle) * 1.78;
+      const y = 0.22 + Math.sin(archAngle) * 1.95;
+      pos.set(x, y, z);
+      quat.setFromEuler(new THREE.Euler(archAngle - Math.PI / 2, 0, (i % 3 - 1) * 0.08));
+      scl.set(0.95 + (i % 3) * 0.35, 0.85 + (i % 2) * 0.4, 0.75);
+      m.compose(pos, quat, scl);
+      inst.setMatrixAt(idx, m);
+      col.setHex(palette[(i + 3) % palette.length]);
+      inst.setColorAt(idx, col);
+      idx++;
+    }
+
+    inst.count = idx;
+    inst.instanceMatrix.needsUpdate = true;
+    if (inst.instanceColor) inst.instanceColor.needsUpdate = true;
+    this.passageGroup.add(inst);
   }
 
   private buildPassagePlaceholder(): void {
@@ -589,14 +783,80 @@ export class SceneLoader {
       this.hallCurtainNode = root.getObjectByName('Hall_Curtain') ?? null;
       this.hallCurtainNode?.removeFromParent();           // re-parented into INT_curtain so the game can slide it aside
       this.lampAnchors.hall = SceneLoader.lampAnchorsOf(root);
-      this.addGlowsFor(root, root, { scale: 2.4, minRadius: 0.45, maxRadius: 2.0, tints: LAMP_TINTS });
+      this.addGlowsFor(root, root, { scale: 0.9, minRadius: 0.25, maxRadius: 0.75, intensity: 0.42, tints: LAMP_TINTS });
       this.hallGroup.add(root);
       this.hallPainted = true;
     } catch (e) {
       console.warn('[SceneLoader] Hall GLB unavailable, building the placeholder hall:', e);
     }
     if (!this.hallPainted) this.buildHallPlaceholderShell();
+    this.addHallArchitecturalRelief();
     this.buildHallAnchors();
+  }
+
+  /**
+   * Adds 3D sculpted parquet mosaic inlays, carpet fringe & border medallions (crucial at macro 0.254m scale in S6_SMALL),
+   * and carved wainscot / stained-glass transom relief in 1 InstancedMesh draw call.
+   */
+  private addHallArchitecturalRelief(): void {
+    const count = 160;
+    const geo = new THREE.BoxGeometry(0.18, 0.024, 0.14);
+    const mat = createToonMaterial(0xffffff, { wash: 'normal' });
+    mat.name = 'M_S5_Wood_Relief';
+    const inst = new THREE.InstancedMesh(geo, mat, count);
+    inst.name = 'S5_Hall_Polychrome_Relief';
+
+    const palette = [
+      0x2c6eb8, // royal cobalt carpet medallion / inlay
+      0x389a8c, // turquoise mosaic tile
+      0x4c9c5c, // emerald botanical border
+      0xeabe4c, // gilded brass / saffron fringe
+      0xc84650, // crimson velvet / madder knot
+      0x7c54a0, // amethyst stained-glass reflection
+      0xf7efe0, // ivory marble / cream fringe tassel
+      0x8a5e3b, // carved walnut parquet block
+    ];
+
+    const m = new THREE.Matrix4();
+    const pos = new THREE.Vector3();
+    const quat = new THREE.Quaternion();
+    const scl = new THREE.Vector3();
+    const col = new THREE.Color();
+
+    let idx = 0;
+    // 1. Macro-scale parquet mosaic border blocks & carpet fringe around the glass table & Little Door (x in [-4, 4], z in [-3.2, 2.2])
+    for (let i = 0; i < 110; i++) {
+      const x = -3.8 + (i / 110) * 7.6;
+      const z = -3.1 + ((i * 0.618) % 1) * 5.0;
+      pos.set(x, 0.006 + (i % 3) * 0.003, z);
+      quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), (i % 4) * (Math.PI / 4));
+      scl.set(0.65 + (i % 3) * 0.25, 0.45, 0.65 + ((i + 1) % 3) * 0.25);
+      m.compose(pos, quat, scl);
+      inst.setMatrixAt(idx, m);
+      col.setHex(palette[i % palette.length]);
+      inst.setColorAt(idx, col);
+      idx++;
+    }
+
+    // 2. Carved wainscot rosette bosses & stained-glass transom panels along the North & South walls (z = ±3.42)
+    for (let i = 0; i < 50 && idx < count; i++) {
+      const x = -10.5 + (i / 50) * 21.0;
+      const z = i % 2 === 0 ? -3.42 : 3.42;
+      const y = i % 3 === 0 ? 2.32 : 0.42 + (i % 2) * 0.36;
+      pos.set(x, y, z);
+      quat.setFromEuler(new THREE.Euler(Math.PI / 2, 0, (i % 2) * (Math.PI / 4)));
+      scl.set(1.4, 1.2, 6.5);
+      m.compose(pos, quat, scl);
+      inst.setMatrixAt(idx, m);
+      col.setHex(palette[(i + 2) % palette.length]);
+      inst.setColorAt(idx, col);
+      idx++;
+    }
+
+    inst.count = idx;
+    inst.instanceMatrix.needsUpdate = true;
+    if (inst.instanceColor) inst.instanceColor.needsUpdate = true;
+    this.hallGroup.add(inst);
   }
 
   private buildHallPlaceholderShell(): void {

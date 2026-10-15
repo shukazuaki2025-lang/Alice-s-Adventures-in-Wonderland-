@@ -63,10 +63,11 @@ def main():
         return {'Head': max(0.0, 1.0 - j), 'Jaw': j}
 
     rng = mk.Rng(1862)
-    # hair: scalp + fringe + two short side locks + chignon
+    # hair: scalp + fringe + cascading side locks + back curtain + chignon
     hbm = bmesh.new()
     hair.build_fringe(hbm, rng)
-    hair.build_side_locks(hbm, rng, max_frac=0.55)
+    hair.build_side_locks(hbm, rng, max_frac=0.88)
+    hair.build_back_curtain(hbm, rng, max_frac=0.62)
     sister.build_bun(hbm, rng)
     clumps = bca.obj_from_bm(hbm, 'Sister_Hair', [m['Sister_Hair']])
     cap = bca.obj_from_bm(cap_bm, 'Sister_HairCap', [m['Sister_HairCap']])
@@ -101,7 +102,7 @@ def main():
     bodice = part('Sister_Bodice', sister.build_bodice, m['Sister_Dress'], None, True)
     mk.uv_cylindrical(bodice, (0.0, 0.015), (0.2, 0.66))
     shawl = part('Sister_Shawl', sister.build_shawl, m['Sister_Shawl'], 0.004, True)
-    mk.uv_cylindrical(shawl, (0.0, 0.015), (0.4, 0.64), u_repeat=2.0)
+    mk.uv_cylindrical(shawl, (0.0, -0.05), (0.08, 0.65), u_repeat=3.0)
     neck = part('Sister_Neck', sister.build_neck, m['Sister_Skin'])
     mk.uv_triplanar(neck, scale=3.0)
 
