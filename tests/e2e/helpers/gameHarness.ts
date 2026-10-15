@@ -17,14 +17,18 @@ export class GameHarnessHelper {
   }
 
   /**
-   * Navigates to the game with ?test=1&forceWebGL=1 and waits for window.__game to be registered.
+   * Opens the game and waits for window.__game, which main.ts registers only after every model is loaded and the loop runs.
+   * Behavioural specs render at half resolution without MSAA (`?scale=0.5&msaa=0`) because the CI browser draws
+   * with a software GPU; the gate's visual specs pass `scale=1&msaa=4` explicitly to capture the real picture.
+   * Loading the ~300k-triangle painted sets on that software GPU takes several seconds, hence the generous timeout.
    */
   async openGame(path = '/?test=1&forceWebGL=1'): Promise<void> {
+    if (!/[?&]scale=/.test(path)) path += `${path.includes('?') ? '&' : '?'}scale=0.5&msaa=0`;
     await this.page.goto(path);
     await this.page.waitForLoadState('domcontentloaded');
 
     await this.page.waitForFunction(() => typeof (window as any).__game !== 'undefined', {
-      timeout: 15000,
+      timeout: 90000,
     });
   }
 

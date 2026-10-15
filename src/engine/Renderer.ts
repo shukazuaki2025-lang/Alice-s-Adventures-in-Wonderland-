@@ -1,20 +1,26 @@
 import * as THREE from 'three';
-import { createPaperGrainOverlayMaterial } from '../shaders/PaperGrain';
+import './../shaders/AtmosphericFog';
+import { GradeParams, PostProcessor } from '../shaders/PaperGrain';
 
 /**
- * Three.js WebGPU / WebGL2 Dual Render Engine with ?forceWebGL=1 support,
- * screen-space PaperGrain overlay, telescope circular vignette, and responsive resize handling.
+ * Three.js WebGPU / WebGL2 Dual Render Engine with ?forceWebGL=1 support.
+ * The scene is drawn into a linear half-float target; PostProcessor (src/shaders/PaperGrain.ts) bloom-glows, grades and
+ * lays the paper over it, with a tinted vignette, the telescope iris and responsive resize handling.
  */
 export class RenderEngine {
   public renderer: THREE.WebGLRenderer;
-  private overlayScene: THREE.Scene;
-  private overlayCamera: THREE.OrthographicCamera;
-  private overlayMaterial: THREE.ShaderMaterial;
+  /** draw calls / triangles of the last *scene* pass (excludes the full-screen post passes); read by the quality gate */
+  public readonly sceneStats = { calls: 0, triangles: 0 };
+  private post: PostProcessor;
   private renderTarget: THREE.WebGLRenderTarget;
+  /** device pixel ratio × optional ?scale= (0.25–1): lets software-GPU CI render fewer pixels without touching the layout */
+  private pixelRatio: number;
 
   constructor(canvas: HTMLCanvasElement) {
     const urlParams = new URLSearchParams(window.location.search);
     const forceWebGL = urlParams.get('forceWebGL') === '1';
+    const renderScale = Math.min(1, Math.max(0.25, parseFloat(urlParams.get('scale') ?? '1') || 1));
+    const msaa = Math.max(0, Math.min(8, parseInt(urlParams.get('msaa') ?? '4', 10) || 0));
 
     if (!forceWebGL && typeof navigator !== 'undefined' && 'gpu' in navigator) {
       console.log('[RenderEngine] WebGPU capability detected; using WebGL2 compatible pipeline for custom GLSL shaders.');
@@ -30,15 +36,17 @@ export class RenderEngine {
       preserveDrawingBuffer: true,
     });
 
-    const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+    const pixelRatio = Math.min(window.devicePixelRatio || 1, 2) * renderScale;
+    this.pixelRatio = pixelRatio;
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.setPixelRatio(pixelRatio);
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.05;
+    this.renderer.toneMapping = THREE.NeutralToneMapping;
+    this.renderer.toneMappingExposure = 1.0;
     this.renderer.autoClear = false;
 
+    // Scene is drawn in linear HDR (half-float) with 4x MSAA; the post pass tone-maps, grades and sRGB-encodes it.
     this.renderTarget = new THREE.WebGLRenderTarget(
       window.innerWidth * pixelRatio,
       window.innerHeight * pixelRatio,
@@ -46,20 +54,15 @@ export class RenderEngine {
         minFilter: THREE.LinearFilter,
         magFilter: THREE.LinearFilter,
         format: THREE.RGBAFormat,
-        colorSpace: THREE.SRGBColorSpace,
+        type: THREE.HalfFloatType,
+        samples: msaa,
       }
     );
 
-    this.overlayScene = new THREE.Scene();
-    this.overlayCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-    this.overlayMaterial = createPaperGrainOverlayMaterial();
-    this.overlayMaterial.uniforms.tDiffuse.value = this.renderTarget.texture;
-    // Set to 15% opacity as per requirements
-    this.overlayMaterial.uniforms.opacity.value = 0.15;
-    const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.overlayMaterial);
-    quad.frustumCulled = false;
-    this.overlayScene.add(quad);
-    
+    this.post = new PostProcessor(this.renderer, this.renderTarget);
+    // 15% paper opacity as per requirements (the tooth amplitude itself is part of the grade)
+    this.post.material.uniforms.opacity.value = 0.15;
+
     // Bind resize to window
     window.addEventListener('resize', () => {
       this.resize(window.innerWidth, window.innerHeight);
@@ -71,15 +74,20 @@ export class RenderEngine {
    * Default radius is 1.5 (off-screen); shrinking narrows it to ~0.38 then restores to 1.5.
    */
   public setTelescopeVignette(radius: number): void {
-    if (this.overlayMaterial?.uniforms?.vignetteRadius) {
-      this.overlayMaterial.uniforms.vignetteRadius.value = radius;
-    }
+    this.post.setTelescopeVignette(radius);
   }
 
   public setColorGrade(color: THREE.ColorRepresentation): void {
-    if (this.overlayMaterial?.uniforms?.colorGrade) {
-      this.overlayMaterial.uniforms.colorGrade.value.set(new THREE.Color(color));
-    }
+    this.post.setColorGrade(color);
+  }
+
+  /** Painterly colour grade / bloom / paper settings of the current scene (see SceneLighting.gradeForState). */
+  public setGrade(grade: Partial<GradeParams>): void {
+    this.post.setGrade(grade);
+  }
+
+  public getGrade(): GradeParams {
+    return this.post.getGrade();
   }
 
   public render(scene: THREE.Scene, camera: THREE.PerspectiveCamera): void {
@@ -87,17 +95,18 @@ export class RenderEngine {
     this.renderer.setRenderTarget(this.renderTarget);
     this.renderer.clear();
     this.renderer.render(scene, camera);
+    this.sceneStats.calls = this.renderer.info.render.calls;
+    this.sceneStats.triangles = this.renderer.info.render.triangles;
 
-    // Render overlay to screen
-    this.renderer.setRenderTarget(null);
-    this.renderer.clear();
-    this.renderer.render(this.overlayScene, this.overlayCamera);
+    // Bloom chain + grade + paper to the screen
+    this.post.render();
   }
 
   public resize(width: number, height: number): void {
-    const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+    const pixelRatio = this.pixelRatio;
     this.renderer.setSize(width, height);
     this.renderer.setPixelRatio(pixelRatio);
     this.renderTarget.setSize(width * pixelRatio, height * pixelRatio);
+    this.post.setSize(width * pixelRatio, height * pixelRatio);
   }
 }

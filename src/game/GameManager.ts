@@ -15,7 +15,11 @@ import { AliceEntity } from './entities/AliceEntity';
 import { RabbitEntity } from './entities/RabbitEntity';
 import { SisterEntity, DinahDreamEntity } from './entities/NpcEntities';
 
-import { globalEventBus, GameStateSnapshot } from '../core/types';
+import { SceneLightingManager } from '../engine/SceneLighting';
+import { PaintedSky } from '../world/PaintedSky';
+import { Pollen } from '../world/Pollen';
+
+import { globalEventBus, GameStateSnapshot, GameStateID } from '../core/types';
 import { GAME_EVENTS } from '../core/events';
 
 export class GameManager {
@@ -37,20 +41,24 @@ export class GameManager {
   public dinahDreamEntity: DinahDreamEntity;
 
   public scene: THREE.Scene;
+  public lighting: SceneLightingManager;
+  public sky: PaintedSky;
+  public pollen: Pollen;
   private elapsedTime = 0;
   private stateElapsedTime = 0; // Tracks time spent in current state
   private fallThoughtsTriggered = [false, false, false, false, false];
 
   constructor(canvas: HTMLCanvasElement) {
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0xe8eff2);
-    this.scene.fog = new THREE.FogExp2(0xe8eff2, 0.018);
-
-    this.setupLighting();
+    this.lighting = new SceneLightingManager(this.scene);
+    this.sky = new PaintedSky();
+    this.scene.add(this.sky.mesh);
+    this.pollen = new Pollen();
+    this.scene.add(this.pollen.points);
 
     this.renderer = new RenderEngine(canvas);
-    this.cameraRig = new CameraRig();
     this.physicsWorld = new PhysicsWorld();
+    this.cameraRig = new CameraRig(this.physicsWorld);
     this.characterController = new CharacterController(this.physicsWorld);
     this.inputManager = new InputManager();
     this.sceneLoader = new SceneLoader();
@@ -75,32 +83,10 @@ export class GameManager {
       this.scene
     );
 
+    this.gameLoop.setMovementLock(() => this.cutscenePlayer.isPlaying);
     this.gameLoop.addUpdateCallback((dt) => this.onUpdate(dt));
     this.setupEventListeners();
     this.setupResizeHandler();
-  }
-
-  private setupLighting(): void {
-    const hemiLight = new THREE.HemisphereLight(0xfff8e7, 0x7c6a58, 1.35);
-    hemiLight.position.set(0, 15, 0);
-    this.scene.add(hemiLight);
-
-    const ambientLight = new THREE.AmbientLight(0xf7f3ea, 0.85);
-    this.scene.add(ambientLight);
-
-    const dirLight = new THREE.DirectionalLight(0xfff0d0, 1.6);
-    dirLight.position.set(8, 16, 10);
-    dirLight.castShadow = true;
-    dirLight.shadow.mapSize.width = 1024;
-    dirLight.shadow.mapSize.height = 1024;
-    this.scene.add(dirLight);
-
-    // Warm chandelier point lights along the hall
-    [-8, 0, 8].forEach((lx) => {
-      const pt = new THREE.PointLight(0xffcb78, 1.2, 16);
-      pt.position.set(lx, 2.5, 0);
-      this.scene.add(pt);
-    });
   }
 
   private setupResizeHandler(): void {
@@ -124,7 +110,9 @@ export class GameManager {
     this.sceneLoader.rabbitMesh.clear();
     this.sceneLoader.rabbitMesh.add(this.rabbitEntity.mesh);
 
+    this.lighting.setLampAnchors(this.sceneLoader.lampAnchors);
     this.characterController.init(new THREE.Vector3(2.0, 0, 0));
+    this.characterController.setFacing(Math.PI);
     this.aliceEntity.setPosition(this.characterController.position);
     this.cameraRig.update(this.characterController.position, 0.16);
     this.applySceneVisualsForState(this.stateMachine.currentState);
@@ -136,21 +124,24 @@ export class GameManager {
   private applySceneVisualsForState(state: string): void {
     this.sceneLoader.setActiveStateScene(state);
     this.stateElapsedTime = 0; // Reset timer on state transition
+    this.characterController.currentState = state;
+    this.cameraRig.currentState = state;
+    this.physicsWorld.setActiveGroup(SceneLoader.getColliderGroup(state));
+    this.physicsWorld.setWalkBounds(SceneLoader.getWalkBounds(state));
 
-    if (state === 'S0_TITLE' || state === 'S1_BANK' || state === 'S2_CHASE') {
-      this.scene.background = new THREE.Color(0xe6eff0);
-      this.scene.fog = new THREE.FogExp2(0xe6eff0, 0.016);
-    } else if (state === 'S3_FALL') {
-      this.scene.background = new THREE.Color(0x281f1b);
-      this.scene.fog = new THREE.FogExp2(0x281f1b, 0.045);
-      this.characterController.setPosition(new THREE.Vector3(0, 0, 0));
-    } else if (state === 'S4_PASSAGE') {
-      this.scene.background = new THREE.Color(0x322620);
-      this.scene.fog = new THREE.FogExp2(0x322620, 0.035);
-      this.characterController.setPosition(new THREE.Vector3(0, 0, 0));
-    } else {
-      this.scene.background = new THREE.Color(0x3d3028);
-      this.scene.fog = new THREE.FogExp2(0x3d3028, 0.025);
+    this.lighting.applyStateLighting(state);
+    this.renderer.setGrade(this.lighting.gradeForState(state as GameStateID));
+    // Dinah only drifts through the well's lavender dusk (added at t >= 70 s of S3); she used to linger in every later scene
+    if (state !== 'S3_FALL') this.dinahDreamEntity.mesh.removeFromParent();
+    const outdoors = state === 'S0_TITLE' || state === 'S1_BANK' || state === 'S2_CHASE';
+    const cavern = state === 'S4_PASSAGE';
+    this.sky.setMode(cavern ? 'cavern' : 'day');
+    this.sky.mesh.visible = outdoors || cavern;
+    // pollen by day, dust motes turning gold in the lamplight underground
+    const motes = state === 'S4_PASSAGE' || state === 'S5_HALL' || state === 'S6_SMALL' || state === 'S7_CAKE';
+    this.pollen.points.visible = outdoors || motes;
+    this.pollen.setLook(outdoors ? 'pollen' : state === 'S6_SMALL' || state === 'S7_CAKE' ? 'dust-small' : 'dust');
+    if (!outdoors) {
       this.characterController.setPosition(new THREE.Vector3(0, 0, 0));
     }
 
@@ -194,7 +185,7 @@ export class GameManager {
   private setupEventListeners(): void {
     globalEventBus.on('startJourney', () => {
       this.characterController.setPosition(new THREE.Vector3(2.0, 0, -1.0));
-      this.characterController.rotation.copy(new THREE.Euler(0, Math.PI, 0));
+      this.characterController.setFacing(Math.PI);
       this.characterController.setScale(1.0);
       this.stateMachine.goto('S1_BANK');
       globalEventBus.emit('S1_OBJECTIVE');
@@ -349,7 +340,11 @@ export class GameManager {
     
     this.aliceEntity.setPosition(this.characterController.position);
     this.aliceEntity.mesh.rotation.y = this.characterController.rotation.y;
-    this.aliceEntity.update(deltaTime, new THREE.Vector3());
+    this.aliceEntity.update(deltaTime, this.characterController.velocity, this.characterController.turnRate);
+    this.sceneLoader.update(deltaTime);
+    this.sky.update(deltaTime, this.cameraRig.camera.position);
+    this.pollen.update(deltaTime, this.characterController.position);
+    this.lighting.follow(this.characterController.position);
     this.sisterEntity.update(deltaTime);
     this.rabbitEntity.update(deltaTime);
     this.puzzleManager.update(deltaTime);
@@ -380,6 +375,7 @@ export class GameManager {
 
     if (state === 'S3_FALL') {
       this.sceneLoader.wellScrollingGroup.position.y = (this.elapsedTime * 2.2) % 6.0;
+      this.lighting.updateWellLamps(this.sceneLoader.wellScrollingGroup.position.y, this.characterController.position);
       this.aliceEntity.mesh.position.y = Math.sin(this.elapsedTime * 2.5) * 0.15;
       this.aliceEntity.mesh.rotation.y += deltaTime * 0.6;
       
@@ -409,10 +405,10 @@ export class GameManager {
         }
       }
 
+      this.lighting.setS3Progress(t); // amber candlelight -> lavender twilight from t = 70 s
+      if (t >= 70) this.renderer.setGrade(this.lighting.s3Grade(t));
       if (t >= 70 && !this.stateMachine.getFlag('lavenderTwilight')) {
         this.stateMachine.setFlag('lavenderTwilight', true);
-        this.scene.background = new THREE.Color(0x3a3045); // Lavender
-        this.scene.fog = new THREE.FogExp2(0x3a3045, 0.045);
         this.scene.add(this.dinahDreamEntity.mesh);
       }
 
@@ -576,6 +572,10 @@ export class GameManager {
         }
       } else if (interactable === 'INT_little_door' && curtainFound && !peekDone) {
         this.stateMachine.setFlag('littleDoorUnlocked', true);
+        // kneel beside the door (not in front of it) so the glide camera can look straight down the passage into the garden
+        this.characterController.setPosition(new THREE.Vector3(-1.45, 0, -3.0));
+        this.characterController.setFacing(Math.PI);
+        this.sceneLoader.setLittleDoorOpen(true);
         globalEventBus.emit(GAME_EVENTS.DIALOGUE_TRIGGER, {
           id: 'S5_PEEK',
           speaker: 'narrator',

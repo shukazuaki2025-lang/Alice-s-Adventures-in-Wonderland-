@@ -67,6 +67,17 @@ npm test
 npm run test:e2e
 ```
 
+### 4. The hard quality gate (definition of "done")
+```bash
+npm run gate:check   # seconds: model floors + re-measure the last screenshots (no suites run)
+npm run gate:quick   # minutes: typecheck/lint/unit/build/controls e2e + fresh scene capture (never exits 0)
+npm run gate         # everything (~30-40 min on a software GPU); exit code 0 is the only completion signal
+```
+The gate measures real frames of every chapter scene and every character against the *Little Prince* (littleprince.dev)
+benchmark (`docs/art/benchmark/`), checks every GLB for painted textures + geometry, and writes
+`docs/devlog/gate/{REPORT.md,board.png,result.json}`. Brief for the agent that has to keep going until it passes:
+[`docs/review/ROUND2_TASK.md`](docs/review/ROUND2_TASK.md).
+
 ---
 
 ## Key Gameplay & Puzzle Invariants Verified by E2E

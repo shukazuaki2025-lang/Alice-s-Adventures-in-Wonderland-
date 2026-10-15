@@ -18,6 +18,8 @@ export class GameLoop {
   private inputManager: InputManager;
   private scene: THREE.Scene;
   private onUpdateCallbacks: Array<(deltaTime: number) => void> = [];
+  /** When this returns true the player cannot walk (cutscenes). Camera orbit stays available. */
+  private movementLocked: () => boolean = () => false;
 
   constructor(
     renderer: RenderEngine,
@@ -33,6 +35,10 @@ export class GameLoop {
     this.characterController = characterController;
     this.inputManager = inputManager;
     this.scene = scene;
+  }
+
+  public setMovementLock(fn: () => boolean): void {
+    this.movementLocked = fn;
   }
 
   public addUpdateCallback(fn: (deltaTime: number) => void): void {
@@ -72,12 +78,16 @@ export class GameLoop {
     deltaTime *= this.timeScale;
 
     if (!this.isPaused) {
-      // 1. Input update
+      // 1. Input update: WASD vector plus mouse / touch look and wheel zoom
       const moveInput = this.inputManager.update();
+      const look = this.inputManager.consumeLook();
+      this.cameraRig.applyMouseDelta(look.x, look.y);
+      this.cameraRig.zoomBy(this.inputManager.consumeZoom());
+      if (this.movementLocked()) moveInput.set(0, 0, 0);
 
-      // 2. Physics & Player update
+      // 2. Physics & Player update (movement is camera-relative: W walks away from the lens)
       this.physicsWorld.step(deltaTime);
-      this.characterController.update(deltaTime, moveInput);
+      this.characterController.update(deltaTime, moveInput, this.cameraRig.yaw, this.inputManager.sprint);
 
       // 3. Camera update
       this.cameraRig.update(this.characterController.position, deltaTime);
@@ -85,6 +95,9 @@ export class GameLoop {
       // 4. Custom update callbacks (State machine, cutscenes, stuck timers)
       this.onUpdateCallbacks.forEach((cb) => cb(deltaTime));
     }
+
+    // Camera input that arrives while paused must not be applied in one lump after resume.
+    if (this.isPaused) this.inputManager.discardLook();
 
     // 5. Render frame
     this.renderer.render(this.scene, this.cameraRig.camera);

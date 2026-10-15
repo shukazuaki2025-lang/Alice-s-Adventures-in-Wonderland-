@@ -1,0 +1,18 @@
+{
+  "pass": false,
+  "quick": false,
+  "noRun": true,
+  "at": "2026-10-14T21:14:16.582Z",
+  "commit": "a798fa2",
+  "failing": [
+    "capture-fresh",
+    "S1_BANK",
+    "S1_BANK_orbit",
+    "S3_FALL",
+    "S4_PASSAGE",
+    "S5_HALL",
+    "S6_SMALL",
+    "npc:sister",
+    "verdict"
+  ]
+}

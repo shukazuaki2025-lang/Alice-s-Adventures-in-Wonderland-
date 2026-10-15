@@ -131,3 +131,22 @@ All 3D models, Blender scenes, physics colliders, and Three.js engine systems mu
    - Initial page load: ≤ 15 MB; complete chapter assets ≤ 60 MB.
 5. **Asset Licensing**:
    - All third-party fonts, textures, audio samples, and code libraries must be registered in `docs/assets-licenses.md` with explicit licenses (SIL OFL, CC0, MIT, etc.).
+
+---
+
+## 7. Definition of Done — the Hard Quality Gate (Round 2)
+
+> Added at the user's request: *"set a hard standard — do not let the agent stop until it is met"*, benchmarked against
+> **https://littleprince.dev/** (watercolour / gouache level of finish and texture).
+
+1. **Do not stop, hand over, or report "done" until `npm run gate` exits with code `0`** and `docs/devlog/gate/VERDICT.md`
+   (written after the last capture, from a side-by-side look at `docs/devlog/gate/board.png`) says `Verdict: PASS`.
+   Exit `1` = checks failing → keep working. Exit `2` = only a `--quick`/`--no-run` run → not a completion signal.
+2. The gate re-measures the real screenshots, checks every GLB for painted textures and geometry, runs the control/rig/unit/e2e
+   suites, and compares `docs/review/gate-thresholds.json` with the version it was first committed in.
+   **Thresholds may only be raised. `tools/lib/image-metrics.mjs`, `tools/quality-gate.mjs`, `tools/check-assets.mjs` and the
+   fixed camera views in `tests/e2e/visual_parity.spec.ts` must not be edited to make a number pass.**
+3. Full brief, work packages, toolbox and integrity rules: `docs/review/ROUND2_TASK.md`.
+   Benchmark numbers and what "that level" looks like: `docs/art/benchmark/README.md`.
+4. Out-of-context or out-of-time is not a reason to stop: write the failing-check list and next steps into
+   `docs/review/REMEDIATION_LOG.md`, commit, push, and continue from `npm run gate -- --no-run`.

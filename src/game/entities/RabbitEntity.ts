@@ -20,7 +20,7 @@ export class RabbitEntity {
     loader.load('/assets/models/chr_rabbit.glb', (gltf) => {
       const model = gltf.scene;
       convertMaterialsToToon(model);
-      applyInkOutline(model);
+      applyInkOutline(model, 0x2b2420, 0.0016);   // object-space width scaled to a 0.75 m rabbit
       this.mesh.add(model);
       
       this.mixer = new THREE.AnimationMixer(model);

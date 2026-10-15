@@ -52,14 +52,19 @@ test.describe('Tier 2: Boundary & Corner Cases (BVA & Edge Conditions)', () => {
     await harness.playToS1Bank();
 
     await page.setViewportSize({ width: 900, height: 600 });
-    await page.waitForTimeout(200);
 
-    const dims = await page.evaluate(() => {
-      const c = document.getElementById('render-canvas') as HTMLCanvasElement;
-      return { w: c.clientWidth, h: c.clientHeight };
-    });
-    expect(dims.w).toBe(900);
-    expect(dims.h).toBe(600);
+    // The resize handler runs on the render thread; poll instead of sleeping a fixed 200 ms so a slow software
+    // rasteriser (CI / SwiftShader) cannot make this flaky.
+    await expect
+      .poll(
+        async () =>
+          page.evaluate(() => {
+            const c = document.getElementById('render-canvas') as HTMLCanvasElement;
+            return { w: c.clientWidth, h: c.clientHeight };
+          }),
+        { timeout: 15000 }
+      )
+      .toEqual({ w: 900, h: 600 });
   });
 
   test('T2-B05: Stuck hint timer boundaries (60s Tier 1 vs 120s Tier 2 via simulation stepping)', async ({ page }) => {

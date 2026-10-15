@@ -6,6 +6,10 @@ export class PhysicsWorld {
   private isInitialized = false;
   private rigidBodies: Map<string, RAPIER.RigidBody> = new Map();
   private staticBounds: Map<string, THREE.Box3> = new Map();
+  private boundGroups: Map<string, string> = new Map();
+  private activeGroup: string | null = null;
+  /** Optional XZ walkable rectangle (world units). Movement is clamped inside it. */
+  private walkBounds: { minX: number; maxX: number; minZ: number; maxZ: number } | null = null;
   private triggers: Map<string, { bounds: THREE.Box3; callback?: () => void }> = new Map();
 
   public async init(): Promise<void> {
@@ -24,18 +28,39 @@ export class PhysicsWorld {
     }
   }
 
-  public addStaticBox(id: string, center: THREE.Vector3, halfExtents: THREE.Vector3): RAPIER.RigidBody | null {
+  /**
+   * Register an axis-aligned obstacle. `group` scopes it to one scene ('bank', 'hall' …) so props that live in
+   * one level never block Alice in another; 'global' boxes are always active.
+   */
+  public addStaticBox(id: string, center: THREE.Vector3, halfExtents: THREE.Vector3, group: string = 'global'): RAPIER.RigidBody | null {
+    const min0 = new THREE.Vector3().subVectors(center, halfExtents);
+    const max0 = new THREE.Vector3().addVectors(center, halfExtents);
+    this.staticBounds.set(id, new THREE.Box3(min0, max0));
+    this.boundGroups.set(id, group);
     if (!this.world) return null;
     const bodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(center.x, center.y, center.z);
     const body = this.world.createRigidBody(bodyDesc);
     const colliderDesc = RAPIER.ColliderDesc.cuboid(halfExtents.x, halfExtents.y, halfExtents.z);
     this.world.createCollider(colliderDesc, body);
     this.rigidBodies.set(id, body);
-    
-    const min = new THREE.Vector3().subVectors(center, halfExtents);
-    const max = new THREE.Vector3().addVectors(center, halfExtents);
-    this.staticBounds.set(id, new THREE.Box3(min, max));
     return body;
+  }
+
+  public setActiveGroup(group: string | null): void {
+    this.activeGroup = group;
+  }
+
+  public setWalkBounds(bounds: { minX: number; maxX: number; minZ: number; maxZ: number } | null): void {
+    this.walkBounds = bounds;
+  }
+
+  public getWalkBounds(): { minX: number; maxX: number; minZ: number; maxZ: number } | null {
+    return this.walkBounds;
+  }
+
+  private isActive(id: string): boolean {
+    const g = this.boundGroups.get(id) ?? 'global';
+    return g === 'global' || g === this.activeGroup;
   }
 
   public addTriggerVolume(
@@ -83,48 +108,51 @@ export class PhysicsWorld {
   }
 
   public resolveMovement(currentPos: THREE.Vector3, desiredDelta: THREE.Vector3, radius: number, height: number): THREE.Vector3 {
-    const result = desiredDelta.clone();
-    
     const steps = 3;
-    const stepDelta = result.clone().divideScalar(steps);
-    
+    const stepDelta = desiredDelta.clone().divideScalar(steps);
     const simPos = currentPos.clone();
-    
+    // Anything whose top is below this is a floor slab to stand on, never a wall.
+    const stepHeight = Math.max(0.04, height * 0.12);
+    const expandedRadius = radius * 1.1; // small margin
+
     for (let s = 0; s < steps; s++) {
       simPos.add(stepDelta);
-      
-      const expandedRadius = radius * 1.1; // small margin
-      
-      // We'll treat the capsule as a cylinder roughly for horizontal collisions
+
       const miny = simPos.y;
       const maxy = simPos.y + height;
-      
-      this.staticBounds.forEach((bound) => {
-        // Broad phase vertical check
-        if (maxy < bound.min.y || miny > bound.max.y) return;
-        
-        // Expanded bound for XZ
+
+      this.staticBounds.forEach((bound, id) => {
+        if (!this.isActive(id)) return;
+        // Floors / ground slabs and things overhead do not block walking.
+        if (bound.max.y <= miny + stepHeight || bound.min.y >= maxy) return;
+
         const minx = bound.min.x - expandedRadius;
         const maxx = bound.max.x + expandedRadius;
         const minz = bound.min.z - expandedRadius;
         const maxz = bound.max.z + expandedRadius;
-        
+
         if (simPos.x > minx && simPos.x < maxx && simPos.z > minz && simPos.z < maxz) {
-          // Collision occurred. Resolve by pushing out of the nearest edge
+          // Push out through the face we entered by (shallowest penetration) so the player slides along walls.
           const dx1 = simPos.x - minx;
           const dx2 = maxx - simPos.x;
           const dz1 = simPos.z - minz;
           const dz2 = maxz - simPos.z;
-          
+
           const mind = Math.min(dx1, dx2, dz1, dz2);
           if (mind === dx1) simPos.x = minx;
           else if (mind === dx2) simPos.x = maxx;
           else if (mind === dz1) simPos.z = minz;
-          else if (mind === dz2) simPos.z = maxz;
+          else simPos.z = maxz;
         }
       });
+
+      if (this.walkBounds) {
+        const b = this.walkBounds;
+        simPos.x = Math.min(b.maxX - radius, Math.max(b.minX + radius, simPos.x));
+        simPos.z = Math.min(b.maxZ - radius, Math.max(b.minZ + radius, simPos.z));
+      }
     }
-    
+
     return simPos.sub(currentPos);
   }
 
@@ -132,20 +160,23 @@ export class PhysicsWorld {
     let hitDist = maxDist;
     const ray = new THREE.Ray(origin, dir);
     
-    this.staticBounds.forEach((bound) => {
+    this.staticBounds.forEach((bound, id) => {
+      if (!this.isActive(id)) return;
+      // Ground slabs never occlude the camera arm (the lens is kept above the floor separately).
+      if (bound.max.y < 0.2) return;
       // Expand bound by radius for sphere sweep
       const expanded = new THREE.Box3(
         new THREE.Vector3(bound.min.x - radius, bound.min.y - radius, bound.min.z - radius),
         new THREE.Vector3(bound.max.x + radius, bound.max.y + radius, bound.max.z + radius)
       );
+      // The follow point sitting inside an obstacle (Alice hugging a wall) must not collapse the arm to zero.
+      if (expanded.containsPoint(origin)) return;
       const target = new THREE.Vector3();
       if (ray.intersectBox(expanded, target)) {
         const d = origin.distanceTo(target);
         if (d < hitDist) {
           hitDist = d;
         }
-      } else if (expanded.containsPoint(origin)) {
-        hitDist = 0;
       }
     });
     
@@ -157,6 +188,7 @@ export class PhysicsWorld {
     this.rigidBodies.forEach((body) => this.world?.removeRigidBody(body));
     this.rigidBodies.clear();
     this.staticBounds.clear();
+    this.boundGroups.clear();
     this.triggers.clear();
   }
 }
