@@ -21,6 +21,7 @@ Project: **Alice: Down the Rabbit-Hole** (Vite + TypeScript + Three.js, Blender/
 `main` is **red** (CI cannot install: the lockfile was swapped for `bun.lock` and an uninstallable plugin was added) and carries a runtime layer that
 inflates the gate's image metrics. The ordered, verified task sheet — 6 small PRs, patches that apply cleanly, exact commands, done criteria —
 is **`docs/review/ROUND3_REVIEW.md`** (full reviewer findings: `docs/review/round3/findings-full.md`). Do PR-1 (`fix/restore-npm-lockfile`) first.
+Face-fidelity upgrade (Alice's face looks low-detail; stylised-but-sculpted target, hard checks, 6 PRs, **after PR-1 and PR-3**): **`docs/review/FACE_UPGRADE_TASK.md`**.
 
 ### Repository rules (all agent tools, including Google AI Studio / Antigravity)
 

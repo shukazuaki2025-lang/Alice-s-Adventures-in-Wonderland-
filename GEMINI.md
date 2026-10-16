@@ -6,3 +6,4 @@ Brief and work packages: `docs/review/ROUND2_TASK.md`.
 
 **Current priority (2026-10-16): `main` is red — start with `docs/review/ROUND3_REVIEW.md` (PR-1 `fix/restore-npm-lockfile` first).**
 Never push to `main`; use a topic branch + PR and wait for CI. npm only (`package-lock.json`), no `bun.lock`.
+Face upgrade task sheet (after PR-1 and PR-3 of the round-3 list): `docs/review/FACE_UPGRADE_TASK.md`.
