@@ -16,6 +16,20 @@ Project: **Alice: Down the Rabbit-Hole** (Vite + TypeScript + Three.js, Blender/
   camera views in `tests/e2e/visual_parity.spec.ts` to make a number pass; never add noise/texture stickers to inflate image metrics;
   never skip/weaken tests; never write state or teleport through `window.__game`.
 
+## Round 3 — fix list for `main@465e004` (read before touching code)
+
+`main` is **red** (CI cannot install: the lockfile was swapped for `bun.lock` and an uninstallable plugin was added) and carries a runtime layer that
+inflates the gate's image metrics. The ordered, verified task sheet — 6 small PRs, patches that apply cleanly, exact commands, done criteria —
+is **`docs/review/ROUND3_REVIEW.md`** (full reviewer findings: `docs/review/round3/findings-full.md`). Do PR-1 (`fix/restore-npm-lockfile`) first.
+
+### Repository rules (all agent tools, including Google AI Studio / Antigravity)
+
+* **Never push to `main`.** Work on a topic branch, open a PR, wait for the `CI Pipeline` checks to be green. A merged PR's branch is finished: do not reuse it.
+* **npm only.** `package-lock.json` is the single lockfile; do not delete it and do not add `bun.lock`. CI uses `npm ci`.
+* Dev server: `npm run dev` (port 3000, also used by Playwright). UI is React 19 (`src/main.tsx`, `src/App.tsx`); the engine stays framework-free.
+* One concern per PR. Any visual change needs a fresh `npm run gate` capture and a before/after `docs/devlog/gate/board.png` in the PR description.
+* Never add write access to `window.__game` / `window.__lab` (the test harness is read-only), never commit tool scratch folders (`.aistudio/`).
+
 ## Where things are
 
 * The brief with work packages, toolbox and every integrity rule: **`docs/review/ROUND2_TASK.md`** (Chinese; commands are English).
