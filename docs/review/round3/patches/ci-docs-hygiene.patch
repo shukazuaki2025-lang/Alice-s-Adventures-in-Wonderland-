@@ -1,0 +1,91 @@
+diff -ruN a/.gitignore b/.gitignore
+--- a/.gitignore	2026-10-15 04:01:13.579294061 +0000
++++ b/.gitignore	2026-10-15 04:01:13.670018100 +0000
+@@ -19,3 +19,6 @@
+ # temporary per-agent capture specs (never committed; delete when done)
+ tests/e2e/_scratch_*.spec.ts
+ tests/e2e/_tmp_*.spec.ts
++
++# Google AI Studio agent scratch (plans, temp media) - never commit
++.aistudio/
+diff -ruN a/PROJECT.md b/PROJECT.md
+--- a/PROJECT.md	2026-10-15 04:01:13.597677414 +0000
++++ b/PROJECT.md	2026-10-15 04:01:13.677935978 +0000
+@@ -108,7 +108,8 @@
+ │   ├── shaders/                 # Toon ramp, ink outline, paper grain
+ │   ├── testing/                 # window.__game test harness
+ │   ├── ui/                      # Victorian HTML/CSS overlay
+-│   └── main.ts                  # Application bootstrap
++│   ├── main.tsx                 # React entry (mounts <App/>)
++│   └── App.tsx                  # React shell: boots GameManager, UI, i18n, test harness
+ ├── tests/
+ │   ├── e2e/                     # Playwright E2E smoke tests
+ │   └── unit/                    # Vitest unit tests
+diff -ruN a/TEST_READY.md b/TEST_READY.md
+--- a/TEST_READY.md	2026-10-15 04:01:13.588761650 +0000
++++ b/TEST_READY.md	2026-10-15 04:01:13.672088289 +0000
+@@ -20,7 +20,7 @@
+ ## 2. Artifact Directory & File Inventory
+ 
+ 1. `TEST_INFRA.md` — Authoritative E2E Test Specification & Category-Partition / BVA Mapping Matrix.
+-2. `playwright.config.ts` — Playwright runner configuration (headless Chromium, Vite dev server integration on port 5173, viewport 1280x720, `?forceWebGL=1&test=1` test harness support).
++2. `playwright.config.ts` — Playwright runner configuration (headless Chromium, Vite dev server integration on port 3000, viewport 1280x720, `?forceWebGL=1&test=1` test harness support).
+ 3. `tests/e2e/helpers/gameHarness.ts` — Strongly-typed helper wrapper for `window.__game` test harness API.
+ 4. `tests/e2e/tier1_features.spec.ts` — Tier 1 Feature Coverage spec.
+ 5. `tests/e2e/tier2_boundaries.spec.ts` — Tier 2 Boundary & Corner Case spec.
+diff -ruN a/docs/assets-licenses.md b/docs/assets-licenses.md
+--- a/docs/assets-licenses.md	2026-10-15 04:01:13.640020367 +0000
++++ b/docs/assets-licenses.md	2026-10-15 04:01:13.679320090 +0000
+@@ -18,3 +18,9 @@
+   are committed. Nothing from its characters, shapes or palette is copied.
+ - **Lettering on prop labels / dials** (`tools/blender/world/props_tex.py`) is set in **Liberation Serif Bold / Bold Italic** (SIL Open Font License 1.1, installed on the build machine; only
+   rasterised glyphs end up inside the baked textures — the font file itself is not distributed). Falls back to DejaVu Serif Bold (Bitstream Vera licence).
++
++## Code libraries (runtime)
++- **react**, **react-dom**, **scheduler**: MIT
++- **three**: MIT
++- **@dimforge/rapier3d-compat**: Apache-2.0
++- **zod**: MIT
+diff -ruN a/docs/review/ROUND2_TASK.md b/docs/review/ROUND2_TASK.md
+--- a/docs/review/ROUND2_TASK.md	2026-10-15 04:01:13.618225924 +0000
++++ b/docs/review/ROUND2_TASK.md	2026-10-15 04:01:13.674095303 +0000
+@@ -134,7 +134,7 @@
+ ## 4. 工作循环
+ 
+ ```bash
+-npm run dev                                   # 开发服务器 :5173（viewer: /viewer.html）
++npm run dev                                   # 开发服务器 :3000（viewer: /viewer.html）
+ # 1) 改模型 / 着色 / 灯光
+ python3 tools/blender/build_<x>.py            # 重新导出 GLB（见 §5）；先用 *_OUT=public/assets/models/dev/x.glb 预览
+ node tools/viewer-shot.mjs out.png "model=dev/x&yaw=25&pitch=8&dist=2.6&ty=0.45&fov=32"   # 看一眼！
+--- a/tests/e2e/helpers/gameHarness.ts	2026-10-15 04:01:13.630188093 +0000
++++ b/tests/e2e/helpers/gameHarness.ts	2026-10-15 04:01:13.676054996 +0000
+@@ -17,7 +17,7 @@
+   }
+ 
+   /**
+-   * Opens the game and waits for window.__game, which main.ts registers only after every model is loaded and the loop runs.
++   * Opens the game and waits for window.__game, which App.tsx registers only after every model is loaded and the loop runs.
+    * Behavioural specs render at half resolution without MSAA (`?scale=0.5&msaa=0`) because the CI browser draws
+    * with a software GPU; the gate's visual specs pass `scale=1&msaa=4` explicitly to capture the real picture.
+    * Loading the ~300k-triangle painted sets on that software GPU takes several seconds, hence the generous timeout.
+diff -ruN a/tools/viewer-shot.mjs b/tools/viewer-shot.mjs
+--- a/tools/viewer-shot.mjs	2026-10-15 04:01:13.607970317 +0000
++++ b/tools/viewer-shot.mjs	2026-10-15 04:01:13.673957068 +0000
+@@ -5,14 +5,14 @@
+  *   node tools/viewer-shot.mjs <out.png> "<viewer query string>" [width] [height]
+  *   node tools/viewer-shot.mjs --batch <batch.json>        // [{ out, query, width?, height? }, ...]
+  *
+- * Needs the dev server (npm run dev) on :5173 – set VIEWER_BASE to override.
++ * Needs the dev server (npm run dev) on :3000 – set VIEWER_BASE to override.
+  * Set PW_CHROMIUM_PATH to use a pre-installed Chromium instead of Playwright's download.
+  */
+ import fs from 'node:fs';
+ import path from 'node:path';
+ import { chromium } from '@playwright/test';
+ 
+-const BASE = process.env.VIEWER_BASE || 'http://localhost:5173';
++const BASE = process.env.VIEWER_BASE || 'http://localhost:3000';
+ 
+ export async function launch() {
+   return chromium.launch({

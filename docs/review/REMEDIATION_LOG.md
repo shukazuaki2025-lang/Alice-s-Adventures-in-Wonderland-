@@ -112,3 +112,13 @@ S4 3.0/0.18, S5 palette 0.39, S6 6.3/0.36), the sister's skirt is a smooth dome,
 ### Round 2 — current progress (update this block whenever you stop for any reason)
 * Failing checks: run `npm run gate -- --no-run` and paste the "Failing:" line here.
 * Next step: WP-A (S3 well) → WP-C (hall) → WP-B (passage) → WP-D (rabbit) → WP-E (props) → WP-F (S1 up to the bar) → WP-G.
+
+---
+
+# Round 3 — review of `main@465e004` (2026-10-16)
+
+Review-only pass (no source changed) of the owner's React-migration commit. Result: CI red (lockfile deleted, uninstallable `@vitejs/plugin-react`), e2e still 29/29 in a clean
+snapshot, quality gate unchanged at 9 of 31 failing, and a runtime "detail enhancer" layer that matches what `CLAUDE.md` §7 forbids. Ordered fix list, patches and the
+confidence level of every finding: [`ROUND3_REVIEW.md`](./ROUND3_REVIEW.md); raw findings: [`round3/findings-full.md`](./round3/findings-full.md).
+Known limitation: only 2 findings (F1, F2) completed adversarial verification before a usage limit interrupted the run; the rest are labelled by how they were checked.
+

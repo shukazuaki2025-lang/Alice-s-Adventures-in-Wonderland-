@@ -1,0 +1,310 @@
+--- a/src/App.tsx
++++ b/src/App.tsx
+@@ -1,57 +1,12 @@
+ import React, { useEffect, useState, useRef, useCallback } from 'react';
+ import { CuriosityNote } from './core/i18nSchema';
+-import { globalEventBus, InventoryItem, Language, GameStateSnapshot } from './core/types';
++import { globalEventBus, InventoryItem, Language } from './core/types';
+ import { getDialogueText, getLanguage, getStuckHint, getUIText, loadI18nData, setLanguage } from './ui/i18n';
+ import { GameManager } from './game/GameManager';
+ import { AudioManager } from './audio/AudioManager';
+ import { registerTestHarness } from './testing/testHarness';
+ import './ui/styles/victorian.css';
+ 
+-declare global {
+-  interface Window {
+-    __game?: {
+-      getState: () => GameStateSnapshot;
+-      getFlags: () => Record<string, unknown>;
+-      getFlag: (k: string) => unknown;
+-      getInventory: () => unknown[];
+-      getPlayerTransform: () => {
+-        position: { x: number; y: number; z: number };
+-        rotation: { x: number; y: number; z: number };
+-        scale: number;
+-      };
+-      getInteractables: () => unknown[];
+-      getCameraState: () => {
+-        yaw: number;
+-        pitch: number;
+-        yawGoal: number;
+-        pitchGoal: number;
+-        zoom: number;
+-        distance: number;
+-        fov: number;
+-        cinematic: boolean;
+-        position: { x: number; y: number; z: number };
+-        forward: { x: number; y: number; z: number };
+-      };
+-      getPlayerMotion: () => {
+-        velocity: { x: number; y: number; z: number };
+-        speed: number;
+-        running: boolean;
+-        facing: number;
+-      };
+-      getRenderStats: () => { calls: number; triangles: number };
+-      getRenderBreakdown: () => Record<string, { meshes: number; hulls: number; shadowCasters: number; drawn: number }>;
+-      getNearbyInteractable: () => string | null;
+-      getAliceAnimation: () => unknown;
+-      getAliceBoneWorld: (name: string) => { x: number; y: number; z: number } | null;
+-      getSceneMetrics: () => unknown;
+-      setTimeScale: (n: number) => void;
+-      fastForward: (seconds: number) => void;
+-      movePlayerTo: (x: number, z: number) => void;
+-      lookAtBottleSide: (side: 'front' | 'back') => void;
+-    };
+-  }
+-}
+-
+ interface DialogueState {
+   visible: boolean;
+   speakerKey: string;
+@@ -135,6 +90,8 @@
+   const audioManagerRef = useRef<AudioManager | null>(null);
+ 
+   const [lang, setLangState] = useState<Language>(() => getLanguage());
++  const [i18nReady, setI18nReady] = useState(false);
++  const [initError, setInitError] = useState<string | null>(null);
+   const [loadingFading, setLoadingFading] = useState(false);
+   const [loadingRemoved, setLoadingRemoved] = useState(false);
+ 
+@@ -154,7 +111,7 @@
+   const [inspectItem, setInspectItem] = useState<InventoryItem | null>(null);
+   const [inspectedFront, setInspectedFront] = useState(false);
+   const [inspectedBack, setInspectedBack] = useState(false);
+-  const [drinkUnlocked, setDrinkUnlocked] = useState(false);
++  const drinkUnlocked = inspectedFront && inspectedBack; // derived, no extra state to keep in sync
+ 
+   const [interactPrompt, setInteractPrompt] = useState<{ visible: boolean; text: string }>({
+     visible: false,
+@@ -236,12 +193,14 @@
+ 
+   const handleStartJourney = useCallback(() => {
+     setTitleVisible(false);
++    globalEventBus.emit('resumeGame'); // "Return to Title" leaves the loop paused; Start must unpause it
+     globalEventBus.emit('startJourney');
+     showChapterHeader();
+   }, [showChapterHeader]);
+ 
+   const handleContinueJourney = useCallback(() => {
+     setTitleVisible(false);
++    globalEventBus.emit('resumeGame');
+     globalEventBus.emit('continueJourney');
+     showChapterHeader();
+   }, [showChapterHeader]);
+@@ -253,17 +212,15 @@
+       try {
+         await loadI18nData('/assets/i18n/ch1.json');
+       } catch (e) {
+-        console.warn('[Bootstrap] Using embedded i18n data due to fetch error:', e);
++        console.warn('[Bootstrap] i18n JSON unavailable:', e);
+       }
+       if (!mounted) return;
+-      // Trigger re-render once i18n JSON finishes loading
+-      setLangState(getLanguage());
++      setI18nReady(true); // a real state flip (setLangState(getLanguage()) bails out when the language is unchanged)
+ 
+-      const audioMgr = new AudioManager();
+-      audioManagerRef.current = audioMgr;
+-
+-      if (canvasRef.current) {
+-        const gameMgr = new GameManager(canvasRef.current);
++      try {
++        const audioMgr = new AudioManager();
++        audioManagerRef.current = audioMgr;
++        const gameMgr = new GameManager(canvasRef.current!);
+         gameManagerRef.current = gameMgr;
+         await gameMgr.init();
+         if (!mounted) return;
+@@ -278,6 +235,9 @@
+             setLoadingRemoved(true);
+           }, 800);
+         }, 500);
++      } catch (e) {
++        console.error('[Bootstrap] game failed to start:', e);
++        if (mounted) setInitError(e instanceof Error ? e.message : String(e));
+       }
+     };
+ 
+@@ -366,6 +326,7 @@
+ 
+     const onStateChanged = ({ to }: { from: string; to: string }) => {
+       currentGameStateRef.current = to;
++      if (to !== 'S0_TITLE') setTitleVisible(false); // engine can leave S0 without the Start button (e.g. pressing E)
+       if (to !== 'S1_BANK' && to !== 'S0_TITLE') {
+         setChapterHeaderVisible(false);
+       }
+@@ -395,32 +356,17 @@
+       const back = Boolean(item.inspectedBack);
+       setInspectedFront(front);
+       setInspectedBack(back);
+-      setDrinkUnlocked(front && back);
+     };
+ 
+     const onBottleSideInspected = (side: 'front' | 'back') => {
+-      if (side === 'front') {
+-        setInspectedFront((_prevFront) => {
+-          setInspectedBack((prevBack) => {
+-            if (prevBack) setDrinkUnlocked(true);
+-            return prevBack;
+-          });
+-          return true;
+-        });
+-      } else if (side === 'back') {
+-        setInspectedBack((_prevBack) => {
+-          setInspectedFront((prevFront) => {
+-            if (prevFront) setDrinkUnlocked(true);
+-            return prevFront;
+-          });
+-          return true;
+-        });
+-      }
++      if (side === 'front') setInspectedFront(true);
++      else setInspectedBack(true);
+     };
+ 
+     const onItemFullyInspected = (item: InventoryItem) => {
+       if (!item || item.id === 'prop_bottle_drinkme' || item.id === 'drink_me_bottle') {
+-        setDrinkUnlocked(true);
++        setInspectedFront(true);
++        setInspectedBack(true);
+       }
+     };
+ 
+@@ -567,7 +513,7 @@
+   return (
+     <div id="game-container">
+       <canvas id="render-canvas" ref={canvasRef}></canvas>
+-      <div id="ui-root" className="victorian-ui">
++      <div id="ui-root" className="victorian-ui" data-i18n={i18nReady ? 'ready' : 'pending'}>
+         {!loadingRemoved && (
+           <div
+             id="loading-screen"
+@@ -576,6 +522,12 @@
+           >
+             <h1 className="loading-title">Alice&apos;s Adventures in Wonderland</h1>
+             <p className="loading-subtitle">Chapter I. Down the Rabbit-Hole</p>
++            {initError && (
++              <div role="alert" id="init-error" style={{ marginTop: '1.5rem', textAlign: 'center' }}>
++                <p>The story could not be started: {initError}</p>
++                <button className="victorian-btn" onClick={() => window.location.reload()}>Reload</button>
++              </div>
++            )}
+           </div>
+         )}
+ 
+--- a/src/testing/testHarness.ts
++++ b/src/testing/testHarness.ts
+@@ -2,6 +2,51 @@
+ import { paintLight } from '../shaders/ToonShaders';
+ import { GameStateSnapshot } from '../core/types';
+ 
++declare global {
++  interface Window {
++    __game?: {
++      getState: () => GameStateSnapshot;
++      getFlags: () => Record<string, unknown>;
++      getFlag: (k: string) => unknown;
++      getInventory: () => unknown[];
++      getPlayerTransform: () => {
++        position: { x: number; y: number; z: number };
++        rotation: { x: number; y: number; z: number };
++        scale: number;
++      };
++      getInteractables: () => unknown[];
++      getCameraState: () => {
++        yaw: number;
++        pitch: number;
++        yawGoal: number;
++        pitchGoal: number;
++        zoom: number;
++        distance: number;
++        fov: number;
++        cinematic: boolean;
++        position: { x: number; y: number; z: number };
++        forward: { x: number; y: number; z: number };
++      };
++      getPlayerMotion: () => {
++        velocity: { x: number; y: number; z: number };
++        speed: number;
++        running: boolean;
++        facing: number;
++      };
++      getRenderStats: () => { calls: number; triangles: number };
++      getRenderBreakdown: () => Record<string, { meshes: number; hulls: number; shadowCasters: number; drawn: number }>;
++      getNearbyInteractable: () => string | null;
++      getAliceAnimation: () => unknown;
++      getAliceBoneWorld: (name: string) => { x: number; y: number; z: number } | null;
++      getSceneMetrics: () => unknown;
++      setTimeScale: (n: number) => void;
++      fastForward: (seconds: number) => void;
++      movePlayerTo: (x: number, z: number) => void;
++      lookAtBottleSide: (side: 'front' | 'back') => void;
++    };
++  }
++}
++
+ export function registerTestHarness(gameManager: GameManager): void {
+   const urlParams = new URLSearchParams(window.location.search);
+   if (urlParams.get('test') !== '1') {
+--- a/src/game/GameManager.ts
++++ b/src/game/GameManager.ts
+@@ -230,6 +230,10 @@
+       this.handleDrinkBottle();
+     });
+ 
++    globalEventBus.on('closeInspector', () => {
++      this.itemInspector.close();
++    });
++
+     globalEventBus.on(GAME_EVENTS.INTERACTION_TRIGGERED, (action: string) => {
+       if (action === 'E') {
+         this.handleInteraction();
+--- a/src/game/ItemInspector.ts
++++ b/src/game/ItemInspector.ts
+@@ -94,6 +94,7 @@
+     this.checkInspectedSides();
+ 
+     console.log(`[ItemInspector] Inspecting item: ${item.name}`);
++    cancelAnimationFrame(this.animationFrameId); // open() may be called while a previous loop is alive
+     this.renderLoop();
+   }
+ 
+@@ -332,8 +333,26 @@
+     }
+   }
+ 
++  private fittedW = 0;
++  private fittedH = 0;
++  /** The modal is un-hidden by React a moment AFTER the inspectItem event, so size to the real box once it has one. */
++  private fitToContainer(): void {
++    const el = this.canvasContainer;
++    if (!el) return;
++    const w = el.clientWidth;
++    const h = el.clientHeight;
++    if (w > 0 && h > 0 && (w !== this.fittedW || h !== this.fittedH)) {
++      this.fittedW = w;
++      this.fittedH = h;
++      this.renderer.setSize(w, h);
++      this.camera.aspect = w / h;
++      this.camera.updateProjectionMatrix();
++    }
++  }
++
+   private renderLoop = (): void => {
+     if (!this.isOpen) return;
++    this.fitToContainer();
+ 
+     // smooth damp
+     this.rotationX += (this.targetRotationX - this.rotationX) * 0.1;
+--- a/index.html
++++ b/index.html
+@@ -72,7 +72,7 @@
+         align-items: center;
+         background: #F7F3EA;
+         color: #2B2420;
+-        z-index: 100;
++        z-index: 2000; /* above .ui-title-screen (1000) so raw/half-built UI is never visible while loading */
+         transition: opacity 0.8s ease;
+       }
+       .loading-title {
